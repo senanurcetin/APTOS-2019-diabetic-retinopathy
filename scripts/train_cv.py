@@ -38,9 +38,9 @@ from sklearn.model_selection import StratifiedKFold
 from torch.utils.data import DataLoader, Dataset
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from train import (DEFAULT_PROCESSED, MODELS, PROJECT_ID, BQ_DATASET,  # noqa: E402,F401
-                   build_transforms, load_labels, optimize_thresholds, qwk,
-                   run_epoch, set_seed, write_to_bigquery)
+from train import (DEFAULT_PROCESSED, MODELS, build_transforms,  # noqa: E402
+                   load_labels, optimize_thresholds, qwk, run_epoch,
+                   set_seed, write_to_bigquery)
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 

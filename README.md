@@ -1,5 +1,7 @@
 # APTOS-2019 Diabetic Retinopathy Grading
 
+[![tests](https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy/actions/workflows/tests.yml/badge.svg)](https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy/actions/workflows/tests.yml) [![licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
+
 Predicting diabetic retinopathy severity (ICDRSS grades 0-4) from 3662 retinal
 fundus photographs — with an emphasis on checking whether the model earns its
 score for the right reason.
@@ -193,7 +195,8 @@ python tests/test_preprocessing.py    # pytest not required
 ```
 
 31 tests over the shared module, using synthetic images — they run on a machine
-that has never downloaded the dataset.
+that has never downloaded the dataset, which is also why CI can run them on
+every push across Python 3.10, 3.11 and 3.12.
 
 ## Things worth knowing
 
@@ -252,6 +255,11 @@ tests/test_preprocessing.py   31 tests over the shared module
 reports/                      three generated reports + 16 figures
 RESULTS.md                    every measurement, in full
 ```
+
+## Licence
+
+MIT — see [LICENSE](LICENSE). The APTOS dataset itself is distributed by Kaggle
+under its own terms.
 
 ## Credits
 
