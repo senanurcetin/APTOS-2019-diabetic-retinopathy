@@ -258,8 +258,10 @@ RESULTS.md                    every measurement, in full
 
 ## Licence
 
-MIT — see [LICENSE](LICENSE). The APTOS dataset itself is distributed by Kaggle
-under its own terms.
+Code: MIT — see [LICENSE](LICENSE).
+
+The dataset is not included in this repository and is not covered by that
+licence; see [NOTICE](NOTICE).
 
 ## Credits
 

@@ -1,0 +1,12 @@
+Dataset licensing
+=================
+
+The MIT licence in LICENSE covers the code in this repository only.
+
+The APTOS 2019 Blindness Detection images and labels are not included here
+and are not covered by it. They are distributed by Kaggle under their own
+terms:
+
+    https://www.kaggle.com/datasets/mariaherrerot/aptos2019
+
+Download them yourself and accept those terms before running the pipeline.
