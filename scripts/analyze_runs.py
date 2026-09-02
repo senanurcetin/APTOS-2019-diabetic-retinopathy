@@ -8,12 +8,15 @@ Usage:
     python scripts/analyze_runs.py --run 3f9a2b1c  # drill into one run
 """
 import argparse
+import os
 
 import pandas as pd
 from google.cloud import bigquery
 
-PROJECT_ID = "datascientis"
-BQ_DATASET = "APTOS_2019"
+# Cloud identifiers are read from the environment so the project runs against
+# any BigQuery project and bucket. The defaults are the ones this work used.
+PROJECT_ID = os.environ.get("APTOS_GCP_PROJECT", "datascientis")
+BQ_DATASET = os.environ.get("APTOS_BQ_DATASET", "APTOS_2019")
 GRADES = ["No DR", "Mild", "Moderate", "Severe", "Proliferative DR"]
 
 client = bigquery.Client(project=PROJECT_ID)

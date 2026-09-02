@@ -19,6 +19,7 @@ Usage:
 import argparse
 import datetime as dt
 import json
+import os
 import pathlib
 import random
 import uuid
@@ -37,8 +38,10 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 DEFAULT_PROCESSED = ROOT / "data" / "processed"
 MODELS = ROOT / "models"
 
-PROJECT_ID = "datascientis"
-BQ_DATASET = "APTOS_2019"
+# Cloud identifiers are read from the environment so the project runs against
+# any BigQuery project and bucket. The defaults are the ones this work used.
+PROJECT_ID = os.environ.get("APTOS_GCP_PROJECT", "datascientis")
+BQ_DATASET = os.environ.get("APTOS_BQ_DATASET", "APTOS_2019")
 
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD = [0.229, 0.224, 0.225]

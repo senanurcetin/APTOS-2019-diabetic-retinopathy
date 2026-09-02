@@ -12,6 +12,7 @@ Usage:
     python scripts/scan_images.py --no-bq
 """
 import argparse
+import os
 import pathlib
 import sys
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -30,8 +31,10 @@ SOURCE_DIRS = {
     "test": ROOT / "data" / "images" / "test_images" / "test_images",
 }
 
-PROJECT_ID = "datascientis"
-BQ_DATASET = "APTOS_2019"
+# Cloud identifiers are read from the environment so the project runs against
+# any BigQuery project and bucket. The defaults are the ones this work used.
+PROJECT_ID = os.environ.get("APTOS_GCP_PROJECT", "datascientis")
+BQ_DATASET = os.environ.get("APTOS_BQ_DATASET", "APTOS_2019")
 
 
 def scan_one(args):

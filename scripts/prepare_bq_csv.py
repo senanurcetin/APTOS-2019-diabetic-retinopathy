@@ -8,6 +8,7 @@ Output: data/bq/aptos_labels.csv         single combined table (recommended)
 The image_uri column carries the full gs:// path, so consumers never have to
 reconstruct the bucket prefix themselves.
 """
+import os
 import pathlib
 
 import pandas as pd
@@ -27,7 +28,7 @@ GRADES = {
 }
 
 # Actual folder layout inside the GCS bucket (verified by listing it).
-GCS_BUCKET = "aptos2019-retina-images"
+GCS_BUCKET = os.environ.get("APTOS_GCS_BUCKET", "aptos2019-retina-images")
 GCS_PREFIXES = {
     "train": "aptos_train_images",
     "valid": "aptos_valid_images",
