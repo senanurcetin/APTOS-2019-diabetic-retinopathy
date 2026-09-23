@@ -1,0 +1,12 @@
+# Five-fold cross-validation over train+valid, test held out entirely.
+#
+# Why this exists: single-split measurements proved fragile. Across three seeds
+# the CLAHE difference swung between +0.015 and -0.020 on a 366-image validation
+# set. Folding over the 3247-image pool shrinks that estimate's variance.
+cv:
+  folds: 5
+  stratify_on: diagnosis
+train:
+  seed: 42
+  epochs: 15
+  patience: 5

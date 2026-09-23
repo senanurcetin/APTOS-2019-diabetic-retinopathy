@@ -1,0 +1,34 @@
+# Defaults shared by every run. Anything not set here comes from the dataclass
+# defaults in src/aptos/config.py, which is the authoritative list.
+variant: baseline
+
+preprocess:
+  size: 512
+  clahe: false
+  clip_limit: null
+  square_mode: pad          # what the cache on disk actually is - see NOTE below
+  crop_tol: 7
+  jpeg_quality: 95
+
+train:
+  model: efficientnet_b0
+  mode: reg
+  size: 384
+  batch: 16
+  epochs: 15
+  lr: 0.0003
+  patience: 5
+  seed: 42
+  workers: 2
+  exclude_leaked: true
+
+tracking:
+  experiment: aptos-2019
+  bigquery_enabled: false
+
+# NOTE on square_mode. `to_square()`'s own default is "squash", and its docstring
+# argues that squash yields 21% more effective retina pixels than padding. But
+# the caches that produced every published number were built with square_mode
+# "pad" (read from their own _manifest.json). Every variant below therefore
+# states its squaring mode explicitly instead of inheriting a default, so the
+# config can never again disagree with the pixels it points at.

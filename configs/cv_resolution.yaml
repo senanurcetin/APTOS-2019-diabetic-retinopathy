@@ -1,0 +1,11 @@
+# The confound-aware fold split.
+#
+# Stratifying jointly on (diagnosis, resolution bucket) means no fold can learn
+# a resolution-to-label mapping that is absent from the folds it is scored
+# against. Compared against configs/cv.yaml, the difference is an estimate of
+# how much of the headline score the acquisition shortcut was carrying.
+cv:
+  folds: 5
+  stratify_on: diagnosis+resolution
+train:
+  seed: 42
