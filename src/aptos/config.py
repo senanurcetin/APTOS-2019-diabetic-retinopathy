@@ -268,13 +268,21 @@ class TrackingConfig:
     """
 
     experiment: str = "aptos-2019"
-    uri: str = ""  # empty -> <root>/mlruns
+    # Empty resolves to a SQLite store at <root>/mlflow.db. MLflow 3 put the
+    # filesystem backend into maintenance mode and refuses it outright, and
+    # SQLite is the better choice here anyway: the leaderboard, confusion and
+    # per-class views that used to be BigQuery queries become SQL again,
+    # against a file that travels with the repository.
+    uri: str = ""
     bigquery_enabled: bool = False
     bigquery_project: str = ""
     bigquery_dataset: str = ""
 
     def resolved_uri(self, paths: Paths) -> str:
-        return self.uri or (paths.root / "mlruns").as_uri()
+        if self.uri:
+            return self.uri
+        # SQLAlchemy wants forward slashes, including on Windows.
+        return "sqlite:///" + str(paths.root / "mlflow.db").replace("\\", "/")
 
 
 @dataclass
