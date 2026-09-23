@@ -76,6 +76,13 @@ filterwarnings = ["ignore::DeprecationWarning"]
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+# aptos_2019.ipynb is excluded because it is known broken, not because its
+# warnings are uninteresting: it calls APTOSDataset(use_crop=...), a parameter
+# that does not exist; it uses pd and plt without importing either; and it has
+# no training loop despite being the notebook the README points at. Linting it
+# would report style problems in code that cannot run. It is scheduled for
+# replacement, and this line should go with it.
+exclude = ["aptos_2019.ipynb"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B"]

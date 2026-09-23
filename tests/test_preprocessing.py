@@ -15,9 +15,18 @@ import cv2
 import numpy as np
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "scripts"))
-from preprocessing import (HARD_BRIGHT, HARD_DARK, apply_clahe, auto_crop,  # noqa: E402
-                           brightness_outliers, dhash, image_quality,
-                           pad_to_square, preprocess, to_square)
+from preprocessing import (  # noqa: E402
+    HARD_BRIGHT,
+    HARD_DARK,
+    apply_clahe,
+    auto_crop,
+    brightness_outliers,
+    dhash,
+    image_quality,
+    pad_to_square,
+    preprocess,
+    to_square,
+)
 
 
 def fake_fundus(h=400, w=600, radius=180, brightness=120, seed=0):

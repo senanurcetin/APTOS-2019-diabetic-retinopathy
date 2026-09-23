@@ -39,9 +39,16 @@ def section(title):
     return f"\n## {title}\n\n"
 
 
-def _thumb(id_code, split, cache={}):
+# Module-level so it actually persists. Duplicate verification compares each
+# candidate against several others, so the same thumbnail is asked for many
+# times; decoding it once is the whole point of this cache.
+_THUMB_CACHE: dict = {}
+
+
+def _thumb(id_code, split):
     """128px grayscale thumbnail from the processed JPEG - far cheaper than
     re-reading the raw PNG."""
+    cache = _THUMB_CACHE
     key = (id_code, split)
     if key in cache:
         return cache[key]
@@ -71,7 +78,7 @@ def _verify_duplicates(candidates):
     """Verify dHash candidates at pixel level and return the real groups."""
     groups = []
     for _, g in candidates.groupby("dhash"):
-        members = list(zip(g.id_code, g.split))
+        members = list(zip(g.id_code, g.split, strict=False))
         remaining = list(members)
         while len(remaining) > 1:
             head, rest = remaining[0], remaining[1:]
