@@ -9,12 +9,12 @@ score for the right reason.
 Data: Kaggle [`mariaherrerot/aptos2019`](https://www.kaggle.com/datasets/mariaherrerot/aptos2019),
 the APTOS 2019 Blindness Detection set pre-split into train/valid/test.
 
-**Best test QWK: 0.9112.** That is not the interesting part — public solutions
-reach 0.93+. The three findings below are.
+**Best test QWK: 0.9098**, a five-fold ensemble. That is not the interesting
+part — public solutions reach 0.93+. The four findings below are.
 
 ---
 
-## Three findings
+## Four findings
 
 ### A model can score well without looking at the retina
 
@@ -31,7 +31,8 @@ correlates with disease prevalence. Resizing to 512px does not remove it —
 aspect ratio, sharpness and edge geometry still carry it.
 
 This does not invalidate the results, but any reported score should be read
-against that floor. `scripts/confound_analysis.py` measures it.
+against that floor. `scripts/confound_analysis.py` measures it — and the fourth
+finding below tests whether the model actually depends on it.
 
 ### The label ceiling is around 84%
 
@@ -39,17 +40,57 @@ The dataset contains the same image more than once. Of 148 same-image pairs,
 **43 (29.1%) carry conflicting labels**. That puts inter-rater agreement at
 70.9% and a single label's accuracy at roughly **84%**.
 
-The model's test accuracy is 0.82 — near the ceiling. Part of the remaining
+The ensemble's test accuracy is 0.8033 — near the ceiling. Part of the remaining
 error belongs to the labels, not the model.
 
-### CLAHE did not survive replication
+### Two preprocessing ideas, both null
 
-The first run suggested CLAHE improved test QWK by +0.0152. Across three seeds
-the difference was **+0.0152, −0.0201, −0.0049** — mean −0.0033, paired t-test
-p = 0.78. No benefit on test could be demonstrated, and CLAHE made results
-*less* stable (test QWK spread 4.4x the baseline's).
+**CLAHE.** The first run suggested it improved test QWK by +0.0152. Across three
+seeds the difference was **+0.0152, −0.0201, −0.0049** — mean −0.0033, paired
+t-test p = 0.78. Five-fold cross-validation, an independent design on a larger
+evaluation pool, agrees and tightens it: **−0.0005, p = 0.865**.
 
-It is implemented and kept as an option, documented as unproven.
+**`squash` squaring.** The geometric case was measured and correct — padding
+leaves 28.5% of a 512px frame black against squash's 13.4%, so squash carries
+21% more retina pixels. Trained and cross-validated, it bought **+0.0038 QWK,
+p = 0.468**, winning 2 of 5 folds.
+
+Neither beats the control. The second one is the sharper lesson: the argument
+for squash was quantitative and right about the pixels, and the pixels turned
+out not to be what limits this model.
+
+The largest effect found anywhere in the project is not a preprocessing choice
+at all — it is ensembling the five folds, worth **+0.019 QWK**, about five times
+the biggest gap between any two variants.
+
+### The model reads the retina, not the camera
+
+Given the shortcut above, the obvious question is whether the score survives
+without it. Within APTOS it cannot be removed — excluding the confounded
+resolution still leaves sixteen others whose No DR share runs from 0% to 100%.
+
+**IDRiD** removes it: all 455 of its images are 4288x2848, so geometry carries
+no label information, and the prior on that geometry is *inverted* — in APTOS
+all 52 images at that resolution are diseased, in IDRiD 129 of 455 are healthy.
+
+A prediction was committed before the run
+([`docs/external-validation-prediction.md`](docs/external-validation-prediction.md)):
+a shortcut-dependent model would over-call disease, and specificity on the
+healthy eyes would collapse.
+
+It was falsified. No fine-tuning, APTOS thresholds not refitted:
+
+| metric | APTOS test | IDRiD |
+|---|---|---|
+| QWK | 0.9091 | 0.8045 |
+| referable sensitivity | 0.956 | 0.885 |
+| **referable specificity** | **0.917** | **0.987** |
+
+1.6% of healthy eyes were called referable. Specificity is *higher* on a
+population the model has never seen. What does degrade is calibration at the
+top of the scale — 8 grade-4 predictions against 64 true cases — while missed
+referrals stay at 2 of 148. It compresses the scale rather than failing to see
+disease.
 
 Full numbers, tables and statistics: **[RESULTS.md](RESULTS.md)**.
 
@@ -57,8 +98,9 @@ Full numbers, tables and statistics: **[RESULTS.md](RESULTS.md)**.
 
 ## Pipeline
 
-Shared functions live in `scripts/preprocessing.py`; every other script and the
-Colab notebook imports from it rather than keeping a copy.
+Shared functions live in `src/aptos/preprocessing.py`. `scripts/preprocessing.py`
+remains as a thin re-export, because the Colab notebook clones this repository at
+run time and imports it by path.
 
 ```
 Read -> Quality check -> Auto-crop -> CLAHE -> Square -> Resize -> Normalise
@@ -68,9 +110,9 @@ Read -> Quality check -> Auto-crop -> CLAHE -> Square -> Resize -> Normalise
 
 | function | what it does |
 |---|---|
-| `auto_crop()` | Removes the black frame outside the retina (10.4% of the area on average) |
+| `auto_crop()` | Removes the black frame outside the retina (11.25% of the area at `tol=7`) |
 | `apply_clahe()` | CLAHE on the LAB L channel only, so colour balance survives |
-| `to_square()` | `squash` or `pad`; squash cuts black area from 28.5% to 13.4% |
+| `to_square()` | `squash` or `pad`; squash cuts black area from 28.5% to 13.4% — measured, but see below |
 | `image_quality()` | Brightness and contrast measures, unusable-image detection |
 | `brightness_outliers()` | MAD-based outlier detection |
 | `dhash()` | Perceptual hash, used as a duplicate candidate generator |
@@ -80,18 +122,22 @@ Decisions were measured rather than assumed:
 
 - **`tol=7` for auto-crop** — cropping at tol=7 and tol=15 give nearly identical
   results (11.25% vs 11.48% removed), so the boundary sits on a stable plateau.
-- **`squash` over `pad`** — the retinal disc is clipped top and bottom but never
-  at the sides, so a cropped image is naturally wide and already 86.5% retina.
-  Padding dilutes that with black bars; squashing keeps all tissue and yields
-  21% more effective retina pixels.
+- **`squash` vs `pad` — measured, then trained, then dropped as a claim.** The
+  retinal disc is clipped top and bottom but never at the sides, so a cropped
+  image is naturally wide and already 86.5% retina. Padding dilutes that with
+  black bars; squashing keeps all tissue and yields 21% more effective retina
+  pixels. All of that is true and none of it helped: cross-validated against
+  pad, squash was worth +0.0038 QWK at p = 0.468. **Every published number in
+  this repository was produced with `pad`**, and the caches on disk record that
+  in their own `_manifest.json`.
 - **CLAHE after auto-crop** — on an uncropped image the wide black border skews
   the histogram.
 - **Normalisation in the training transforms, not the pipeline** — one place
   only, so it cannot happen twice.
 
 Each processed directory carries a `_manifest.json` recording the settings that
-produced it, and the training scripts print it, so every run states which
-preprocessing it used.
+produced it. Training checks it rather than merely printing it: a cache that
+does not match what the config asked for stops the run.
 
 ## Model and training
 
@@ -109,8 +155,10 @@ on validation; `--mode cls` uses five-way softmax with class-weighted
 cross-entropy.
 
 **Training loop.** AdamW, cosine schedule, mixed precision, early stopping on
-validation QWK, best checkpoint kept rather than last. `train_cv.py` adds
-stratified K-fold cross-validation with the test set held out entirely.
+validation QWK, best checkpoint kept rather than last. `aptos.training.cv` adds
+stratified K-fold cross-validation with the test set held out entirely, and is
+resumable: each fold persists its predictions and metrics before the next
+starts, so an interrupted sweep costs one fold rather than all of them.
 
 ## Choosing the metric
 
@@ -119,8 +167,8 @@ dataset is "No DR"; a model that always predicts 0 scores 49% accuracy and 0 on
 QWK. The problem is also **ordinal** — grades form a severity scale, so calling
 a Severe case Mild is worse than calling it Proliferative.
 
-QWK should be read together with macro F1. This model scores **QWK 0.90 but
-macro F1 0.57**: errors land on neighbouring grades, which QWK penalises
+QWK should be read together with macro F1. This model scores **QWK 0.91 but
+macro F1 0.55**: errors land on neighbouring grades, which QWK penalises
 lightly, so the weakness on minority classes shows up only in macro F1.
 
 ## Data
@@ -139,7 +187,8 @@ scripts, not written by hand.
 ## Setup
 
 ```bash
-pip install -r requirements.txt
+pip install -e .            # preprocessing and analysis, no torch
+pip install -e ".[train]"   # add the training stack (quote it: some shells glob [ ])
 ```
 
 For GPU support install PyTorch from the CUDA index **only** — adding
@@ -149,54 +198,67 @@ For GPU support install PyTorch from the CUDA index **only** — adding
 pip install --force-reinstall torch torchvision --index-url https://download.pytorch.org/whl/cu128
 ```
 
-BigQuery is optional. The pipeline reads and writes local CSVs when it is
-unavailable; only `load_to_bigquery.py` and `analyze_runs.py` require it.
-Cloud identifiers come from the environment:
+Runs are tracked locally with MLflow, in `mlflow.db` beside the code:
 
 ```bash
-export APTOS_GCP_PROJECT=your-project     # default: datascientis
-export APTOS_BQ_DATASET=your-dataset      # default: APTOS_2019
-export APTOS_GCS_BUCKET=your-bucket       # default: aptos2019-retina-images
+mlflow ui --backend-store-uri sqlite:///mlflow.db
 ```
+
+BigQuery is not required for anything. The project originally logged every run
+to a GCP project, and when that access was withdrawn the entire experimental
+record went with it — which is why tracking is local and travels with the
+repository. `load_to_bigquery.py` and `analyze_runs.py` are the only files that
+still expect it, and nothing depends on them.
 
 ## Running
 
+One entry point, with the stage order enforced rather than documented:
+
 ```bash
-# 1. Raw data
 kaggle datasets download mariaherrerot/aptos2019 -p data/images --unzip
 
-# 2. Labels
-python scripts/prepare_bq_csv.py
+python -m aptos.pipeline list        # the stage graph
+python -m aptos.pipeline check       # what could run right now
+python -m aptos.pipeline run all     # everything, in dependency order
+```
 
-# 3. Scan image properties
-python scripts/scan_images.py --no-bq
+Every stage declares what it reads, so a stage whose inputs are missing stops
+with a message naming the stage you skipped. That matters here: `quality`
+verifies duplicate candidates against thumbnails from the processed cache, and
+running it before `preprocess` used to yield zero duplicates and an empty leak
+list *silently*. The published run order in earlier versions of this file had
+exactly that mistake.
 
-# 4. Reports
-python scripts/image_report.py
-python scripts/quality_report.py
-python scripts/confound_analysis.py
+Training and cross-validation:
 
-# 5. Prepare images
-python scripts/preprocess_images.py --size 512              # with CLAHE
-python scripts/preprocess_images.py --size 512 --no-clahe   # control set
+```bash
+python -m aptos.training.cv --config configs/cv.yaml --variant baseline
+bash scripts/run_cv.sh                      # baseline, squash, clahe in turn
+```
 
-# 6. Figures
-python scripts/make_figures.py
+The sweep is resumable — completed folds are skipped, so re-running after an
+interruption picks up where it stopped.
 
-# 7. Train
-python scripts/train.py --mode reg --epochs 30 --patience 5 --exclude-leaked
-python scripts/train_cv.py --folds 5 --exclude-leaked       # cross-validated
+External validation, with no fine-tuning and no threshold refitting:
+
+```bash
+kaggle datasets download mariaherrerot/idrid-dataset -p data/external --unzip
+python -m aptos.evaluation.external --sweep models/cv/baseline-<id>
+python -m aptos.evaluation.confound --sweeps models/cv/baseline-<id>
 ```
 
 ## Tests
 
 ```bash
-python tests/test_preprocessing.py    # pytest not required
+pytest                      # 79 tests
+pytest -m pure              # the 62 that need neither torch nor the dataset
+python tests/test_preprocessing.py   # 31 of those, without pytest at all
 ```
 
-31 tests over the shared module, using synthetic images — they run on a machine
-that has never downloaded the dataset, which is also why CI can run them on
-every push across Python 3.10, 3.11 and 3.12.
+The preprocessing tests build synthetic fundus images, so they run on a machine
+that has never downloaded the dataset — which is why CI checks them on Python
+3.10, 3.11 and 3.12, and why the Colab notebook can run them too. A second CI
+job installs CPU torch and runs everything.
 
 ## Things worth knowing
 
@@ -210,7 +272,7 @@ every push across Python 3.10, 3.11 and 3.12.
   validation, look at test once, and treat per-class test figures as
   indicative.
 - **Brightness thresholds must be data-aware.** Brightness spans 15.0-129.6
-  here, so a general-purpose "too bright" cutoff of 240 never fires. The
+  here, so the general-purpose "too bright" cutoff of 250 never fires. The
   quality report uses MAD-based outlier detection alongside fixed thresholds.
 - **The Kaggle archive is inconsistent**: the validation split lives under
   `val_images/`, not `valid_images/`.
@@ -219,41 +281,64 @@ every push across Python 3.10, 3.11 and 3.12.
 - **Long GPU runs are fragile on Windows.** Do not start a second GPU job
   alongside one — the commit limit is exhausted and dataloader workers die with
   `error code 1455`. Do not edit `train_cv.py` while it runs either; the
-  workers re-import it by path.
+  workers re-import it by path. The same applies to anything under `src/aptos/`.
 
 ## Known gaps
 
-Documented rather than hidden:
+Documented rather than hidden. Four earlier entries here are now closed —
+cross-validation completed, `squash` was trained and came back null, the
+shortcut was tested rather than only reported, and IDRiD was run. What remains:
 
-- **Cross-validation was built but never completed.** `train_cv.py` works and
-  passes a smoke test, but no full sweep finished before the project ended.
-- **`squash` was never validated by training.** The geometric case is sound,
-  but CLAHE is a reminder that a sound argument is not a result.
-- **CLAHE parameters were never properly tuned.** A training-free proxy sweep
-  could not discriminate between settings.
+- **Calibration was never addressed, and external validation exposed it.** On
+  IDRiD the model issues 8 grade-4 predictions where 64 exist, because
+  thresholds fitted on APTOS validation are carried across unchanged. Missed
+  referrals stay at 2 of 148, so this is scale compression rather than a
+  detection failure — but temperature scaling, or reporting a recalibrated
+  variant beside the fixed-threshold one, would separate the two. Neither was
+  done.
+- **CLAHE parameters were never tuned.** Only clip=2.0 on the LAB lightness
+  channel has been trained. So the finding is "CLAHE at these settings does
+  nothing", not "CLAHE cannot help" — though two independent designs now put
+  the effect at zero.
+- **Confound-aware fold splitting is implemented but unrun.**
+  `configs/cv_resolution.yaml` stratifies folds jointly on (diagnosis,
+  resolution). After the IDRiD result its value dropped: it makes folds
+  comparable to each other without removing the shortcut, and IDRiD answers the
+  underlying question outright. Left undone deliberately.
+- **The external result rests on one mirror of one dataset.** 455 images from a
+  Kaggle copy of IDRiD rather than the full official distribution, and 129
+  healthy eyes is a small denominator for the specificity the conclusion leans
+  on — it moves by 0.008 per image.
+- **There is no serving surface.** No inference API, no demo, no model card.
+- **`aptos_2019.ipynb` is broken.** It calls `APTOSDataset(use_crop=...)`, a
+  parameter that does not exist, uses `pd` and `plt` without importing either,
+  and has no training loop. It is excluded from linting and scheduled for
+  replacement.
+- **Several legacy scripts are unported.** `analyze_runs.py` builds a BigQuery
+  client at module scope and cannot be imported without credentials;
+  `load_to_bigquery.py`'s default table names can never match what `train.py`
+  queries; `run_seeds.sh` omits `--exclude-leaked` while `run_cv.sh` includes
+  it. The package path does not depend on any of them.
 
 ## Layout
 
 ```
-scripts/
-  preprocessing.py       shared preprocessing functions
-  prepare_bq_csv.py      clean and enrich the label CSVs
-  load_to_bigquery.py    load labels into BigQuery
-  scan_images.py         scan image properties
-  image_report.py        image properties summary
-  quality_report.py      data quality + duplicate analysis
-  confound_analysis.py   metadata shortcut and label noise
-  preprocess_images.py   prepare images for training
-  make_figures.py        report figures
-  train.py               training and evaluation (single split)
-  train_cv.py            K-fold cross-validation
-  analyze_runs.py        run comparison and error analysis
-  run_cv.sh              cross-validation for every variant
-  run_seeds.sh           multi-seed comparison
-
-tests/test_preprocessing.py   31 tests over the shared module
-reports/                      three generated reports + 16 figures
-RESULTS.md                    every measurement, in full
+src/aptos/
+  config.py            every constant, one place; YAML + dataclasses
+  preprocessing.py     the shared image pipeline
+  pipeline.py          stage graph, preconditions, CLI entry point
+  tracking.py          MLflow, with BigQuery as an optional extra sink
+  data/                labels, datasets, cache manifests
+  modeling/            QWK, threshold search, clinical metrics (no torch)
+  training/            model, epoch loop, resumable cross-validation
+  evaluation/          confound stratification, external validation
+configs/               base + one file per variant, and the CV variants
+scripts/               legacy scripts, ported progressively
+  preprocessing.py     thin re-export, kept for the Colab notebook
+  run_cv.sh            the sweep runner
+tests/                 79 tests; `-m pure` needs neither torch nor the dataset
+docs/                  the pre-registered external-validation prediction
+reports/               generated markdown, CSVs and 16 figures
 ```
 
 ## Licence
