@@ -1,0 +1,55 @@
+{
+  "dataset": "IDRiD",
+  "n": 455,
+  "variant": "baseline",
+  "sweep": "baseline-6e66147526",
+  "thresholds": [
+    0.6680000000000001,
+    1.1319999999999997,
+    2.3239999999999994,
+    3.3
+  ],
+  "refitted": false,
+  "qwk": 0.8045258469523743,
+  "accuracy": 0.5868131868131868,
+  "macro_f1": 0.4609217342131718,
+  "recall_grade_0": 0.8294573643410853,
+  "recall_grade_1": 0.36363636363636365,
+  "recall_grade_2": 0.7051282051282052,
+  "recall_grade_3": 0.4166666666666667,
+  "recall_grade_4": 0.109375,
+  "ref_tp": 269,
+  "ref_fp": 2,
+  "ref_tn": 149,
+  "ref_fn": 35,
+  "ref_sensitivity": 0.8848684210526315,
+  "ref_specificity": 0.9867549668874173,
+  "ref_precision": 0.992619926199262,
+  "ref_referral_rate": 0.5956043956043956,
+  "severe_total": 148,
+  "severe_missed": 2,
+  "per_class_recall": {
+    "0": 0.8294573643410853,
+    "1": 0.36363636363636365,
+    "2": 0.7051282051282052,
+    "3": 0.4166666666666667,
+    "4": 0.109375
+  },
+  "predicted_distribution": {
+    "0": 130,
+    "1": 54,
+    "2": 179,
+    "3": 84,
+    "4": 8
+  },
+  "true_distribution": {
+    "0": 129,
+    "1": 22,
+    "2": 156,
+    "3": 84,
+    "4": 64
+  },
+  "healthy_n": 129,
+  "healthy_called_healthy": 0.8294573643410853,
+  "healthy_called_referable": 0.015503875968992248
+}

@@ -7,7 +7,11 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  # The preprocessing and analysis code needs neither torch nor the dataset -
+  # the tests build synthetic fundus images - so it is worth checking on every
+  # supported Python version. This job is the one that has to stay fast.
+  fast:
+    name: pure (py${{ matrix.python-version }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -22,16 +26,62 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
 
-      # The test suite builds synthetic fundus images, so it needs neither the
-      # dataset nor a GPU - only the image and numerics stack.
-      - name: Install test dependencies
+      # Dependencies are installed explicitly rather than through the package
+      # metadata, so CI gets opencv-python-headless instead of the GUI build,
+      # which pulls X11 libraries onto a runner that has no display.
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install numpy opencv-python-headless
+          pip install numpy opencv-python-headless pandas scipy scikit-learn matplotlib pyyaml pytest
+          pip install -e . --no-deps
 
-      - name: Run tests
+      - name: Run the tests that need no torch
+        run: pytest -m pure -q
+
+      # The original suite also runs without pytest, using a hand-rolled
+      # collector. That is a real property worth keeping: it means the
+      # preprocessing module can be checked anywhere Python and OpenCV exist,
+      # including the Colab notebook that imports it straight from GitHub.
+      - name: Run the dependency-free runner too
         run: python tests/test_preprocessing.py
 
-      - name: Check every script parses
+      - name: Check every module parses
+        run: python -m compileall -q src scripts tests
+
+  # Everything else: the model, the epoch loop, the fold machinery, the
+  # threshold search against real tensors. CPU torch is a large download, so
+  # this runs once rather than across the matrix.
+  full:
+    name: torch (cpu)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
         run: |
-          python -m compileall -q scripts tests
+          python -m pip install --upgrade pip
+          pip install numpy opencv-python-headless pandas scipy scikit-learn matplotlib pyyaml pytest
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install timm pillow mlflow fastapi python-multipart onnxruntime
+          pip install -e . --no-deps
+
+      - name: Run the whole suite
+        run: pytest -q
+
+  lint:
+    name: ruff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install ruff
+      - run: ruff check .

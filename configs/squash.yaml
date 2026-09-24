@@ -1,0 +1,14 @@
+# Squash instead of pad, no CLAHE. Single-variable change from baseline: the
+# only difference is how a wide cropped image is brought to a square.
+#
+# Status: NEVER VALIDATED BY TRAINING. The geometric argument is measured and
+# sound - padding leaves 28.5% of a 512px output black against squash's 13.4%,
+# so squash carries 21% more retina pixels - but as CLAHE demonstrated, a sound
+# argument is not a result. The cache already exists on disk, so this is a
+# ready-to-run A/B against baseline.
+variant: squash
+preprocess:
+  size: 512
+  clahe: false
+  clip_limit: null
+  square_mode: squash

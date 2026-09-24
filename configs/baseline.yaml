@@ -1,0 +1,8 @@
+# The control: no CLAHE, padded to square. This is what "baseline" meant in the
+# six recorded single-split runs (test QWK 0.8986 +/- 0.0033 across seeds 42-44).
+variant: baseline
+preprocess:
+  size: 512
+  clahe: false
+  clip_limit: null
+  square_mode: pad

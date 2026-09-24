@@ -73,12 +73,12 @@ def sample_per_grade(labels, split="train"):
 
 def fig_class_distribution(labels):
     fig, axes = plt.subplots(1, 3, figsize=(13, 4), sharey=True)
-    for ax, split in zip(axes, ["train", "valid", "test"]):
+    for ax, split in zip(axes, ["train", "valid", "test"], strict=False):
         counts = (labels[labels.split == split].diagnosis
                   .value_counts().reindex(range(5), fill_value=0).sort_index())
         bars = ax.bar([f"{i}" for i in range(5)], counts.values, color=COLORS)
         total = counts.sum()
-        for bar, v in zip(bars, counts.values):
+        for bar, v in zip(bars, counts.values, strict=False):
             ax.text(bar.get_x() + bar.get_width() / 2, v + total * 0.015,
                     f"{v}\n{v / total * 100:.1f}%", ha="center", va="bottom",
                     fontsize=8.5)
@@ -103,7 +103,7 @@ def fig_imbalance(labels):
         c = labels[labels.split == split].diagnosis.value_counts()
         ratios.append(c.max() / c.min())
     bars = ax1.bar(splits, ratios, color="#0F766E", width=0.55)
-    for bar, v in zip(bars, ratios):
+    for bar, v in zip(bars, ratios, strict=False):
         ax1.text(bar.get_x() + bar.get_width() / 2, v + 0.2, f"{v:.2f}x",
                  ha="center", fontsize=10, fontweight="bold")
     ax1.set_title("Class imbalance ratio (most / least frequent)")
@@ -116,7 +116,7 @@ def fig_imbalance(labels):
             (labels[(labels.split == s) & (labels.diagnosis == g)].shape[0]
              / labels[labels.split == s].shape[0] * 100) for s in splits])
         ax2.barh(splits, vals, left=bottom, color=COLORS[g], label=f"{g} {GRADES[g]}")
-        for i, (v, b) in enumerate(zip(vals, bottom)):
+        for i, (v, b) in enumerate(zip(vals, bottom, strict=False)):
             if v > 6:
                 ax2.text(b + v / 2, i, f"{v:.0f}%", ha="center", va="center",
                          color="white", fontsize=9, fontweight="bold")
@@ -209,7 +209,7 @@ def fig_pipeline(samples):
     ]
 
     fig, axes = plt.subplots(1, 6, figsize=(17, 3.4))
-    for ax, (im, title) in zip(axes, stages):
+    for ax, (im, title) in zip(axes, stages, strict=False):
         ax.imshow(im)
         ax.set_title(title, fontsize=9)
         ax.axis("off")
@@ -267,7 +267,7 @@ def fig_confound(stats, labels):
     b = [(rest.diagnosis == g).mean() * 100 for g in range(5)]
     ax1.bar(x - w / 2, a, w, label=f"1050x1050  (n={len(sq)})", color="#B91C1C")
     ax1.bar(x + w / 2, b, w, label=f"other resolutions  (n={len(rest)})", color="#0F766E")
-    for i, (va, vb) in enumerate(zip(a, b)):
+    for i, (va, vb) in enumerate(zip(a, b, strict=False)):
         ax1.text(i - w / 2, va + 1.5, f"{va:.0f}", ha="center", fontsize=8.5)
         ax1.text(i + w / 2, vb + 1.5, f"{vb:.0f}", ha="center", fontsize=8.5)
     ax1.set_xticks(x)
@@ -280,7 +280,7 @@ def fig_confound(stats, labels):
     bp = ax2.boxplot([m[m.diagnosis == g].megapixels.values for g in range(5)],
                      patch_artist=True, widths=0.6,
                      medianprops=dict(color="white", linewidth=1.5))
-    for patch, c in zip(bp["boxes"], COLORS):
+    for patch, c in zip(bp["boxes"], COLORS, strict=False):
         patch.set_facecolor(c)
     ax2.set_xticklabels([f"{i}" for i in range(5)])
     ax2.set_xlabel("ICDRSS grade")
@@ -305,8 +305,8 @@ def fig_augmentation(samples):
     against CLAHE, which normalises local contrast on purpose.
     """
     import torch
-    from torchvision import transforms as T
     from PIL import Image
+    from torchvision import transforms as T
 
     grade = 2 if 2 in samples else next(iter(samples))
     raw = cv2.imread(str(SOURCE_DIRS["train"] / f"{samples[grade]}.png"),

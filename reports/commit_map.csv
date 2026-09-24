@@ -1,0 +1,13 @@
+pre_rewrite,post_rewrite,subject
+db503cc,d230dde,Stage a Hugging Face Space from the serving subset
+3b778bb,c53383f,"Measure Grad-CAM with proper controls, and retract what one draw suggested"
+c07ef86,d3a8c6a,"Separate discrimination from calibration, and add a serving surface"
+4a49de0,cf16263,Align the README with what the code now does
+e212cd0,af0a85b,"Test the shortcut instead of reporting it, and validate externally on IDRiD"
+09e3ed5,2c2b06c,"Complete the cross-validation sweep, and report two null results"
+cf09e68,3ed79f2,"Verify IDRiD, and pre-register the external-validation prediction"
+7d75cd5,238ca71,"Make CI test the code, and fix a cache ruff silently broke"
+81eb230,21b42a7,"Rewrite run_cv.sh against the package, and fix its exit-code reporting"
+238c811,ce48674,"Make cross-validation resumable, so a died fold costs one fold"
+d344829,94db42c,Replace the dead BigQuery layer with local MLflow tracking
+80a31b5,7349e3e,"Make the pipeline a package, and make stage ordering enforceable"

@@ -1,14 +1,28 @@
-# Kimlik bilgileri - asla commit etmeyin
-*.json
-!dataset-metadata.json
+# Credentials - never commit these.
+# Anchored to the repository root and named explicitly. A blanket `*.json` rule
+# used to live here; besides credentials it also silently ignored
+# src/aptos/data/ and would hide any JSON asset shipped inside the package.
+/*.json
+/credentials/
+*-service-account*.json
+client_secret*.json
 
-# Veri (yeniden uretilebilir, buyuk)
-data/
-*.pth
+# Data and model artefacts: large, and reproducible from the pipeline.
+# The leading slash matters. Without it, `data/` matches a directory named
+# `data` at ANY depth - which is exactly how src/aptos/data/ came to be ignored.
+/data/
+/models/
+/mlruns/
+# The SQLite tracking store is binary, grows with every run, and embeds absolute
+# local paths. It also tripped GitHub secret scanning: SQLite packs the metric
+# key `test_acc` beside a run id, and the concatenation matches a vendor API-key
+# pattern. The record is versioned as text instead - see reports/runs.csv.
+/mlflow.db
+/outputs/
 *.pt
-models/
+*.pth
 
-# Ham ve islenmis goruntuler
+# Raw and intermediate images.
 *.jpeg
 *.tif
 
@@ -18,12 +32,19 @@ __pycache__/
 .ipynb_checkpoints/
 .venv/
 venv/
+*.egg-info/
+/build/
+/dist/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 
-# Genel gorseller ve tablolar surum kontrolu disinda...
+# Generated images and tables stay out of version control...
 *.png
 *.jpg
 *.csv
 
-# ...ancak rapor ciktilarini tutuyoruz - bunlar teslim edilen is
+# ...except the report outputs, which are delivered work.
 !reports/figures/*.png
 !reports/*.csv

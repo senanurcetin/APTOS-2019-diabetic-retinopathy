@@ -44,7 +44,7 @@ def shortcut_baseline(m):
     pred = cross_val_predict(clf, X, y, cv=5, n_jobs=-1)
 
     clf.fit(X, y)
-    importance = sorted(zip(META_COLS, clf.feature_importances_),
+    importance = sorted(zip(META_COLS, clf.feature_importances_, strict=False),
                         key=lambda t: -t[1])
     return {
         "accuracy": float((pred == y).mean()),

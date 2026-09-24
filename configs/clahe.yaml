@@ -1,0 +1,14 @@
+# CLAHE on the LAB lightness channel, still padded. Single-variable change from
+# baseline.
+#
+# Status: reported as a NULL RESULT. Across seeds 42/43/44 the test-QWK deltas
+# were +0.0152, -0.0201, -0.0049 - mean -0.0033, paired t-test p = 0.78. CLAHE
+# won on validation in all three seeds and did not carry to test, which is what
+# you would expect when the thresholds are themselves fitted on validation.
+# Cross-validation re-tests this with materially lower variance.
+variant: clahe
+preprocess:
+  size: 512
+  clahe: true
+  clip_limit: 2.0
+  square_mode: pad

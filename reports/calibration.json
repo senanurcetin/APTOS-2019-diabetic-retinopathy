@@ -1,0 +1,42 @@
+{
+  "operating_point": {
+    "min_sensitivity": 0.9,
+    "cut": 1.3359375,
+    "sensitivity": 0.9001524390243902,
+    "specificity": 0.9255813953488372,
+    "roc_auc": 0.974019584672591,
+    "average_precision": 0.9562187551213543
+  },
+  "applied": [
+    {
+      "set": "APTOS out-of-fold (selection)",
+      "n": 3247,
+      "prevalence": 0.40406529103788114,
+      "sensitivity": 0.9001524390243902,
+      "specificity": 0.9255813953488372,
+      "PPV": 0.8913207547169811,
+      "referral rate": 0.4080689867570065,
+      "ROC AUC": 0.974019584672591
+    },
+    {
+      "set": "APTOS test",
+      "n": 366,
+      "prevalence": 0.3743169398907104,
+      "sensitivity": 0.9197080291970803,
+      "specificity": 0.9344978165938864,
+      "PPV": 0.8936170212765957,
+      "referral rate": 0.38524590163934425,
+      "ROC AUC": 0.9830427437605584
+    },
+    {
+      "set": "IDRiD",
+      "n": 455,
+      "prevalence": 0.6681318681318681,
+      "sensitivity": 0.8157894736842105,
+      "specificity": 1.0,
+      "PPV": 1.0,
+      "referral rate": 0.545054945054945,
+      "ROC AUC": 0.9844457999302892
+    }
+  ]
+}
