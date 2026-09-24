@@ -20,6 +20,7 @@ thresholds tuned on validation.
 | Metadata-only floor | **QWK 0.652** — without looking at the retina |
 | Estimated label ceiling | **~84%** single-label accuracy |
 | Preprocessing ideas tested | **2 of 2 came back null** |
+| External validation (IDRiD) | **QWK 0.8045**, referable specificity **0.987** |
 
 The score is not the interesting part of this project. Public APTOS solutions
 reach 0.93+. What follows — the shortcut floor, the label ceiling, and two
@@ -259,6 +260,72 @@ diagnosis at all**, and any reported score should be read against that floor.
 
 ---
 
+## The shortcut, tested rather than reported
+
+A metadata-only classifier reaches QWK 0.652 on APTOS. Until now that floor was
+reported alongside the headline and left there. Two measurements now ask whether
+the score survives without it.
+
+### Within APTOS: narrowed, not removed
+
+| stratum | n | metadata QWK | model QWK | model acc | majority acc |
+|---|---|---|---|---|---|
+| ALL | 3662 / 366 test | 0.6519 | 0.9091 | 0.8033 | 0.5437 |
+| 1050x1050 | 974 / 109 test | 0.3454 | 0.9357 | 0.9817 | 0.9633 |
+| other | 2688 / 257 test | 0.5669 | 0.8766 | 0.7276 | 0.3658 |
+
+In both strata the model beats file properties by a wide margin, so it is not
+simply re-deriving the shortcut. But this analysis cannot do more than that, for
+two reasons that are worth stating plainly:
+
+- The confounded test stratum holds 109 images of which **4 are diseased**. Its
+  QWK rests on four positive cases and should not be interpreted.
+- `other` is not shortcut-free. It contains sixteen further resolutions whose
+  No DR share runs from **0% to 100%** - 3388x2588 has none, 2048x1536 has
+  nothing else. The metadata baseline still scores 0.5669 inside it.
+
+Removing the shortcut needs a test set with one acquisition. That is IDRiD.
+
+### External validation on IDRiD
+
+All 455 IDRiD images are 4288x2848, so geometry carries no label information at
+all. The prior attached to that geometry is also inverted: in APTOS every one of
+the 52 images at that resolution is diseased; in IDRiD 129 of 455 are healthy.
+
+A prediction was written down before the run (`docs/external-validation-prediction.md`):
+if the model leaned on acquisition cues it would over-call disease, and
+specificity on the healthy eyes would collapse.
+
+**It did not.** Baseline fold ensemble, no fine-tuning, APTOS thresholds not
+refitted:
+
+| metric | APTOS test | IDRiD |
+|---|---|---|
+| QWK | 0.9091 | 0.8045 |
+| accuracy | 0.8033 | 0.5868 |
+| macro F1 | 0.5450 | 0.4609 |
+| referable sensitivity | 0.956 | 0.885 |
+| **referable specificity** | **0.917** | **0.987** |
+
+1.6% of healthy eyes were called referable; 82.9% were graded healthy outright.
+Specificity is *higher* on IDRiD than on APTOS. The prediction was falsified in
+the direction that favours the model, and it is the strongest evidence here that
+the model reads the retina rather than the camera.
+
+Transfer is not free, and the damage has a shape: the model issues 8 grade-4
+predictions where 64 exist, with per-class recall 0.829 / 0.364 / 0.705 / 0.417
+/ 0.109. Yet missed referrals - true grade >= 3 called <= 1 - number **2 of
+148**. It is compressing the top of the scale, not failing to see disease. That
+is calibration drift under covariate shift with fixed thresholds, and it argues
+the referable-DR framing is the part that transfers.
+
+squash, for comparison: QWK 0.7859, sensitivity 0.862, specificity 0.993, 3 of
+148 severe missed - marginally worse throughout, consistent with the null result.
+
+Generated reports: `reports/confound_evaluation.md`, `reports/external_validation.md`.
+
+---
+
 ## The label ceiling
 
 The dataset contains the same image more than once. Where it does, the labels
@@ -363,9 +430,10 @@ area on average. Preprocessing turns 8 GiB of PNGs into 184 MB of 512px JPEGs.
 
 ## What was not finished
 
-Two of the three gaps listed here previously are now closed: cross-validation
-completed on 24 September 2026, and `squash` was validated by training — it
-came back null. What remains:
+Four gaps listed here previously are now closed: cross-validation completed,
+`squash` was validated by training and came back null, the shortcut was tested
+rather than only reported, and external validation was run on IDRiD — all on
+24 September 2026. What remains:
 
 - **CLAHE parameters were never properly tuned.** Only clip=2.0 on the LAB
   lightness channel has been trained; a sweep with training-free proxies could
@@ -374,17 +442,24 @@ came back null. What remains:
   now put the effect at zero, further tuning looks a poor use of GPU time, but
   it has not been ruled out.
 
-- **The confound is measured, not addressed.** A metadata-only model reaches
-  QWK 0.652, and every headline number here is still reported against that
-  floor rather than with the shortcut removed. Two experiments would change
-  that: evaluation stratified by resolution, and folds stratified jointly on
-  (diagnosis, resolution) so no fold can exploit a mapping the others lack.
-  Both are implemented and neither has been run.
+- **Confound-aware fold splitting is implemented but was not run.** Folds
+  stratified jointly on (diagnosis, resolution) are available in
+  `configs/cv_resolution.yaml`. After the stratified and external results above
+  its expected value dropped: joint stratification makes folds comparable to
+  each other but does not remove the shortcut, and IDRiD answers the underlying
+  question outright. Left undone deliberately, not overlooked.
 
-- **No external validation yet.** IDRiD has been downloaded and verified — 455
-  images, 455 labels, the same 0-4 scale — and `docs/external-validation-prediction.md`
-  records what is expected, and what would falsify it, before the fact. The
-  measurement itself has not been made.
+- **Calibration was never addressed, and IDRiD exposed it.** The model issues 8
+  grade-4 predictions where 64 exist, because thresholds fitted on APTOS
+  validation are carried across unchanged. Temperature scaling, or reporting a
+  recalibrated variant beside the fixed-threshold one, would separate
+  calibration drift from discrimination loss. Neither was done.
+
+- **The external result rests on one mirror of one dataset.** 455 images from a
+  Kaggle copy of IDRiD rather than the full official distribution, and 129
+  healthy eyes is a small denominator for the specificity figure the conclusion
+  leans on — it moves by 0.008 per image. A second external set would make the
+  claim much harder to dismiss.
 
 - **Per-class test figures remain thin.** 17 Severe images in the test split;
   one case moves that class's recall by 0.06. Cross-validation improved the

@@ -110,3 +110,77 @@ Stated now, so it is not quietly dropped later if the result is flattering.
 - Reported: QWK, accuracy, macro F1, per-class recall, and the referable-DR
   sensitivity/specificity pair - against the APTOS test figures and against the
   0.652 metadata floor.
+
+---
+
+# Outcome, 24 September 2026
+
+**The prediction was wrong.** Nothing above has been edited; this section was
+appended after the measurement.
+
+The baseline five-fold ensemble, no fine-tuning, APTOS thresholds unchanged:
+
+| metric | APTOS test | IDRiD |
+|---|---|---|
+| QWK | 0.9091 | 0.8045 |
+| accuracy | 0.8033 | 0.5868 |
+| macro F1 | 0.5450 | 0.4609 |
+| referable sensitivity | 0.956 | 0.885 |
+| **referable specificity** | **0.917** | **0.987** |
+
+The discriminating measurement was specificity on the 129 healthy eyes, and it
+went the opposite way to the prediction. The shortcut story required the model
+to over-call disease on IDRiD, because in APTOS every image at 4288x2848 was
+diseased. Instead **1.6% of healthy eyes were called referable** and 82.9% were
+graded healthy outright. Specificity is *higher* on IDRiD than on APTOS.
+
+So the model did not carry the acquisition prior across. On a population where
+geometry says nothing, where the prior attached to that geometry is inverted
+relative to training, and with no adaptation of any kind, it holds QWK 0.8045.
+That is well above the 0.652 metadata floor measured on APTOS - and on IDRiD
+the equivalent floor is lower still, because a single resolution leaves file
+geometry with no signal to give.
+
+This is the strongest evidence in the project that the model reads the retina.
+
+## What did degrade
+
+Transfer is not free, and the failure has a clear shape.
+
+| grade | n | recall | predicted |
+|---|---|---|---|
+| 0 No DR | 129 | 0.829 | 130 |
+| 1 Mild | 22 | 0.364 | 54 |
+| 2 Moderate | 156 | 0.705 | 179 |
+| 3 Severe | 84 | 0.417 | 84 |
+| 4 Proliferative | 64 | **0.109** | **8** |
+
+The model issues 8 grade-4 predictions where there are 64 true cases. But
+missed referrals - true grade >= 3 called <= 1 - are only **2 of 148**. It is
+not failing to see the disease; it is compressing the top of the scale, calling
+proliferative cases severe or moderate.
+
+That is calibration drift under covariate shift, not a detection failure, and
+it is exactly what fixed thresholds carried across datasets would be expected to
+produce. It also argues that the referable-DR framing is the transferable one:
+the binary decision survives the shift (specificity 0.987, sensitivity 0.885)
+while the five-way grade does not.
+
+## The squash ensemble, for comparison
+
+QWK 0.7859, referable sensitivity 0.862, specificity 0.993, 3 of 148 severe
+cases missed. Marginally worse than baseline on everything except specificity -
+consistent with squash being the null result cross-validation found it to be.
+
+## What still cannot be claimed
+
+The caveats written before the experiment stand, and the favourable result does
+not retire them:
+
+- IDRiD differs from APTOS in camera, country, grading team and class balance
+  simultaneously. The result shows transfer survived; it does not isolate
+  *which* difference the model was robust to.
+- 129 healthy eyes is a small denominator. Specificity moves by 0.008 per image.
+- 455 images is a Kaggle mirror, not the full official IDRiD distribution.
+- No fine-tuning was involved by design, so nothing here speaks to how well the
+  model would adapt if it were allowed to.
