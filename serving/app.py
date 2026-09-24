@@ -98,7 +98,7 @@ class Grader:
         # 21 MB, so five of them is a cheap trade for an interactive demo.
         self.models = []
         for state in self.states:
-            model = build_model(cfg, self.device)
+            model = build_model(cfg, self.device, pretrained=False)
             model.load_state_dict(state)
             model.eval()
             self.models.append(model)

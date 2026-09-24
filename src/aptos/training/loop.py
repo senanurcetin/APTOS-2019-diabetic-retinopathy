@@ -110,11 +110,18 @@ def make_loader(df, transform, root, cfg: Config, *, shuffle: bool) -> DataLoade
 
 # ----------------------------------------------------------------------- model
 
-def build_model(cfg: Config, device: str):
+def build_model(cfg: Config, device: str, *, pretrained: bool = True):
+    """The backbone with a task head.
+
+    `pretrained=False` is for anything that immediately loads trained weights
+    over the top - evaluation and serving. Fetching ImageNet weights there only
+    to overwrite them adds a network dependency to startup and nothing else.
+    """
     import timm
 
     num_classes = 1 if cfg.train.mode == "reg" else N_GRADES
-    return timm.create_model(cfg.train.model, pretrained=True, num_classes=num_classes).to(device)
+    return timm.create_model(cfg.train.model, pretrained=pretrained,
+                             num_classes=num_classes).to(device)
 
 
 def build_criterion(cfg: Config, train_df, device: str):
