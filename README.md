@@ -215,8 +215,13 @@ and the concatenation matched a vendor API-key pattern).
 BigQuery is not required for anything. The project originally logged every run
 to a GCP project, and when that access was withdrawn the entire experimental
 record went with it — which is why tracking is local and travels with the
-repository. `load_to_bigquery.py` and `analyze_runs.py` are the only files that
-still expect it, and nothing depends on them.
+repository. `load_to_bigquery.py` is the only file that still talks to it, and
+it is an optional export - nothing reads from BigQuery any more.
+
+`scripts/analyze_runs.py` prints the run leaderboard and, with
+`--sweep models/cv/<sweep>`, the confusion matrix, per-class recall and every
+missed severe case for one sweep's ensemble, read from its persisted fold
+predictions.
 
 ## Running
 
@@ -375,11 +380,10 @@ shortcut was tested rather than only reported, and IDRiD was run. What remains:
   parameter that does not exist, uses `pd` and `plt` without importing either,
   and has no training loop. It is excluded from linting and scheduled for
   replacement.
-- **Several legacy scripts are unported.** `analyze_runs.py` builds a BigQuery
-  client at module scope and cannot be imported without credentials;
-  `load_to_bigquery.py`'s default table names can never match what `train.py`
-  queries; `run_seeds.sh` omits `--exclude-leaked` while `run_cv.sh` includes
-  it. The package path does not depend on any of them.
+- **Single-split training still runs through `scripts/train.py`.** Cross-
+  validation moved into the package; the single-split trainer has not. The
+  pipeline's `train` stage drives it with the config's settings, so this is a
+  tidiness gap rather than a correctness one.
 
 ## Layout
 
