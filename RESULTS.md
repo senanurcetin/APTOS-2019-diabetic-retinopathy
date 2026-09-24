@@ -326,6 +326,68 @@ Generated reports: `reports/confound_evaluation.md`, `reports/external_validatio
 
 ---
 
+## Calibration and the clinical operating point
+
+A grade is a benchmark output. A screening programme asks whether to refer, and
+picks its point on the curve deliberately: a missed referral risks sight, a false
+positive costs an appointment.
+
+The operating point is chosen at **sensitivity >= 0.90 on out-of-fold
+predictions** - each pool image scored by the fold model that held it out - and
+then applied unchanged to the held-out test split and to IDRiD. Choosing it on
+test and reporting test performance at that choice would measure the selection.
+
+Chosen cut: **1.336** on the raw ordinal score.
+
+| set | n | prevalence | sensitivity | specificity | PPV | referral rate | ROC AUC |
+|---|---|---|---|---|---|---|---|
+| APTOS out-of-fold (selection) | 3247 | 0.404 | 0.900 | 0.926 | 0.891 | 40.8% | 0.974 |
+| APTOS test | 366 | 0.374 | 0.920 | 0.934 | 0.894 | 38.5% | **0.983** |
+| IDRiD | 455 | 0.668 | 0.816 | 1.000 | 1.000 | 54.5% | **0.984** |
+
+### Discrimination transfers; calibration does not
+
+This is the cleanest statement of what external validation found.
+
+**ROC AUC is 0.983 on APTOS test and 0.984 on IDRiD.** The model ranks patients
+on an unseen population exactly as well as on its own. Nothing about its ability
+to separate referable from non-referable degraded.
+
+What moved is where the cut sits. At the fixed threshold IDRiD sensitivity falls
+to 0.816 while specificity reaches 1.000 - the score distribution shifted down
+relative to the boundary, so a threshold calibrated on APTOS under-refers on
+IDRiD.
+
+Expected calibration error says the same thing:
+
+| set | ECE |
+|---|---|
+| APTOS out-of-fold | 0.0190 |
+| APTOS test | 0.0317 |
+| **IDRiD** | **0.1174** |
+
+And the reliability table gives it a direction: every IDRiD bin is
+*under*-confident. The model predicts 0.27 probability of referable in a bin
+where 80% are referable. It is not confused about who is sick; it is
+systematically too cautious about saying so.
+
+That is a one-parameter problem. Refitting the cut on target-population data
+would recover the sensitivity, and the AUC says the information is there to
+recover. It is left unfixed here because fixing it would require labelled data
+from the target population, which is exactly what a deployment would have to
+obtain and this project does not have.
+
+### Decision curve
+
+Net benefit against treating everyone and treating no one, across thresholds
+from 0.05 to 0.70: the model beats **both trivial policies at every threshold
+tested, on all three sets including IDRiD**. Miscalibrated and still useful -
+those are separate questions, and separating them is the point of running this.
+
+Generated report: `reports/calibration.md`.
+
+---
+
 ## The label ceiling
 
 The dataset contains the same image more than once. Where it does, the labels

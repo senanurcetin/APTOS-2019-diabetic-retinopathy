@@ -88,6 +88,13 @@ exclude = ["aptos_2019.ipynb"]
 select = ["E", "F", "W", "I", "UP", "B"]
 ignore = ["E501"]
 
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI's dependency injection requires these calls in argument defaults;
+# B008 exists for mutable defaults, which these are not.
+extend-immutable-calls = [
+    "fastapi.File", "fastapi.Form", "fastapi.Query", "fastapi.Depends", "fastapi.Body",
+]
+
 [tool.coverage.run]
 source = ["aptos"]
 omit = ["*/reporting/figures.py"]

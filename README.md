@@ -283,19 +283,39 @@ job installs CPU torch and runs everything.
   `error code 1455`. Do not edit `train_cv.py` while it runs either; the
   workers re-import it by path. The same applies to anything under `src/aptos/`.
 
+## Serving
+
+```bash
+pip install -e ".[train,serve]"
+uvicorn serving.app:app --reload
+```
+
+`POST /predict` takes a fundus photograph and returns a grade, the referral
+decision, the raw ordinal score and the spread across the five folds.
+`GET /model-card` returns what the model is known to get wrong. The page states
+that this is not a medical device, and lists the confound, the label ceiling and
+the calibration drift, because a demo that omits them would contradict the
+analysis it exists to demonstrate.
+
+The referable flag is the headline rather than the grade: external validation
+showed the binary decision transfers (ROC AUC 0.984) while the five-way grade
+compresses under distribution shift.
+
 ## Known gaps
 
 Documented rather than hidden. Four earlier entries here are now closed —
 cross-validation completed, `squash` was trained and came back null, the
 shortcut was tested rather than only reported, and IDRiD was run. What remains:
 
-- **Calibration was never addressed, and external validation exposed it.** On
-  IDRiD the model issues 8 grade-4 predictions where 64 exist, because
-  thresholds fitted on APTOS validation are carried across unchanged. Missed
-  referrals stay at 2 of 148, so this is scale compression rather than a
-  detection failure — but temperature scaling, or reporting a recalibrated
-  variant beside the fixed-threshold one, would separate the two. Neither was
-  done.
+- **Calibration is measured but deliberately not corrected.** On IDRiD the ROC
+  AUC is 0.984 against APTOS test's 0.983 — discrimination transfers intact —
+  but ECE rises from 0.019 to 0.117 and the model becomes systematically
+  *under*-confident, so a threshold fitted on APTOS under-refers elsewhere
+  (sensitivity 0.816 against the 0.90 it was set for). It is a one-parameter
+  problem and fixing it needs labelled data from the target population, which is
+  what a deployment would have to obtain and this project does not have. See
+  [`reports/calibration.md`](reports/calibration.md).
+
 - **CLAHE parameters were never tuned.** Only clip=2.0 on the LAB lightness
   channel has been trained. So the finding is "CLAHE at these settings does
   nothing", not "CLAHE cannot help" — though two independent designs now put
@@ -309,7 +329,14 @@ shortcut was tested rather than only reported, and IDRiD was run. What remains:
   Kaggle copy of IDRiD rather than the full official distribution, and 129
   healthy eyes is a small denominator for the specificity the conclusion leans
   on — it moves by 0.008 per image.
-- **There is no serving surface.** No inference API, no demo, no model card.
+- **The serving surface runs locally but is not deployed.** `serving/app.py`
+  exposes `/predict`, `/health` and `/model-card` with a minimal page, and its
+  grades match the offline evaluation on held-out images. Nothing is hosted, and
+  Grad-CAM is stubbed rather than implemented.
+- **Serving preprocesses from source while training read cached JPEGs.** The
+  cache went through a quality-95 JPEG round-trip that an upload does not, so
+  raw scores differ slightly — up to 0.12 on six held-out images, with every
+  predicted grade agreeing. Small, real, and not worth hiding.
 - **`aptos_2019.ipynb` is broken.** It calls `APTOSDataset(use_crop=...)`, a
   parameter that does not exist, uses `pd` and `plt` without importing either,
   and has no training loop. It is excluded from linting and scheduled for

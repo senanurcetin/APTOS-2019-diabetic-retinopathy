@@ -198,13 +198,29 @@ def preprocess(path, size=512, use_clahe=True, normalize=False,
     Returns: (image | None, info dict). Unreadable images and images failing
     the quality gate return None, with the reason in info["error"].
     """
-    info = {"path": str(path)}
-
     img = cv2.imread(str(path), cv2.IMREAD_COLOR)
     if img is None:
-        info["error"] = "unreadable"
-        return None, info
+        return None, {"path": str(path), "error": "unreadable"}
 
+    image, info = preprocess_array(
+        img, size=size, use_clahe=use_clahe, normalize=normalize,
+        clip_limit=clip_limit, quality_check=quality_check, square_mode=square_mode,
+    )
+    info["path"] = str(path)
+    return image, info
+
+
+def preprocess_array(img, size=512, use_clahe=True, normalize=False,
+                     clip_limit=2.0, quality_check=True, square_mode="squash"):
+    """The same pipeline, starting from an already-decoded BGR array.
+
+    Added so the inference service can run the exact pipeline the training cache
+    was built with, without first writing an upload to a temporary file. There
+    is one implementation and `preprocess()` delegates to it, so a served
+    prediction cannot drift from a trained one - which is the whole reason this
+    module is shared in the first place.
+    """
+    info = {}
     info["orig_height"], info["orig_width"] = img.shape[:2]
 
     if quality_check:
