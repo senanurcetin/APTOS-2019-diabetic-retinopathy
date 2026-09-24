@@ -143,9 +143,25 @@ def build(m, sc, ln):
         _, p = st.kruskal(*[m[m.diagnosis == g][col].values for g in range(5)])
         md.append(f"| {col} | {p:.2e} | {'differs' if p < 0.05 else 'no difference'} |\n")
 
-    md.append("\n`No DR` images have a median of 1.10 megapixels and half are "
-              "square; the diseased classes sit at 4-5 megapixels and almost "
-              "none are square. That is the shortcut, stated directly.\n")
+    # Computed, not written in. This sentence used to be literal text inside a
+    # generated report, so it would have kept describing the data after the data
+    # changed.
+    def square_share(frame):
+        return float(((frame.aspect_ratio > 0.98) & (frame.aspect_ratio < 1.02)).mean())
+
+    no_dr = m[m.diagnosis == 0]
+    diseased = [m[m.diagnosis == g] for g in range(1, 5)]
+    sick_mp = [s.megapixels.median() for s in diseased if len(s)]
+    sick_sq = [square_share(s) for s in diseased if len(s)]
+    md.append(
+        f"\n`No DR` images have a median of {no_dr.megapixels.median():.2f} megapixels "
+        f"and {square_share(no_dr):.0%} are square; the diseased grades have medians "
+        f"of {min(sick_mp):.1f}-{max(sick_mp):.1f} megapixels, and at most "
+        f"{max(sick_sq):.0%} of any diseased grade is square."
+    )
+    if no_dr.megapixels.median() * 2 < min(sick_mp):
+        md.append(" That is the shortcut, stated directly.")
+    md.append("\n")
 
     # --------------------------------------------------------- label noise
     md.append("\n## 3. Label noise\n\n")
@@ -168,12 +184,18 @@ def build(m, sc, ln):
             dist = ", ".join(f"{k} grade(s): {v}" for k, v in ln["gap_dist"].items())
             md.append(f"\nDisagreement sizes: {dist}.\n")
         md.append("\n### What this means\n\n")
+        # This report runs before any training, so it says nothing about a
+        # particular model. It used to carry the literal sentence "The current
+        # model sits near 0.82 on test", which was a claim this stage could not
+        # know and which went stale when the model changed. The comparison lives
+        # in RESULTS.md, next to the model numbers.
         md.append(f"A single label is correct roughly "
                   f"**{ln['single_label_acc'] * 100:.0f}%** of the time. That caps "
                   "the accuracy any model, however good, can reach on this "
-                  "dataset. The current model sits near 0.82 on test - close to "
-                  "the ceiling. Part of the remaining error belongs to the "
-                  "labels, not the model.\n\n")
+                  "dataset: a model near that figure is close to the ceiling, "
+                  "and part of its remaining error belongs to the labels rather "
+                  "than to the model. RESULTS.md reads the trained models "
+                  "against this number.\n\n")
         md.append("This is a **lower bound**: it only measures noise visible in "
                   "duplicated images, not in the rest of the dataset.\n")
 

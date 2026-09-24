@@ -55,7 +55,7 @@ Kruskal-Wallis test for differences between classes:
 | contrast_std | 1.73e-67 | differs |
 | megapixels | 0.00e+00 | differs |
 
-`No DR` images have a median of 1.10 megapixels and half are square; the diseased classes sit at 4-5 megapixels and almost none are square. That is the shortcut, stated directly.
+`No DR` images have a median of 1.10 megapixels and 50% are square; the diseased grades have medians of 4.2-5.1 megapixels, and at most 5% of any diseased grade is square. That is the shortcut, stated directly.
 
 ## 3. Label noise
 
@@ -74,7 +74,7 @@ Disagreement sizes: 1 grade(s): 33, 2 grade(s): 9, 3 grade(s): 1.
 
 ### What this means
 
-A single label is correct roughly **84%** of the time. That caps the accuracy any model, however good, can reach on this dataset. The current model sits near 0.82 on test - close to the ceiling. Part of the remaining error belongs to the labels, not the model.
+A single label is correct roughly **84%** of the time. That caps the accuracy any model, however good, can reach on this dataset: a model near that figure is close to the ceiling, and part of its remaining error belongs to the labels rather than to the model. RESULTS.md reads the trained models against this number.
 
 This is a **lower bound**: it only measures noise visible in duplicated images, not in the rest of the dataset.
 

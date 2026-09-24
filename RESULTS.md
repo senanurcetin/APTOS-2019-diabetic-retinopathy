@@ -233,10 +233,10 @@ A RandomForest trained **only on file properties** — resolution, aspect ratio,
 brightness, contrast, file size — never seeing a single pixel of retina.
 Five-fold cross-validation.
 
-| measure | metadata only | always predict 0 | the real model |
+| measure | metadata only | always predict 0 | the model (5-fold ensemble) |
 |---|---|---|---|
-| QWK | **0.652** | 0.000 | ~0.90 |
-| Accuracy | 0.708 | 0.493 | ~0.82 |
+| QWK | **0.652** | 0.000 | 0.9091 |
+| Accuracy | 0.708 | 0.493 | 0.8033 |
 
 Where it comes from:
 
@@ -445,7 +445,7 @@ should agree.
 
 Disagreement sizes: 33 pairs differ by one grade, 9 by two, 1 by three.
 
-The model's test accuracy is 0.82 — near that ceiling. Part of the remaining
+The five-fold baseline ensemble's test accuracy is 0.8033 — near that ceiling. Part of the remaining
 error belongs to the labels, not the model. This is a **lower bound**: it only
 measures noise visible in duplicated images.
 
