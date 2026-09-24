@@ -291,10 +291,15 @@ job installs CPU torch and runs everything.
   `val_images/`, not `valid_images/`.
 - **`test.csv` ends with ~500 blank lines.** Loading it raw with schema
   autodetection produces a broken table.
-- **Long GPU runs are fragile on Windows.** Do not start a second GPU job
-  alongside one — the commit limit is exhausted and dataloader workers die with
-  `error code 1455`. Do not edit `train_cv.py` while it runs either; the
-  workers re-import it by path. The same applies to anything under `src/aptos/`.
+- **Long GPU runs are fragile on Windows.** Every dataloader worker is a
+  fresh process that re-imports torch and maps its CUDA libraries, and Windows
+  charges each of them against a system-wide commit limit. Run out and the
+  workers die with `error code 1455` ("paging file too small"). It is not a
+  VRAM problem - peak VRAM here is 2.2 GB of 6. Do not start a second heavy job
+  alongside a run, and do not edit anything under `src/aptos/` while one is
+  live, because workers re-import it by path. When headroom is short,
+  `--workers 0` loads data in the main process: slower, but it cannot fail
+  this way.
 
 ## Serving
 
@@ -380,10 +385,13 @@ shortcut was tested rather than only reported, and IDRiD was run. What remains:
   parameter that does not exist, uses `pd` and `plt` without importing either,
   and has no training loop. It is excluded from linting and scheduled for
   replacement.
-- **Single-split training still runs through `scripts/train.py`.** Cross-
-  validation moved into the package; the single-split trainer has not. The
-  pipeline's `train` stage drives it with the config's settings, so this is a
-  tidiness gap rather than a correctness one.
+- **The ported single-split trainer has not yet reproduced a recorded run.**
+  `aptos.training.single` keeps the original's model, loss, schedule, threshold
+  search and early stopping, and a smoke run passes end to end, but a full
+  seed-42 run without leak exclusion - the comparison against the recorded
+  0.8960 test QWK - has not been made. Worker seeding differs (two workers,
+  not four), so an exact match is not expected; a result outside the
+  +/-0.0033 seed spread would be.
 
 ## Layout
 

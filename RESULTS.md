@@ -582,7 +582,7 @@ python scripts/quality_report.py
 python scripts/confound_analysis.py
 python scripts/preprocess_images.py --size 512
 python scripts/make_figures.py
-python scripts/train.py --mode reg --exclude-leaked --no-bq
+python -m aptos.training.single --mode reg --exclude-leaked
 ```
 
 Every report under `reports/` is generated, not hand-written, so the numbers

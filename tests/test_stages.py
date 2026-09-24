@@ -140,6 +140,7 @@ def test_cv_carries_the_stratification(tmp_path, captured):
 def test_train_uses_the_variant_cache_and_excludes_leaks(tmp_path, captured):
     pipeline._run_train(_cfg(tmp_path), _args())
     cmd = captured[0]
+    assert "aptos.training.single" in cmd
     assert cmd[cmd.index("--data-dir") + 1].endswith("processed")
     assert "--exclude-leaked" in cmd
     assert "--no-bq" in cmd

@@ -101,7 +101,7 @@ def main():
                 print(f"  {done}/{len(jobs)}")
 
     # Provenance record: which settings produced this directory. train.py and
-    # train_cv.py read and print it, so a run always states its preprocessing.
+    # aptos.training checks it, so a run always states its preprocessing.
     (out_root / "_manifest.json").write_text(json.dumps({
         "size": args.size,
         "clahe": use_clahe,

@@ -173,7 +173,7 @@ def _run_preprocess(cfg: Config, args: argparse.Namespace) -> None:
 
 
 def _run_train(cfg: Config, args: argparse.Namespace) -> None:
-    cmd = [sys.executable, "-u", cfg.paths.root / "scripts" / "train.py",
+    cmd = [sys.executable, "-u", "-m", "aptos.training.single",
            "--data-dir", cfg.data_dir, "--variant", cfg.variant,
            "--seed", cfg.train.seed, "--epochs", cfg.train.epochs,
            "--size", cfg.train.size, "--batch", cfg.train.batch,
