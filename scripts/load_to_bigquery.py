@@ -1,38 +1,52 @@
 """Load the prepared APTOS-2019 label CSVs into BigQuery.
 
+Optional. Nothing in the pipeline needs BigQuery; this exists for anyone who
+wants the labels there.
+
 Prerequisites:
-    pip install google-cloud-bigquery
-    python scripts/prepare_bq_csv.py
+    pip install -e ".[bigquery]"
+    python -m aptos.pipeline run prepare
     Authentication: gcloud auth application-default login
                     or  export GOOGLE_APPLICATION_CREDENTIALS=.../key.json
 
 Usage:
-    python scripts/load_to_bigquery.py --project PROJECT_ID [--dataset aptos2019]
-                                       [--location EU] [--prefix aptos_]
+    python scripts/load_to_bigquery.py --project PROJECT_ID [--dataset APTOS_2019]
+
+The defaults used to be dataset `aptos2019` with no table prefix, producing
+`{project}.aptos2019.labels` - while train.py and aptos.data.labels query
+`{project}.APTOS_2019.aptos_labels`. With the defaults, the two could never
+meet, and nothing said so. They now agree, and the dataset follows the same
+APTOS_BQ_DATASET variable the readers use.
 """
 import argparse
+import os
 import pathlib
-
-from google.cloud import bigquery
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 BQ_DIR = ROOT / "data" / "bq"
 
-SCHEMA = [
-    bigquery.SchemaField("id_code", "STRING", mode="REQUIRED",
-                         description="Kaggle image id; the file is <id_code>.png"),
-    bigquery.SchemaField("diagnosis", "INT64", mode="REQUIRED",
-                         description="ICDRSS DR severity grade, 0-4"),
-    bigquery.SchemaField("diagnosis_label", "STRING", mode="REQUIRED",
-                         description="Human-readable grade"),
-    bigquery.SchemaField("is_referable", "BOOL", mode="REQUIRED",
-                         description="diagnosis >= 2, referable DR"),
-    bigquery.SchemaField("split", "STRING", mode="REQUIRED",
-                         description="train / valid / test"),
-    bigquery.SchemaField("image_file", "STRING", mode="REQUIRED"),
-    bigquery.SchemaField("image_uri", "STRING", mode="REQUIRED",
-                         description="Full gs:// path to the image"),
-]
+
+def _schema():
+    # Imported here, not at module level, so --help works without the
+    # google-cloud-bigquery package or any credentials.
+    from google.cloud import bigquery
+
+    field = bigquery.SchemaField
+    return [
+        field("id_code", "STRING", mode="REQUIRED",
+              description="Kaggle image id; the file is <id_code>.png"),
+        field("diagnosis", "INT64", mode="REQUIRED",
+              description="ICDRSS DR severity grade, 0-4"),
+        field("diagnosis_label", "STRING", mode="REQUIRED",
+              description="Human-readable grade"),
+        field("is_referable", "BOOL", mode="REQUIRED",
+              description="diagnosis >= 2, referable DR"),
+        field("split", "STRING", mode="REQUIRED",
+              description="train / valid / test"),
+        field("image_file", "STRING", mode="REQUIRED"),
+        field("image_uri", "STRING", mode="REQUIRED",
+              description="Full gs:// path to the image"),
+    ]
 
 # table name -> source CSV
 TABLES = {
@@ -44,12 +58,18 @@ TABLES = {
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--project", required=True)
-    ap.add_argument("--dataset", default="aptos2019")
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--project", default=os.environ.get("APTOS_GCP_PROJECT"),
+                    help="defaults to $APTOS_GCP_PROJECT")
+    ap.add_argument("--dataset", default=os.environ.get("APTOS_BQ_DATASET", "APTOS_2019"))
     ap.add_argument("--location", default="EU", help="EU, US, europe-west1, ...")
-    ap.add_argument("--prefix", default="", help="table name prefix, e.g. aptos_")
+    ap.add_argument("--prefix", default="aptos_",
+                    help="table name prefix; aptos_ gives the aptos_labels table the readers query")
     args = ap.parse_args()
+    if not args.project:
+        ap.error("--project is required (or set APTOS_GCP_PROJECT)")
+
+    from google.cloud import bigquery
 
     client = bigquery.Client(project=args.project)
 
@@ -67,7 +87,7 @@ def main() -> None:
 
         table_id = f"{args.project}.{args.dataset}.{args.prefix}{table}"
         job_config = bigquery.LoadJobConfig(
-            schema=SCHEMA,
+            schema=_schema(),
             source_format=bigquery.SourceFormat.CSV,
             skip_leading_rows=1,
             write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
