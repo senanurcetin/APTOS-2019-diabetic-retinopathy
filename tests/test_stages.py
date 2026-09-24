@@ -158,14 +158,31 @@ def no_execution(monkeypatch):
                             lambda cfg, args, _n=stage.name: pytest.fail(f"{_n} executed"))
 
 
-def test_dry_run_after_the_stage_names_does_not_execute(no_execution, capsys):
+def _preconditions(monkeypatch, problems):
+    """Pin every stage's precondition result, so the test does not depend on
+    whether this machine happens to have the dataset. The first version of the
+    test below read the real repository and passed only where data/ existed."""
+    for stage in pipeline.STAGES:
+        monkeypatch.setattr(stage, "check", lambda cfg, _p=problems: list(_p))
+
+
+def test_dry_run_after_the_stage_names_does_not_execute(no_execution, monkeypatch, capsys):
     """`run all --dry-run` - the form the module's own docstring recommends -
     used to execute the prepare stage for real."""
+    _preconditions(monkeypatch, [])
     assert pipeline.main(["run", "quality", "--dry-run"]) == 0
     assert "dry run" in capsys.readouterr().out
 
 
-def test_dry_run_before_the_stage_names_does_not_execute(no_execution):
+def test_dry_run_reports_blocked_stages_without_executing(no_execution, monkeypatch, capsys):
+    """With inputs missing, a dry run should survey and report, not raise."""
+    _preconditions(monkeypatch, ["label table: found 0, need at least 1"])
+    assert pipeline.main(["run", "quality", "--dry-run"]) == 0
+    assert "WOULD FAIL" in capsys.readouterr().out
+
+
+def test_dry_run_before_the_stage_names_does_not_execute(no_execution, monkeypatch):
+    _preconditions(monkeypatch, [])
     assert pipeline.main(["run", "--dry-run", "quality"]) == 0
 
 
