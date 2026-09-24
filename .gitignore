@@ -33,6 +33,8 @@ __pycache__/
 .venv/
 venv/
 *.egg-info/
+/build/
+/dist/
 .pytest_cache/
 .ruff_cache/
 .coverage
