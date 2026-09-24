@@ -198,11 +198,19 @@ For GPU support install PyTorch from the CUDA index **only** — adding
 pip install --force-reinstall torch torchvision --index-url https://download.pytorch.org/whl/cu128
 ```
 
-Runs are tracked locally with MLflow, in `mlflow.db` beside the code:
+Runs are tracked locally with MLflow in a SQLite store, `mlflow.db`, which
+stays on the machine that produced it:
 
 ```bash
 mlflow ui --backend-store-uri sqlite:///mlflow.db
 ```
+
+The record travels with the repository as text instead: `python -m aptos.tracking
+export` writes every run to [`reports/runs.csv`](reports/runs.csv), which is
+versioned, diffable, and readable in a pull request. The binary store is not
+committed - it embeds absolute local paths, and its byte layout once tripped
+GitHub secret scanning (SQLite packed the metric key `test_acc` beside a run id,
+and the concatenation matched a vendor API-key pattern).
 
 BigQuery is not required for anything. The project originally logged every run
 to a GCP project, and when that access was withdrawn the entire experimental

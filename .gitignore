@@ -13,6 +13,11 @@ client_secret*.json
 /data/
 /models/
 /mlruns/
+# The SQLite tracking store is binary, grows with every run, and embeds absolute
+# local paths. It also tripped GitHub secret scanning: SQLite packs the metric
+# key `test_acc` beside a run id, and the concatenation matches a vendor API-key
+# pattern. The record is versioned as text instead - see reports/runs.csv.
+/mlflow.db
 /outputs/
 *.pt
 *.pth

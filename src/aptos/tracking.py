@@ -5,10 +5,12 @@ run to `datascientis.APTOS_2019` and, when that project was withdrawn, its
 entire experimental record went with it - the numbers survive only because they
 were transcribed into RESULTS.md by hand.
 
-So the system of record is local and travels with the repository. BigQuery
-remains available as an extra sink for anyone who wants it, and is off by
-default. Local-first is not a downgrade here; it is the fix for the specific
-way this project broke.
+So the system of record is local, and it travels with the repository as text:
+`export_runs()` writes every run to `reports/runs.csv`, which is versioned. The
+SQLite store itself (`mlflow.db`) is not - it is binary, embeds absolute local
+paths, and its byte layout once tripped GitHub secret scanning. BigQuery remains
+an optional extra sink, off by default. Local-first is not a downgrade here; it
+is the fix for the specific way this project broke.
 
 MLflow is imported lazily so the package still works - and CI still runs - when
 it is not installed.
@@ -171,3 +173,68 @@ def backfill_history(cfg: Config) -> int:
             })
             written += 1
     return written
+
+
+# --------------------------------------------------------------------- export
+
+# The metrics worth reading in a diff. Epoch-wise curves stay in MLflow.
+EXPORT_METRICS = (
+    "valid_qwk", "test_qwk", "test_acc", "test_accuracy", "test_macro_f1",
+    "valid_qwk_mean", "valid_qwk_std", "test_qwk_mean", "test_qwk_std",
+    "ensemble_qwk", "ensemble_accuracy", "ensemble_macro_f1",
+    "ensemble_referable_sensitivity", "ensemble_referable_specificity",
+    "best_epoch",
+)
+EXPORT_TAGS = ("variant", "split", "fold", "sweep", "stratify", "source", "git_commit")
+
+
+def export_runs(cfg: Config, out: pathlib.Path | None = None) -> pathlib.Path:
+    """Write every tracked run to a CSV that can be versioned and reviewed.
+
+    This is what keeps the record with the repository. A reviewer can read it in
+    a pull request, a diff shows exactly which numbers moved, and nothing about
+    it depends on the machine that produced it.
+    """
+    import pandas as pd
+
+    mlflow = setup(cfg)
+    runs = mlflow.search_runs(experiment_names=[cfg.tracking.experiment])
+    if runs.empty:
+        raise RuntimeError("no runs to export")
+
+    frame = pd.DataFrame({"run_name": runs.get("tags.mlflow.runName")})
+    for tag in EXPORT_TAGS:
+        col = f"tags.{tag}"
+        if col in runs:
+            frame[tag] = runs[col]
+    for metric in EXPORT_METRICS:
+        col = f"metrics.{metric}"
+        if col in runs:
+            frame[metric] = runs[col].round(6)
+
+    # Runs record the commit they came from. The branch that produced the
+    # cross-validation runs was rewritten once before its first push, to strip
+    # the binary tracking store from history, which changed every commit hash on
+    # it. reports/commit_map.csv maps the recorded hashes to the ones that
+    # exist; the store keeps the original, the export shows the reachable one.
+    commit_map = cfg.paths.reports / "commit_map.csv"
+    if "git_commit" in frame and commit_map.exists():
+        mapping = pd.read_csv(commit_map, dtype=str).set_index("pre_rewrite")["post_rewrite"]
+        frame["git_commit"] = frame["git_commit"].map(lambda h: mapping.get(h, h))
+
+    frame = frame.sort_values(["split", "variant", "run_name"], na_position="last")
+    out = out or cfg.paths.reports / "runs.csv"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    frame.to_csv(out, index=False, lineterminator="\n")
+    return out
+
+
+if __name__ == "__main__":
+    import sys
+
+    if sys.argv[1:] == ["export"]:
+        path = export_runs(Config.load())
+        print(f"written to {path}")
+    else:
+        print("usage: python -m aptos.tracking export")
+        raise SystemExit(2)

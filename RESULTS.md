@@ -1,7 +1,7 @@
 # Results
 
 Every number here was produced by the code in this repository. Runs are tracked
-in MLflow (`mlflow.db`, in the repository root); the six single-split runs
+in MLflow and exported as text to `reports/runs.csv`; the six single-split runs
 predate that layer and were transcribed from the original BigQuery tables.
 
 Setup for all runs: EfficientNet-B0 (ImageNet weights), 384px input, batch 16,
