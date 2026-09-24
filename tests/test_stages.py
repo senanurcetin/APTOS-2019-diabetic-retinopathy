@@ -143,3 +143,45 @@ def test_train_uses_the_variant_cache_and_excludes_leaks(tmp_path, captured):
     assert cmd[cmd.index("--data-dir") + 1].endswith("processed")
     assert "--exclude-leaked" in cmd
     assert "--no-bq" in cmd
+
+
+# ------------------------------------------------------------------------- CLI
+# These go through main(), i.e. through argparse, because that is where the
+# dry-run bug lived: every test above called run_stages() directly and never
+# saw how the command line was parsed.
+
+@pytest.fixture
+def no_execution(monkeypatch):
+    """Fail loudly if any stage body runs."""
+    for stage in pipeline.STAGES:
+        monkeypatch.setattr(stage, "run",
+                            lambda cfg, args, _n=stage.name: pytest.fail(f"{_n} executed"))
+
+
+def test_dry_run_after_the_stage_names_does_not_execute(no_execution, capsys):
+    """`run all --dry-run` - the form the module's own docstring recommends -
+    used to execute the prepare stage for real."""
+    assert pipeline.main(["run", "quality", "--dry-run"]) == 0
+    assert "dry run" in capsys.readouterr().out
+
+
+def test_dry_run_before_the_stage_names_does_not_execute(no_execution):
+    assert pipeline.main(["run", "--dry-run", "quality"]) == 0
+
+
+def test_arguments_after_a_double_dash_reach_the_stage(monkeypatch):
+    seen = {}
+    for stage in pipeline.STAGES:
+        monkeypatch.setattr(stage, "run", lambda cfg, args: seen.setdefault("extra", args.extra))
+        monkeypatch.setattr(stage, "check", lambda cfg: [])
+    pipeline.main(["run", "prepare", "--only", "--", "--workers", "2"])
+    assert seen["extra"] == ["--workers", "2"]
+
+
+def test_pipeline_flags_are_not_passed_through_to_scripts(monkeypatch):
+    seen = {}
+    for stage in pipeline.STAGES:
+        monkeypatch.setattr(stage, "run", lambda cfg, args: seen.setdefault("extra", args.extra))
+        monkeypatch.setattr(stage, "check", lambda cfg: [])
+    pipeline.main(["run", "prepare", "--only", "--force"])
+    assert seen["extra"] == []

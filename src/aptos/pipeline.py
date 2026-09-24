@@ -398,8 +398,11 @@ def build_parser() -> argparse.ArgumentParser:
                      help="check preconditions and report, without executing")
     run.add_argument("--force", action="store_true",
                      help="rebuild a processed cache even if it exists with other settings")
-    run.add_argument("extra", nargs=argparse.REMAINDER,
-                     help="arguments passed through to the underlying script")
+    # Pass-through arguments go after a literal `--`, split off in main() before
+    # argparse sees them. This used to be a REMAINDER positional, which swallowed
+    # every flag written after the stage names: `run all --dry-run` put
+    # --dry-run into the pass-through list, so nothing was a dry run - the
+    # prepare stage executed for real and scan died on an unknown argument.
 
     check = sub.add_parser("check", help="report which stages could run right now")
     check.add_argument("--config", default=None)
@@ -436,7 +439,14 @@ def cmd_check(cfg: Config) -> int:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    argv = list(sys.argv[1:] if argv is None else argv)
+    extra: list[str] = []
+    if "--" in argv:
+        cut = argv.index("--")
+        argv, extra = argv[:cut], argv[cut + 1:]
+
     args = build_parser().parse_args(argv)
+    args.extra = extra
 
     if args.command == "list":
         return cmd_list()
