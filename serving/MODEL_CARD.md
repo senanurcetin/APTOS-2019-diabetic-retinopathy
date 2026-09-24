@@ -1,19 +1,27 @@
 ---
-title: APTOS Retinopathy Grader
-emoji: 👁️
-colorFrom: indigo
-colorTo: gray
-sdk: docker
-app_port: 7860
-pinned: false
 license: mit
-short_description: Diabetic retinopathy grading, with its limits stated
+library_name: onnx
+pipeline_tag: image-classification
+tags:
+  - medical-imaging
+  - diabetic-retinopathy
+  - fundus
+  - efficientnet
+  - onnx
+datasets:
+  - aptos2019
 ---
 
 # APTOS retinopathy grader
 
-Upload a colour fundus photograph and get an ICDRSS grade (0-4) and a referral
-decision, from a five-fold EfficientNet-B0 ensemble trained on APTOS-2019.
+A five-fold EfficientNet-B0 ensemble that grades diabetic retinopathy (ICDRSS
+0-4) from colour fundus photographs and makes a referral decision. Trained on
+APTOS-2019; exported to ONNX for CPU serving.
+
+The export was checked against the original PyTorch models before publication:
+maximum raw-score difference 3.1e-05 on 40 held-out images, zero grade
+mismatches. `export.json` records that check alongside the thresholds and the
+preprocessing settings the model expects.
 
 > **Not a medical device.** A benchmark model trained on one public dataset,
 > with no clinical validation and no regulatory clearance. Do not use it for

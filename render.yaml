@@ -1,0 +1,15 @@
+# Render blueprint for the inference service.
+#
+# In the Render dashboard: New -> Blueprint -> pick this repository. Render
+# builds serving/Dockerfile from the repository root and runs it on the free
+# plan. The service sleeps after inactivity, so the first request after a quiet
+# spell waits for a cold start.
+services:
+  - type: web
+    name: aptos-retinopathy-grader
+    runtime: docker
+    plan: free
+    dockerfilePath: ./serving/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true

@@ -309,6 +309,29 @@ The referable flag is the headline rather than the grade: external validation
 showed the binary decision transfers (ROC AUC 0.984) while the five-way grade
 compresses under distribution shift.
 
+### Deployment
+
+The weights are published as an ONNX export on Hugging Face:
+[senanurcetin/aptos-retinopathy-grader](https://huggingface.co/senanurcetin/aptos-retinopathy-grader).
+The service deploys to Render's free tier from [`render.yaml`](render.yaml).
+
+The free tier allows 512 MB of RAM, which the PyTorch service did not fit. So
+the deployed path runs the same ensemble through ONNX Runtime and never imports
+torch. Every substitution in that path was measured before it was used:
+
+| step | check | result |
+|---|---|---|
+| PyTorch -> ONNX | raw scores on 40 held-out images | max difference 3.1e-05, 0 grade mismatches |
+| torchvision -> numpy input transform | 25 images, pixel by pixel | identical |
+| memory | largest 8 test images, full service | peak 204 MB (was 613 MB with ONNX Runtime's arena on) |
+| dependencies | service run in a venv holding only the Dockerfile's packages | all endpoints respond; torch and scikit-learn absent |
+| weight download | build step run locally at the pinned revision | sha256 identical to the export |
+
+Preprocessing is not reimplemented anywhere: both paths call the same
+`preprocess_array`. `serving/export_onnx.py` refuses an export that fails
+parity, and `serving/fetch_weights.py` refuses to fetch one whose recorded
+check failed.
+
 ## Known gaps
 
 Documented rather than hidden. Four earlier entries here are now closed —
@@ -337,9 +360,8 @@ shortcut was tested rather than only reported, and IDRiD was run. What remains:
   Kaggle copy of IDRiD rather than the full official distribution, and 129
   healthy eyes is a small denominator for the specificity the conclusion leans
   on — it moves by 0.008 per image.
-- **The serving surface runs locally but is not deployed.** `serving/app.py`
-  exposes `/predict`, `/health` and `/model-card` with a minimal page, and its
-  grades match the offline evaluation on held-out images. Nothing is hosted.
+- **The deployed service sleeps.** Render's free tier stops the container after
+  inactivity, so the first request after a quiet spell waits for a cold start.
 - **There is no working attention explanation.** Grad-CAM is implemented and
   measured, and the measurement says it cannot be trusted here: five identically
   trained folds disagree about where the model looks as much as trained and

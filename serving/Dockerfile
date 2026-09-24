@@ -1,52 +1,56 @@
-# Image for the Hugging Face Space. Built from the directory that
-# serving/stage_space.py assembles, not from the repository root.
+# The inference service, as deployed on Render's free tier.
+#
+# Built from the repository root (see render.yaml). It serves the ONNX export
+# through ONNX Runtime and never imports torch: the free tier has 512 MB of RAM,
+# and measured with the five fold models loaded the service peaks at ~204 MB.
+# The same code with torch did not fit.
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    # The package resolves its root from its own location by default, which
-    # after a non-editable install is site-packages. Point it at /app instead.
+    # After a non-editable install the package would resolve its root to
+    # site-packages; point it at the application directory instead.
     APTOS_ROOT=/app \
-    HOME=/tmp \
-    MPLCONFIGDIR=/tmp \
-    HF_HOME=/tmp/hf
+    APTOS_BACKEND=onnx \
+    HOME=/tmp
 
 WORKDIR /app
 
-# CPU wheels only. The PyPI default pulls a CUDA build several gigabytes larger,
-# and a free Space has no GPU to use it. torch, torchvision and timm are pinned
-# to the versions the checkpoints were trained with, since they define the
-# architecture the weights are loaded into.
+# The serving subset only. No torch, no torchvision, no scikit-learn at import
+# time, no mlflow - each was checked to be absent from the running process.
 RUN pip install --no-cache-dir \
-        torch==2.11.0 torchvision==0.26.0 \
-        --index-url https://download.pytorch.org/whl/cpu
-
-RUN pip install --no-cache-dir \
-        timm==1.0.29 \
+        "onnxruntime>=1.18,<2" \
         "numpy>=2.0,<3" \
         "opencv-python-headless>=4.9,<6" \
-        "pandas>=2.2,<3" \
-        "scipy>=1.11" \
-        "scikit-learn>=1.4" \
-        "pyyaml>=6" \
         "pillow>=10" \
+        "pyyaml>=6" \
         "fastapi>=0.110" \
         "uvicorn[standard]>=0.27" \
         "python-multipart>=0.0.9"
 
 COPY pyproject.toml README.md ./
 COPY src ./src
-# --no-deps: the dependencies above are the serving subset. The package's own
-# list also names matplotlib and friends, which nothing here imports.
 RUN pip install --no-cache-dir --no-deps .
 
 COPY configs ./configs
-COPY serving ./serving
-COPY models ./models
+COPY serving/app.py ./serving/app.py
 
-# Spaces run containers as uid 1000.
-RUN useradd -m -u 1000 user && chown -R user /app
-USER user
+# The weights live in a Hugging Face model repository, not in git: 80 MB of
+# binaries do not belong in a source repository. The revision is pinned to a
+# commit, so every build serves exactly the model whose parity was checked.
+ARG WEIGHTS_REPO=senanurcetin/aptos-retinopathy-grader
+ARG WEIGHTS_REVISION=882dfc66076cd143d91002394fff68c1778f8e1b
+ARG SWEEP=baseline-6e66147526
+COPY serving/fetch_weights.py ./serving/fetch_weights.py
+# Refuses an export whose recorded parity check failed.
+RUN python serving/fetch_weights.py \
+        --repo "${WEIGHTS_REPO}" --revision "${WEIGHTS_REVISION}" \
+        --sweep "${SWEEP}" --out models/onnx
 
-EXPOSE 7860
-CMD ["uvicorn", "serving.app:app", "--host", "0.0.0.0", "--port", "7860"]
+RUN useradd -m -u 1000 app && chown -R app /app
+USER app
+
+# Render supplies PORT; 10000 is its documented default.
+ENV PORT=10000
+EXPOSE 10000
+CMD ["sh", "-c", "uvicorn serving.app:app --host 0.0.0.0 --port ${PORT}"]

@@ -22,6 +22,11 @@ scores differ slightly - on six held-out test images the offline and served
 scores differed by up to 0.12 while every predicted grade agreed. It is small,
 but it is a real training/serving difference and not worth pretending away.
 
+Two backends serve the same ensemble. With an ONNX export under models/onnx/
+the service uses ONNX Runtime and never imports torch - that is the deployed
+path, sized for a 512 MB host. Without one it falls back to the PyTorch
+checkpoints. APTOS_BACKEND=onnx|torch forces either.
+
 Run:
     pip install -e ".[train,serve]"
     uvicorn serving.app:app --reload
@@ -29,6 +34,7 @@ Run:
 from __future__ import annotations
 
 import json
+import os
 import pathlib
 import time
 from typing import Any
@@ -152,20 +158,118 @@ class Grader:
         }
 
 
+class OnnxGrader:
+    """The same ensemble, served through ONNX Runtime without importing torch.
+
+    This is what fits a 512 MB host. It is a second path to the same numbers,
+    so both halves of it were measured before it was trusted:
+
+      * the exported graphs against their torch originals - max raw-score
+        difference 3.1e-05 on 40 held-out images, zero grade mismatches
+        (serving/export_onnx.py, recorded in export.json);
+      * the numpy input transform against torchvision's
+        Resize -> ToTensor -> Normalize - identical, difference 0.0.
+
+    Preprocessing is not reimplemented at all: it is the same
+    `preprocess_array` the training cache was built with.
+    """
+
+    def __init__(self, export_dir: pathlib.Path):
+        import onnxruntime as ort
+
+        meta = json.loads((export_dir / "export.json").read_text(encoding="utf-8"))
+        self.size = int(meta["input_size"])
+        self.preprocess_settings = meta["preprocess"]
+        self.thresholds = np.asarray(meta["thresholds"], dtype=float)
+        self.sweep = meta["sweep"]
+
+        options = ort.SessionOptions()
+        # One thread per session: the free tier has a fraction of one CPU, and
+        # five sessions each spawning a pool would only contend for it.
+        options.intra_op_num_threads = 1
+        options.inter_op_num_threads = 1
+        # The CPU memory arena is what made this not fit. Each session
+        # preallocates and holds its own pool; measured with five sessions it
+        # cost +318 MB against +100 MB with the arena off, and pushed the whole
+        # service to 613 MB on a 512 MB host. Batch-1 inference gains nothing
+        # from the arena worth that.
+        options.enable_cpu_mem_arena = False
+        self.sessions = [
+            ort.InferenceSession(str(path), options, providers=["CPUExecutionProvider"])
+            for path in sorted(export_dir.glob("fold*.onnx"), key=lambda p: int(p.stem[4:]))
+        ]
+        if not self.sessions:
+            raise FileNotFoundError(f"no fold*.onnx under {export_dir}")
+
+    def _to_input(self, bgr: np.ndarray) -> np.ndarray:
+        import cv2
+        from PIL import Image
+
+        from aptos.preprocessing import IMAGENET_MEAN, IMAGENET_STD
+
+        rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+        # Matches torchvision's Resize((size, size)) on a PIL image exactly.
+        resized = Image.fromarray(rgb).resize((self.size, self.size), Image.BILINEAR)
+        x = np.asarray(resized, dtype=np.float32) / 255.0
+        x = (x - IMAGENET_MEAN) / IMAGENET_STD
+        return x.transpose(2, 0, 1)[None].astype(np.float32)
+
+    def grade(self, image_bytes: bytes) -> dict[str, Any]:
+        import cv2
+
+        from aptos.preprocessing import preprocess_array
+
+        decoded = cv2.imdecode(np.frombuffer(image_bytes, np.uint8), cv2.IMREAD_COLOR)
+        if decoded is None:
+            raise ValueError("could not decode that file as an image")
+
+        s = self.preprocess_settings
+        processed, info = preprocess_array(
+            decoded, size=s["size"], use_clahe=s["clahe"],
+            clip_limit=s["clip_limit"] or 2.0, square_mode=s["square_mode"],
+            normalize=False,
+        )
+        if processed is None:
+            raise ValueError(f"image rejected by the quality gate: {info.get('error')}")
+
+        x = self._to_input(processed)
+        raws = [float(sess.run(None, {"image": x})[0].squeeze()) for sess in self.sessions]
+        raw = float(np.mean(raws))
+        grade = int(apply_thresholds([raw], self.thresholds)[0])
+        return {
+            "grade": grade,
+            "grade_label": GRADES[grade],
+            "referable": grade >= REFERABLE_FROM,
+            "raw_score": round(raw, 4),
+            "fold_spread": round(float(np.std(raws, ddof=1)), 4),
+            "thresholds": [round(float(t), 4) for t in self.thresholds],
+            "model_version": self.sweep,
+            "backend": "onnx",
+        }
+
+
 app = FastAPI(title="APTOS retinopathy grader", version="0.2.0")
-_grader: Grader | None = None
+_grader: Grader | OnnxGrader | None = None
 
 
-def get_grader() -> Grader:
+def get_grader() -> Grader | OnnxGrader:
+    """ONNX if an export is present, torch otherwise; APTOS_BACKEND overrides."""
     global _grader
     if _grader is None:
         cfg = Config.load("configs/baseline.yaml")
-        base = Config.load("configs/cv.yaml")
-        cfg.train = base.train
-        sweeps = sorted((cfg.paths.models / "cv").glob("baseline-*"))
-        if not sweeps:
-            raise HTTPException(503, "no trained sweep found under models/cv/")
-        _grader = Grader(sweeps[-1], cfg)
+        backend = os.environ.get("APTOS_BACKEND", "auto")
+
+        exports = sorted((cfg.paths.models / "onnx").glob("baseline-*"))
+        if backend == "onnx" or (backend == "auto" and exports):
+            if not exports:
+                raise HTTPException(503, "no ONNX export found under models/onnx/")
+            _grader = OnnxGrader(exports[-1])
+        else:
+            cfg.train = Config.load("configs/cv.yaml").train
+            sweeps = sorted((cfg.paths.models / "cv").glob("baseline-*"))
+            if not sweeps:
+                raise HTTPException(503, "no trained sweep found under models/cv/")
+            _grader = Grader(sweeps[-1], cfg)
     return _grader
 
 
