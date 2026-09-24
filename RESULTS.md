@@ -1,8 +1,8 @@
 # Results
 
-Every number here was produced by the scripts in this repository. Runs were
-originally logged to BigQuery; that project is no longer available, so the
-tables are reproduced in full below.
+Every number here was produced by the code in this repository. Runs are tracked
+in MLflow (`mlflow.db`, in the repository root); the six single-split runs
+predate that layer and were transcribed from the original BigQuery tables.
 
 Setup for all runs: EfficientNet-B0 (ImageNet weights), 384px input, batch 16,
 15 epochs, AdamW at 3e-4, cosine schedule, mixed precision, early stopping on
@@ -15,15 +15,19 @@ thresholds tuned on validation.
 
 | | |
 |---|---|
-| Best test QWK | **0.9112** (CLAHE, seed 42) |
-| Baseline test QWK, 3 seeds | 0.8986 ± 0.0033 |
-| CLAHE test QWK, 3 seeds | 0.8954 ± 0.0146 |
+| Best test QWK | **0.9098** — 5-fold squash ensemble |
+| Baseline, 5-fold CV | 0.8902 ± 0.0086 per fold; ensemble **0.9091** |
 | Metadata-only floor | **QWK 0.652** — without looking at the retina |
 | Estimated label ceiling | **~84%** single-label accuracy |
+| Preprocessing ideas tested | **2 of 2 came back null** |
 
 The score is not the interesting part of this project. Public APTOS solutions
-reach 0.93+. What follows — the shortcut floor, the label ceiling, and a
-preprocessing technique that did not survive replication — is.
+reach 0.93+. What follows — the shortcut floor, the label ceiling, and two
+preprocessing techniques that did not survive measurement — is.
+
+The largest effect found anywhere in this project is not a preprocessing
+choice. It is **ensembling the five folds: +0.019 QWK**, about five times the
+biggest gap between any two preprocessing variants.
 
 ---
 
@@ -72,6 +76,95 @@ baseline and 1 of 39 for CLAHE.
 
 ---
 
+## Five-fold cross-validation
+
+Completed 24 September 2026, on the fourth attempt. The pool is train + valid,
+3247 images after excluding the 49 leaked ids; the 366-image test split is held
+out of every fold. Stratified on diagnosis, seed 42, otherwise identical
+settings to the single-split runs. The same fold boundaries are used for all
+three variants, so the comparisons below are paired.
+
+Per-fold **test** QWK:
+
+| fold | baseline | squash | clahe |
+|---|---|---|---|
+| 1 | 0.8860 | 0.8805 | 0.8826 |
+| 2 | 0.8882 | 0.8938 | 0.8937 |
+| 3 | 0.8936 | 0.8920 | 0.8923 |
+| 4 | 0.8802 | 0.9018 | 0.8866 |
+| 5 | 0.9030 | 0.9021 | 0.8932 |
+
+| variant | CV valid QWK | CV test QWK | test acc | test macro F1 |
+|---|---|---|---|---|
+| baseline | 0.8951 ± 0.0073 | 0.8902 ± 0.0086 | 0.7732 ± 0.0086 | 0.5230 ± 0.0056 |
+| squash | 0.8914 ± 0.0085 | 0.8940 ± 0.0088 | 0.7672 ± 0.0089 | 0.5257 ± 0.0172 |
+| clahe | 0.8945 ± 0.0101 | 0.8897 ± 0.0049 | 0.7814 ± 0.0256 | 0.5441 ± 0.0334 |
+
+Fold ensembles — averaging the five folds' raw outputs and their thresholds:
+
+| variant | QWK | accuracy | macro F1 | referable sens. | referable spec. | severe missed |
+|---|---|---|---|---|---|---|
+| baseline | 0.9091 | 0.8033 | 0.5450 | 0.956 | 0.917 | 1/50 |
+| **squash** | **0.9098** | 0.8033 | 0.5697 | 0.971 | 0.917 | **0/50** |
+| clahe | 0.8965 | 0.8142 | 0.5808 | 0.971 | 0.917 | 1/50 |
+
+### What the folds say
+
+**Ensembling is worth more than any preprocessing decision.** Baseline goes from
+a 0.8902 fold mean to 0.9091 as an ensemble: **+0.019**. The largest difference
+between any two preprocessing variants is 0.0044. The preprocessing argument
+this project spent most of its effort on was being conducted inside the noise of
+a much larger effect sitting untouched next to it.
+
+**Three seeds on one split understated the variance.** The baseline spread was
+±0.0033 across seeds and is ±0.0086 across folds — 2.6x wider. Part of that is
+real fold-to-fold variation the single split could not see, and part is that
+each CV model trains on 2597 images against the single split's 2881, so the
+folds are slightly weaker models. Both push the same way: the single-split
+figure looked more precise than it was.
+
+**The clinical numbers are strong and stable.** Referable sensitivity 0.956-0.971
+at specificity 0.917, identical across all three variants. The squash ensemble
+misses **none** of the 50 referable-severe cases in the test split. That is the
+number a screening programme would care about, and it is considerably more
+reassuring than macro F1 0.55.
+
+### Statistical comparison, paired across folds
+
+| comparison | mean Δ QWK | paired t | Wilcoxon | folds won |
+|---|---|---|---|---|
+| squash − baseline | **+0.0038** ± 0.0107 | p = 0.468 | p = 0.812 | 2/5 |
+| clahe − baseline | **−0.0005** ± 0.0067 | p = 0.865 | p = 1.000 | 2/5 |
+| clahe − squash | −0.0044 ± 0.0074 | p = 0.259 | p = 0.625 | 2/5 |
+
+Neither preprocessing variant beats the control. Both are null results.
+
+---
+
+## squash: a sound argument that produced nothing
+
+This is the gap the repository previously listed as unmeasured, and it now has
+an answer.
+
+The geometric case for `squash` was measured, not assumed: padding leaves 28.5%
+of a 512px output black against squash's 13.4%, so squash carries **21% more
+effective retina pixels**. Nothing about that measurement was wrong.
+
+It bought **+0.0038 QWK, p = 0.468, winning 2 of 5 folds** — indistinguishable
+from noise.
+
+The README already warned, about CLAHE, that a sound argument is not a result.
+squash is the second instance, and a cleaner one: the argument here was
+quantitative and correct about the pixels, and the pixels turned out not to be
+the binding constraint. Whatever limits this model, it is not how much of the
+frame is black.
+
+One thing does separate the two on a metric nobody was optimising: the squash
+ensemble misses 0 of 50 severe cases against baseline's 1. On a denominator of
+50 that is one image, and no conclusion should be hung on it.
+
+---
+
 ## CLAHE did not replicate
 
 The first run suggested CLAHE improved test QWK by +0.0152. Repeating across
@@ -105,6 +198,31 @@ visibility-to-noise ratio sat at ~1.0 for every setting, because CLAHE
 amplifies edge signal and high-frequency noise proportionally. The only usable
 finding was calibration: LAB-L is markedly more aggressive than the green
 channel at the same clip limit (2.32x vs 1.81x gain at clip=2).
+
+---
+
+### Cross-validation confirms it
+
+The single-split result rested on three seeds with a test spread of ±0.0177.
+Cross-validation is an independent design on a larger evaluation pool, and it
+agrees:
+
+| design | mean Δ test QWK (clahe − baseline) | spread | p |
+|---|---|---|---|
+| 3 seeds, single split | −0.0033 | ± 0.0177 | 0.780 |
+| 5 folds, paired | **−0.0005** | ± 0.0067 | 0.865 |
+
+The effect estimate moves towards zero and its spread narrows by 2.6x. Two
+designs that could have disagreed did not. CLAHE at clip=2.0 on the LAB
+lightness channel does nothing measurable for this task, and that is now about
+as settled as this dataset can make it.
+
+The validation-side advantage vanished as well. In the single-split runs CLAHE
+won on validation in all three seeds, which was the strongest thing that could
+be said for it. Under cross-validation it does not even do that: validation QWK
+0.8945 against baseline's 0.8951. Thresholds are fitted on validation, so a
+validation win is partly a quantity being optimised rather than a result — and
+with a larger evaluation pool, this one stopped appearing at all.
 
 ---
 
@@ -245,19 +363,32 @@ area on average. Preprocessing turns 8 GiB of PNGs into 184 MB of 512px JPEGs.
 
 ## What was not finished
 
-- **Cross-validation was built but never completed.** `train_cv.py` works and
-  passes a smoke test, but three attempts to run the full sweep died: twice to
-  environment problems (a concurrent GPU job exhausting the Windows commit
-  limit; editing the running script, which on Windows kills the dataloader
-  workers because they re-import it by path) and once when the project ended.
-  With a 366-image validation set, single-split measurements are fragile — the
-  CLAHE difference swinging between +0.015 and −0.020 across seeds is the
-  evidence. Cross-validation over the full 3247-image pool is the fix.
+Two of the three gaps listed here previously are now closed: cross-validation
+completed on 24 September 2026, and `squash` was validated by training — it
+came back null. What remains:
 
-- **`squash` was never validated by training**, as noted above.
+- **CLAHE parameters were never properly tuned.** Only clip=2.0 on the LAB
+  lightness channel has been trained; a sweep with training-free proxies could
+  not discriminate between settings. So the finding is "CLAHE at these settings
+  does nothing", not "CLAHE cannot help". Given that two independent designs
+  now put the effect at zero, further tuning looks a poor use of GPU time, but
+  it has not been ruled out.
 
-- **CLAHE parameters were never properly tuned**, only swept with
-  training-free proxies that could not discriminate.
+- **The confound is measured, not addressed.** A metadata-only model reaches
+  QWK 0.652, and every headline number here is still reported against that
+  floor rather than with the shortcut removed. Two experiments would change
+  that: evaluation stratified by resolution, and folds stratified jointly on
+  (diagnosis, resolution) so no fold can exploit a mapping the others lack.
+  Both are implemented and neither has been run.
+
+- **No external validation yet.** IDRiD has been downloaded and verified — 455
+  images, 455 labels, the same 0-4 scale — and `docs/external-validation-prediction.md`
+  records what is expected, and what would falsify it, before the fact. The
+  measurement itself has not been made.
+
+- **Per-class test figures remain thin.** 17 Severe images in the test split;
+  one case moves that class's recall by 0.06. Cross-validation improved the
+  *training* pool's use, not the test split's size.
 
 ---
 

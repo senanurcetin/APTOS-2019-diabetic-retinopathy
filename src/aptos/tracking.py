@@ -16,7 +16,6 @@ it is not installed.
 from __future__ import annotations
 
 import contextlib
-import json
 import pathlib
 import subprocess
 from collections.abc import Iterator

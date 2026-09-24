@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import argparse
 import dataclasses
-import pathlib
 import subprocess
 import sys
 import time
