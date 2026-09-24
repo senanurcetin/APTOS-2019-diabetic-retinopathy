@@ -182,7 +182,7 @@ def model_card() -> dict[str, Any]:
 @app.post("/predict")
 async def predict(
     file: UploadFile = File(...),
-    explain: bool = Query(False, description="not implemented yet"),
+    explain: bool = Query(False, description="deliberately not offered - see reports/attention.md"),
 ) -> JSONResponse:
     grader = get_grader()
     started = time.time()
@@ -197,7 +197,13 @@ async def predict(
         "externally; the five-way grade degrades under distribution shift."
     )
     if explain:
-        result["explain"] = "Grad-CAM is not implemented yet."
+        result["explain"] = (
+            "Not offered. Grad-CAM was implemented and measured on this model: "
+            "attention concentration varies as much between five identically "
+            "trained folds as between trained and untrained weights, so a "
+            "heatmap here would look informative without being so. See "
+            "reports/attention.md."
+        )
     return JSONResponse(result)
 
 

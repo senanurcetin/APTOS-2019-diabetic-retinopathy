@@ -388,6 +388,48 @@ Generated report: `reports/calibration.md`.
 
 ---
 
+## Grad-CAM: an instrument too noisy to answer the question
+
+Grad-CAM was meant to test from the inside what IDRiD tested from the outside:
+whether the model attends to the retina or to the frame. It is measured rather
+than only drawn - the share of heatmap mass inside the retina divided by the
+share of area the retina occupies, so 1.00 means no preference.
+
+The first reading was striking and wrong. Fold 1 gave **0.72x**, apparently
+concentrating on the black frame; against an ImageNet baseline of 1.41 with
+p < 0.0001, it looked like training had pulled attention off the retina.
+
+Both numbers were single draws, and the p-value pooled per-image values across
+draws, counting each image several times. Repeated properly - five head
+initialisations for each untrained baseline, all five trained folds, and the
+draws treated as the independent units:
+
+| weights | draws | concentration | range across draws |
+|---|---|---|---|
+| random | 5 | 0.895 | 0.71-1.06 |
+| ImageNet, never shown a fundus photograph | 5 | 1.088 | 0.73-1.39 |
+| trained (all five folds) | 5 | **0.940** | 0.72-1.11 |
+
+Mann-Whitney, trained against untrained draws: **p = 0.768**. Fold 1 was simply
+the lowest of the five.
+
+This is a result about the instrument, not about the model. Five models trained
+identically on overlapping data disagree with each other by as much as they
+differ from untrained noise, so Grad-CAM concentration on this setup cannot say
+where the model looks. It neither supports nor contradicts the IDRiD finding,
+which never depended on it.
+
+It is the third instance in this project of the same lesson - after CLAHE on
+three seeds and squash on five folds - that one run is an anecdote. This time
+the anecdote was the analyst's own, and it was caught by the control rather
+than by a reviewer.
+
+A consequence for the serving layer: `?explain=true` deliberately does not
+return a heatmap. One that looks informative without being so is worse than
+none. Generated report: `reports/attention.md`.
+
+---
+
 ## The label ceiling
 
 The dataset contains the same image more than once. Where it does, the labels

@@ -331,8 +331,12 @@ shortcut was tested rather than only reported, and IDRiD was run. What remains:
   on — it moves by 0.008 per image.
 - **The serving surface runs locally but is not deployed.** `serving/app.py`
   exposes `/predict`, `/health` and `/model-card` with a minimal page, and its
-  grades match the offline evaluation on held-out images. Nothing is hosted, and
-  Grad-CAM is stubbed rather than implemented.
+  grades match the offline evaluation on held-out images. Nothing is hosted.
+- **There is no working attention explanation.** Grad-CAM is implemented and
+  measured, and the measurement says it cannot be trusted here: five identically
+  trained folds disagree about where the model looks as much as trained and
+  untrained weights do (p = 0.77). The service declines to return heatmaps for
+  that reason. See [`reports/attention.md`](reports/attention.md).
 - **Serving preprocesses from source while training read cached JPEGs.** The
   cache went through a quality-95 JPEG round-trip that an upload does not, so
   raw scores differ slightly — up to 0.12 on six held-out images, with every
