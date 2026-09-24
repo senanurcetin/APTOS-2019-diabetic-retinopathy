@@ -114,6 +114,88 @@ def _script(name: str) -> Callable[[Config, argparse.Namespace], None]:
     return runner
 
 
+def _no_bq(cfg: Config) -> list[str]:
+    """Scripts that can write to BigQuery do so unless told not to, and without
+    credentials they fail. BigQuery is an opt-in sink here, so the default is off."""
+    return [] if cfg.tracking.bigquery_enabled else ["--no-bq"]
+
+
+def _run(cmd: list[str], cfg: Config) -> None:
+    print(f"  $ {' '.join(str(c) for c in cmd[1:])}")
+    result = subprocess.run([str(c) for c in cmd], cwd=cfg.paths.root)
+    if result.returncode != 0:
+        raise RuntimeError(f"{cmd[1:3]} exited with code {result.returncode}")
+
+
+def _run_scan(cfg: Config, args: argparse.Namespace) -> None:
+    _run([sys.executable, "-u", cfg.paths.root / "scripts" / "scan_images.py",
+          *_no_bq(cfg), *getattr(args, "extra", [])], cfg)
+
+
+def _run_preprocess(cfg: Config, args: argparse.Namespace) -> None:
+    """Build the cache for the configured variant - and only that one.
+
+    This stage used to call the script with no arguments, which means its
+    defaults: CLAHE on, square mode `squash`, written to data/processed_clahe.
+    The processed_clahe cache on disk was built with `pad`, so an ordinary
+    `run all` would have silently overwritten the pixels behind the published
+    CLAHE results with differently squared ones, rewritten the manifest to
+    match, and never produced data/processed at all.
+
+    So the settings come from the config, the output goes to the variant's own
+    directory, and an existing cache is checked against its manifest: skipped
+    if it matches, refused if it does not unless --force is given.
+    """
+    from aptos.data import manifest as manifest_mod
+
+    target = cfg.data_dir
+    expected = cfg.manifest_fields()
+    force = getattr(args, "force", False)
+
+    if manifest_mod.path_for(target).exists() and not force:
+        found = manifest_mod.check(target, expected, count_images=True, strict=False)
+        if not found["problems"]:
+            print(f"  {target.name} already matches the config "
+                  f"({manifest_mod.describe(found)}) - skipping")
+            return
+        raise PreconditionError(
+            f"{target} exists but was built differently from what the config asks "
+            f"for:\n  - " + "\n  - ".join(found["problems"]) +
+            "\nRefusing to overwrite it. Pass --force to rebuild it deliberately."
+        )
+
+    p = cfg.preprocess
+    cmd = [sys.executable, "-u", cfg.paths.root / "scripts" / "preprocess_images.py",
+           "--size", p.size, "--square-mode", p.square_mode,
+           "--workers", p.workers, "--out", target]
+    cmd += ["--clip-limit", p.clip_limit] if p.clahe else ["--no-clahe"]
+    _run(cmd, cfg)
+
+
+def _run_train(cfg: Config, args: argparse.Namespace) -> None:
+    cmd = [sys.executable, "-u", cfg.paths.root / "scripts" / "train.py",
+           "--data-dir", cfg.data_dir, "--variant", cfg.variant,
+           "--seed", cfg.train.seed, "--epochs", cfg.train.epochs,
+           "--size", cfg.train.size, "--batch", cfg.train.batch,
+           "--workers", cfg.train.workers, *_no_bq(cfg)]
+    if cfg.train.exclude_leaked:
+        cmd.append("--exclude-leaked")
+    _run(cmd + list(getattr(args, "extra", [])), cfg)
+
+
+def _run_cv(cfg: Config, args: argparse.Namespace) -> None:
+    """The package's resumable sweep, not the old script.
+
+    Run as a subprocess rather than in-process: dataloader workers on Windows
+    re-import the main module, and isolating the sweep keeps that module small.
+    """
+    cmd = [sys.executable, "-u", "-m", "aptos.training.cv",
+           "--config", getattr(args, "config", None) or "configs/cv.yaml",
+           "--variant", cfg.variant,
+           "--stratify", cfg.cv.stratify_on]
+    _run(cmd + list(getattr(args, "extra", [])), cfg)
+
+
 # ---------------------------------------------------------------------- stages
 
 def _processed_requirements() -> tuple[Requirement, ...]:
@@ -141,7 +223,7 @@ STAGES: tuple[Stage, ...] = (
     Stage(
         name="scan",
         description="Measure every raw image: size, brightness, contrast, dHash.",
-        run=_script("scan_images.py"),
+        run=_run_scan,
         depends_on=("prepare",),
         requires=(
             Requirement("label table", "data/bq/aptos_labels.csv", produced_by="prepare"),
@@ -152,7 +234,7 @@ STAGES: tuple[Stage, ...] = (
     Stage(
         name="preprocess",
         description="Build the cached 512px JPEGs for one variant.",
-        run=_script("preprocess_images.py"),
+        run=_run_preprocess,
         depends_on=("prepare",),
         requires=(
             Requirement("raw training images", "data/images/train_images/train_images/*.png",
@@ -206,7 +288,7 @@ STAGES: tuple[Stage, ...] = (
     Stage(
         name="train",
         description="Single-split training run.",
-        run=_script("train.py"),
+        run=_run_train,
         depends_on=("preprocess", "quality"),
         gpu=True,
         requires=(
@@ -218,7 +300,7 @@ STAGES: tuple[Stage, ...] = (
     Stage(
         name="cv",
         description="K-fold cross-validation over train+valid, test held out.",
-        run=_script("train_cv.py"),
+        run=_run_cv,
         depends_on=("preprocess", "quality"),
         gpu=True,
         requires=(
@@ -314,6 +396,8 @@ def build_parser() -> argparse.ArgumentParser:
                      help="run exactly the named stages, skipping dependency expansion")
     run.add_argument("--dry-run", action="store_true",
                      help="check preconditions and report, without executing")
+    run.add_argument("--force", action="store_true",
+                     help="rebuild a processed cache even if it exists with other settings")
     run.add_argument("extra", nargs=argparse.REMAINDER,
                      help="arguments passed through to the underlying script")
 
