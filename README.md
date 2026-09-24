@@ -60,8 +60,9 @@ for squash was quantitative and right about the pixels, and the pixels turned
 out not to be what limits this model.
 
 The largest effect found anywhere in the project is not a preprocessing choice
-at all — it is ensembling the five folds, worth **+0.019 QWK**, about five times
-the biggest gap between any two variants.
+at all — it is ensembling the five folds, worth **+0.019 QWK** on the baseline,
+about four times the biggest gap between any two variants (0.0044). The gain is
+smaller for the other variants: +0.016 for squash, +0.007 for clahe.
 
 ### The model reads the retina, not the camera
 
@@ -92,15 +93,17 @@ top of the scale — 8 grade-4 predictions against 64 true cases — while misse
 referrals stay at 2 of 148. It compresses the scale rather than failing to see
 disease.
 
-Full numbers, tables and statistics: **[RESULTS.md](RESULTS.md)**.
+Full numbers, tables and statistics: **[RESULTS.md](RESULTS.md)**. For a walk
+through the findings that recomputes them from the committed reports, open
+[`aptos_2019.ipynb`](aptos_2019.ipynb) - it runs in Colab without the dataset.
 
 ---
 
 ## Pipeline
 
 Shared functions live in `src/aptos/preprocessing.py`. `scripts/preprocessing.py`
-remains as a thin re-export, because the Colab notebook clones this repository at
-run time and imports it by path.
+remains as a thin re-export, because the scripts still under `scripts/` import it
+by path.
 
 ```
 Read -> Quality check -> Auto-crop -> CLAHE -> Square -> Resize -> Normalise
@@ -381,10 +384,6 @@ shortcut was tested rather than only reported, and IDRiD was run. What remains:
   cache went through a quality-95 JPEG round-trip that an upload does not, so
   raw scores differ slightly — up to 0.12 on six held-out images, with every
   predicted grade agreeing. Small, real, and not worth hiding.
-- **`aptos_2019.ipynb` is broken.** It calls `APTOSDataset(use_crop=...)`, a
-  parameter that does not exist, uses `pd` and `plt` without importing either,
-  and has no training loop. It is excluded from linting and scheduled for
-  replacement.
 - **The ported single-split trainer has not yet reproduced a recorded run.**
   `aptos.training.single` keeps the original's model, loss, schedule, threshold
   search and early stopping, and a smoke run passes end to end, but a full
@@ -407,7 +406,7 @@ src/aptos/
   evaluation/          confound stratification, external validation
 configs/               base + one file per variant, and the CV variants
 scripts/               legacy scripts, ported progressively
-  preprocessing.py     thin re-export, kept for the Colab notebook
+  preprocessing.py     thin re-export, kept for the scripts that import by path
   run_cv.sh            the sweep runner
 tests/                 79 tests; `-m pure` needs neither torch nor the dataset
 docs/                  the pre-registered external-validation prediction

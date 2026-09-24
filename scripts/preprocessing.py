@@ -1,8 +1,9 @@
 """Backwards-compatible shim.
 
-The Colab notebook clones this repository at run time and imports
-`preprocessing` by path, so the module has to stay reachable here even though it
-now lives in the installable package at `src/aptos/preprocessing.py`.
+The scripts still living under scripts/ import `preprocessing` by path, so
+the module has to stay reachable here even though it lives in the installable
+package at `src/aptos/preprocessing.py`. (The Colab notebook used to be the
+reason; it now installs the package instead.)
 
 Import from `aptos.preprocessing` in new code.
 """

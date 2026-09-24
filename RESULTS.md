@@ -27,8 +27,10 @@ reach 0.93+. What follows — the shortcut floor, the label ceiling, and two
 preprocessing techniques that did not survive measurement — is.
 
 The largest effect found anywhere in this project is not a preprocessing
-choice. It is **ensembling the five folds: +0.019 QWK**, about five times the
-biggest gap between any two preprocessing variants.
+choice. It is **ensembling the five folds: +0.019 QWK** on the baseline, about
+four times the biggest gap between any two preprocessing variants (0.0044).
+The gain is smaller elsewhere - +0.016 for squash, +0.007 for clahe - so this is
+a statement about the baseline, not a constant.
 
 ---
 
