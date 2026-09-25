@@ -68,11 +68,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install numpy opencv-python-headless pandas scipy scikit-learn matplotlib pyyaml pytest
           pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-          pip install timm pillow mlflow fastapi python-multipart onnxruntime
+          pip install timm pillow mlflow fastapi python-multipart onnxruntime pytest-cov
           pip install -e . --no-deps
 
-      - name: Run the whole suite
-        run: pytest -q
+      # Coverage is measured here, where every test that can run without the
+      # dataset does. The floor lives in pyproject.toml ([tool.coverage.report]).
+      - name: Run the whole suite, with the coverage floor
+        run: pytest -q --cov --cov-report=term
 
   lint:
     name: ruff
