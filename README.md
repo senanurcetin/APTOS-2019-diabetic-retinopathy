@@ -326,7 +326,10 @@ compresses under distribution shift.
 
 The weights are published as an ONNX export on Hugging Face:
 [senanurcetin/aptos-retinopathy-grader](https://huggingface.co/senanurcetin/aptos-retinopathy-grader).
-The service deploys to Render's free tier from [`render.yaml`](render.yaml).
+The service runs on Render's free tier from [`render.yaml`](render.yaml):
+**[aptos-2019-diabetic-retinopathy.onrender.com](https://aptos-2019-diabetic-retinopathy.onrender.com)**.
+It sleeps when idle, so the first request after a quiet spell waits for a cold
+start, and on the free tier's fraction of a CPU a prediction takes 4-9 seconds.
 
 The free tier allows 512 MB of RAM, which the PyTorch service did not fit. So
 the deployed path runs the same ensemble through ONNX Runtime and never imports
@@ -339,6 +342,15 @@ torch. Every substitution in that path was measured before it was used:
 | memory | largest 8 test images, full service | peak 204 MB (was 613 MB with ONNX Runtime's arena on) |
 | dependencies | service run in a venv holding only the Dockerfile's packages | all endpoints respond; torch and scikit-learn absent |
 | weight download | build step run locally at the pinned revision | sha256 identical to the export |
+| the live service | 10 held-out test images, two per grade, sent to the deployed URL | grade matches the offline ensemble on 9 of 10 |
+
+The one disagreement is a boundary case, and a measured one: the offline score
+was 2.353 and the live score 2.310, either side of the 2|3 cut at 2.324. The
+offline path reads the JPEG cache, the live one preprocesses the uploaded PNG
+from source, and that round-trip moved the score by 0.042 - inside the 0.12
+range already recorded. The referral decision is the same either way, and the
+five folds' own scores for that image spread by 0.54, which puts the
+preprocessing difference in proportion.
 
 Preprocessing is not reimplemented anywhere: both paths call the same
 `preprocess_array`. `serving/export_onnx.py` refuses an export that fails
