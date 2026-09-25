@@ -60,8 +60,9 @@ for squash was quantitative and right about the pixels, and the pixels turned
 out not to be what limits this model.
 
 The largest effect found anywhere in the project is not a preprocessing choice
-at all — it is ensembling the five folds, worth **+0.019 QWK**, about five times
-the biggest gap between any two variants.
+at all — it is ensembling the five folds, worth **+0.019 QWK** on the baseline,
+about four times the biggest gap between any two variants (0.0044). The gain is
+smaller for the other variants: +0.016 for squash, +0.007 for clahe.
 
 ### The model reads the retina, not the camera
 
@@ -92,15 +93,17 @@ top of the scale — 8 grade-4 predictions against 64 true cases — while misse
 referrals stay at 2 of 148. It compresses the scale rather than failing to see
 disease.
 
-Full numbers, tables and statistics: **[RESULTS.md](RESULTS.md)**.
+Full numbers, tables and statistics: **[RESULTS.md](RESULTS.md)**. For a walk
+through the findings that recomputes them from the committed reports, open
+[`aptos_2019.ipynb`](aptos_2019.ipynb) - it runs in Colab without the dataset.
 
 ---
 
 ## Pipeline
 
 Shared functions live in `src/aptos/preprocessing.py`. `scripts/preprocessing.py`
-remains as a thin re-export, because the Colab notebook clones this repository at
-run time and imports it by path.
+remains as a thin re-export, because the scripts still under `scripts/` import it
+by path.
 
 ```
 Read -> Quality check -> Auto-crop -> CLAHE -> Square -> Resize -> Normalise
@@ -291,10 +294,15 @@ job installs CPU torch and runs everything.
   `val_images/`, not `valid_images/`.
 - **`test.csv` ends with ~500 blank lines.** Loading it raw with schema
   autodetection produces a broken table.
-- **Long GPU runs are fragile on Windows.** Do not start a second GPU job
-  alongside one — the commit limit is exhausted and dataloader workers die with
-  `error code 1455`. Do not edit `train_cv.py` while it runs either; the
-  workers re-import it by path. The same applies to anything under `src/aptos/`.
+- **Long GPU runs are fragile on Windows.** Every dataloader worker is a
+  fresh process that re-imports torch and maps its CUDA libraries, and Windows
+  charges each of them against a system-wide commit limit. Run out and the
+  workers die with `error code 1455` ("paging file too small"). It is not a
+  VRAM problem - peak VRAM here is 2.2 GB of 6. Do not start a second heavy job
+  alongside a run, and do not edit anything under `src/aptos/` while one is
+  live, because workers re-import it by path. When headroom is short,
+  `--workers 0` loads data in the main process: slower, but it cannot fail
+  this way.
 
 ## Serving
 
@@ -376,14 +384,13 @@ shortcut was tested rather than only reported, and IDRiD was run. What remains:
   cache went through a quality-95 JPEG round-trip that an upload does not, so
   raw scores differ slightly — up to 0.12 on six held-out images, with every
   predicted grade agreeing. Small, real, and not worth hiding.
-- **`aptos_2019.ipynb` is broken.** It calls `APTOSDataset(use_crop=...)`, a
-  parameter that does not exist, uses `pd` and `plt` without importing either,
-  and has no training loop. It is excluded from linting and scheduled for
-  replacement.
-- **Single-split training still runs through `scripts/train.py`.** Cross-
-  validation moved into the package; the single-split trainer has not. The
-  pipeline's `train` stage drives it with the config's settings, so this is a
-  tidiness gap rather than a correctness one.
+- **The ported single-split trainer has not yet reproduced a recorded run.**
+  `aptos.training.single` keeps the original's model, loss, schedule, threshold
+  search and early stopping, and a smoke run passes end to end, but a full
+  seed-42 run without leak exclusion - the comparison against the recorded
+  0.8960 test QWK - has not been made. Worker seeding differs (two workers,
+  not four), so an exact match is not expected; a result outside the
+  +/-0.0033 seed spread would be.
 
 ## Layout
 
@@ -399,7 +406,7 @@ src/aptos/
   evaluation/          confound stratification, external validation
 configs/               base + one file per variant, and the CV variants
 scripts/               legacy scripts, ported progressively
-  preprocessing.py     thin re-export, kept for the Colab notebook
+  preprocessing.py     thin re-export, kept for the scripts that import by path
   run_cv.sh            the sweep runner
 tests/                 79 tests; `-m pure` needs neither torch nor the dataset
 docs/                  the pre-registered external-validation prediction

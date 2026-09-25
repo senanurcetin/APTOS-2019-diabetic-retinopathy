@@ -27,8 +27,10 @@ reach 0.93+. What follows — the shortcut floor, the label ceiling, and two
 preprocessing techniques that did not survive measurement — is.
 
 The largest effect found anywhere in this project is not a preprocessing
-choice. It is **ensembling the five folds: +0.019 QWK**, about five times the
-biggest gap between any two preprocessing variants.
+choice. It is **ensembling the five folds: +0.019 QWK** on the baseline, about
+four times the biggest gap between any two preprocessing variants (0.0044).
+The gain is smaller elsewhere - +0.016 for squash, +0.007 for clahe - so this is
+a statement about the baseline, not a constant.
 
 ---
 
@@ -233,10 +235,10 @@ A RandomForest trained **only on file properties** — resolution, aspect ratio,
 brightness, contrast, file size — never seeing a single pixel of retina.
 Five-fold cross-validation.
 
-| measure | metadata only | always predict 0 | the real model |
+| measure | metadata only | always predict 0 | the model (5-fold ensemble) |
 |---|---|---|---|
-| QWK | **0.652** | 0.000 | ~0.90 |
-| Accuracy | 0.708 | 0.493 | ~0.82 |
+| QWK | **0.652** | 0.000 | 0.9091 |
+| Accuracy | 0.708 | 0.493 | 0.8033 |
 
 Where it comes from:
 
@@ -445,7 +447,7 @@ should agree.
 
 Disagreement sizes: 33 pairs differ by one grade, 9 by two, 1 by three.
 
-The model's test accuracy is 0.82 — near that ceiling. Part of the remaining
+The five-fold baseline ensemble's test accuracy is 0.8033 — near that ceiling. Part of the remaining
 error belongs to the labels, not the model. This is a **lower bound**: it only
 measures noise visible in duplicated images.
 
@@ -582,7 +584,7 @@ python scripts/quality_report.py
 python scripts/confound_analysis.py
 python scripts/preprocess_images.py --size 512
 python scripts/make_figures.py
-python scripts/train.py --mode reg --exclude-leaked --no-bq
+python -m aptos.training.single --mode reg --exclude-leaked
 ```
 
 Every report under `reports/` is generated, not hand-written, so the numbers
