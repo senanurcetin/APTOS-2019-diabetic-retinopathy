@@ -312,8 +312,17 @@ uvicorn serving.app:app --reload
 ```
 
 `POST /predict` takes a fundus photograph and returns a grade, the referral
-decision, the raw ordinal score and the spread across the five folds.
-`GET /model-card` returns what the model is known to get wrong. The page states
+decision, the raw ordinal score, each fold's score and the spread across the
+five folds; `?preview=true` adds the preprocessed image the model actually
+scored. `GET /model-card` returns what the model is known to get wrong.
+
+The page at `/` ([serving/static/index.html](serving/static/index.html)) shows
+the referral decision first, then the grade, the ensemble score against the four
+thresholds with each fold marked, and the upload beside the cropped, padded
+image that was scored. Fold spread is read against a measured reference - its
+percentile among the 366 APTOS test images - rather than a cut-off picked by
+eye. Every number on the page is injected from `MODEL_CARD`, and a test fails if
+the page names a metric the card does not carry. The page states
 that this is not a medical device, and lists the confound, the label ceiling and
 the calibration drift, because a demo that omits them would contradict the
 analysis it exists to demonstrate.

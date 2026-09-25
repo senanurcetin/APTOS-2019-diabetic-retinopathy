@@ -30,6 +30,11 @@ preprocessing settings the model expects.
 Source, analysis and every number below:
 [senanurcetin/APTOS-2019-diabetic-retinopathy](https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy).
 
+Live demo, serving these exact weights on a free CPU instance:
+[aptos-2019-diabetic-retinopathy.onrender.com](https://aptos-2019-diabetic-retinopathy.onrender.com).
+The instance sleeps when idle, so the first request after a pause takes
+about a minute.
+
 ## What it gets right
 
 | | APTOS test | IDRiD (external) |

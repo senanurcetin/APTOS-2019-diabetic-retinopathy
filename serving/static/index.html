@@ -1,0 +1,718 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>APTOS Retinopathy Grader</title>
+<meta name="description" content="Diabetic retinopathy grading and referral from a fundus photograph: a five-fold EfficientNet-B0 ensemble, externally validated on IDRiD, served with its limitations attached.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23e8893a'/%3E%3Ccircle cx='21' cy='13' r='4' fill='%23ffd9a8'/%3E%3C/svg%3E">
+<style>
+:root{
+  color-scheme: dark;
+  --bg:#070a10; --bg-2:#0c111a; --panel:#0f1622; --panel-2:#131c2b;
+  --line:#1e2a3d; --line-2:#2a3a52;
+  --text:#e7edf6; --muted:#8c9ab0; --faint:#5d6b81;
+  --teal:#2dd4bf; --teal-dim:rgba(45,212,191,.14);
+  --amber:#f59e0b; --amber-dim:rgba(245,158,11,.14);
+  --red:#f87171; --red-dim:rgba(248,113,113,.14);
+  --retina:#e8893a; --retina-2:#b4491d; --disc:#ffd9a8;
+  --g0:#2dd4bf; --g1:#a3e635; --g2:#facc15; --g3:#fb923c; --g4:#f87171;
+  --radius:16px;
+  --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  --display:"Space Grotesk","Inter",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font:15.5px/1.6 "Inter",system-ui,sans-serif; -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+a{color:var(--teal); text-decoration:none}
+a:hover{text-decoration:underline}
+.wrap{max-width:1180px; margin:0 auto; padding:0 24px}
+@media (max-width:640px){.wrap{padding:0 16px}}
+
+/* backdrop */
+.glow{position:fixed; inset:0; pointer-events:none; z-index:0;
+  background:
+    radial-gradient(900px 600px at 85% -10%, rgba(232,137,58,.13), transparent 60%),
+    radial-gradient(700px 500px at -10% 30%, rgba(45,212,191,.08), transparent 60%);
+}
+.grid-bg{position:fixed; inset:0; pointer-events:none; z-index:0; opacity:.35;
+  background-image:linear-gradient(var(--line) 1px, transparent 1px),linear-gradient(90deg,var(--line) 1px, transparent 1px);
+  background-size:56px 56px;
+  mask-image:radial-gradient(ellipse at 50% 0%, #000 0%, transparent 70%);
+}
+main, header, footer{position:relative; z-index:1}
+
+/* nav */
+nav{position:sticky; top:0; z-index:10; backdrop-filter:blur(14px);
+  background:rgba(7,10,16,.72); border-bottom:1px solid var(--line)}
+nav .wrap{display:flex; align-items:center; gap:24px; height:62px}
+.brand{display:flex; align-items:center; gap:10px; font:600 16px var(--display); color:var(--text)}
+.brand:hover{text-decoration:none}
+.brand-dot{width:26px; height:26px; border-radius:50%;
+  background:radial-gradient(circle at 64% 40%, var(--disc) 0 18%, var(--retina) 19% 60%, var(--retina-2) 100%);
+  box-shadow:0 0 18px rgba(232,137,58,.55)}
+.navlinks{display:flex; gap:20px; margin-left:auto; font-size:14px}
+.navlinks a{color:var(--muted)}
+.navlinks a:hover{color:var(--text); text-decoration:none}
+@media (max-width:860px){.navlinks .opt{display:none}}
+
+/* hero */
+.hero{padding:72px 0 40px; display:grid; grid-template-columns:1.15fr .85fr; gap:48px; align-items:center}
+@media (max-width:900px){.hero{grid-template-columns:1fr; padding-top:40px}.hero-art{order:-1; max-width:300px; margin:0 auto}}
+.eyebrow{display:inline-flex; align-items:center; gap:8px; font:500 12.5px var(--mono); letter-spacing:.06em;
+  text-transform:uppercase; color:var(--teal); border:1px solid rgba(45,212,191,.3); background:var(--teal-dim);
+  padding:5px 12px; border-radius:999px}
+.pulse{width:7px; height:7px; border-radius:50%; background:var(--teal); box-shadow:0 0 0 0 rgba(45,212,191,.6); animation:pulse 2s infinite}
+@keyframes pulse{70%{box-shadow:0 0 0 8px rgba(45,212,191,0)}100%{box-shadow:0 0 0 0 rgba(45,212,191,0)}}
+h1{font:700 clamp(34px,5vw,56px)/1.05 var(--display); letter-spacing:-.025em; margin:18px 0 18px}
+h1 .accent{background:linear-gradient(95deg,var(--disc),var(--retina) 55%,#f25f3a); -webkit-background-clip:text; background-clip:text; color:transparent}
+.lede{color:var(--muted); font-size:17px; max-width:36rem}
+.cta{display:flex; gap:12px; flex-wrap:wrap; margin-top:28px}
+.btn{display:inline-flex; align-items:center; gap:8px; border-radius:10px; padding:11px 18px; font:600 14.5px "Inter"; cursor:pointer;
+  border:1px solid var(--line-2); background:var(--panel-2); color:var(--text); transition:transform .15s, border-color .15s, background .15s}
+.btn:hover{text-decoration:none; border-color:var(--muted); transform:translateY(-1px)}
+.btn.primary{background:linear-gradient(135deg,var(--retina),#f25f3a); border-color:transparent; color:#1a0d05;
+  box-shadow:0 8px 30px -8px rgba(232,137,58,.6)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn:disabled{opacity:.45; cursor:not-allowed; transform:none}
+
+/* retina art */
+.hero-art{position:relative; aspect-ratio:1}
+.hero-art svg{width:100%; height:100%; overflow:visible}
+.scan{transform-origin:200px 200px; animation:spin 7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ring{animation:breathe 4s ease-in-out infinite}
+@keyframes breathe{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.scan,.ring,.pulse{animation:none}}
+
+/* stats */
+.stats{display:grid; grid-template-columns:repeat(4,1fr); border:1px solid var(--line); border-radius:var(--radius);
+  background:linear-gradient(180deg,var(--panel),var(--bg-2)); overflow:hidden; margin-bottom:24px}
+.stat{padding:22px 24px; border-right:1px solid var(--line)}
+.stat:last-child{border-right:0}
+.stat b{display:block; font:600 30px var(--display); letter-spacing:-.02em}
+.stat span{color:var(--muted); font-size:13px}
+.stat small{display:block; color:var(--faint); font:12px var(--mono); margin-top:2px}
+@media (max-width:760px){.stats{grid-template-columns:1fr 1fr}.stat:nth-child(2){border-right:0}.stat:nth-child(-n+2){border-bottom:1px solid var(--line)}}
+
+/* sections */
+section{padding:64px 0 16px}
+.sec-head{display:flex; align-items:end; justify-content:space-between; gap:24px; margin-bottom:26px; flex-wrap:wrap}
+.kicker{font:500 12px var(--mono); letter-spacing:.1em; text-transform:uppercase; color:var(--retina)}
+h2{font:600 clamp(26px,3.2vw,36px)/1.15 var(--display); letter-spacing:-.02em; margin:6px 0 0}
+.sec-head p{color:var(--muted); max-width:30rem; margin:0}
+.card{background:linear-gradient(180deg,var(--panel),var(--bg-2)); border:1px solid var(--line); border-radius:var(--radius)}
+
+/* analyzer */
+.analyzer{display:grid; grid-template-columns:.9fr 1.1fr; gap:20px}
+@media (max-width:900px){.analyzer{grid-template-columns:1fr}}
+@media (min-width:901px){.analyzer > .card:first-child{align-self:start; position:sticky; top:80px}}
+.pane{padding:22px}
+.pane-title{display:flex; align-items:center; justify-content:space-between; font:600 14px var(--display); color:var(--muted);
+  letter-spacing:.02em; margin-bottom:14px}
+.drop{position:relative; border:1.5px dashed var(--line-2); border-radius:14px; aspect-ratio:4/3; display:grid; place-items:center;
+  text-align:center; cursor:pointer; overflow:hidden; transition:border-color .2s, background .2s; background:rgba(255,255,255,.015)}
+.drop:hover,.drop.over{border-color:var(--retina); background:var(--amber-dim)}
+.drop:focus-visible{outline:2px solid var(--teal); outline-offset:3px}
+.drop img{position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000}
+.drop .hint{padding:24px; color:var(--muted)}
+.drop .hint strong{display:block; color:var(--text); font:600 17px var(--display); margin:12px 0 4px}
+.drop .hint kbd{font:12px var(--mono); border:1px solid var(--line-2); border-radius:5px; padding:1px 6px; color:var(--text)}
+.drop.busy::after{content:""; position:absolute; left:0; right:0; height:3px; top:0;
+  background:linear-gradient(90deg,transparent,var(--teal),transparent); box-shadow:0 0 16px var(--teal); animation:sweep 1.6s ease-in-out infinite}
+@keyframes sweep{0%{top:0}50%{top:calc(100% - 3px)}100%{top:0}}
+.file-meta{display:flex; justify-content:space-between; gap:12px; font:12.5px var(--mono); color:var(--faint); margin-top:10px; min-height:18px}
+.file-meta span:first-child{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.actions{display:flex; gap:10px; margin-top:14px}
+.actions .btn{flex:1; justify-content:center}
+.status{font-size:13px; color:var(--muted); margin-top:12px; min-height:20px}
+.status.err{color:var(--red)}
+
+/* result */
+.empty{height:100%; min-height:340px; display:grid; place-items:center; text-align:center; color:var(--faint)}
+.empty svg{opacity:.5; margin-bottom:10px}
+.verdict{display:flex; align-items:center; gap:16px; padding:18px 20px; border-radius:14px; border:1px solid}
+.verdict.refer{background:var(--amber-dim); border-color:rgba(245,158,11,.4)}
+.verdict.norefer{background:var(--teal-dim); border-color:rgba(45,212,191,.4)}
+.v-icon{flex:none; width:46px; height:46px; border-radius:12px; display:grid; place-items:center}
+.refer .v-icon{background:var(--amber); color:#241400}
+.norefer .v-icon{background:var(--teal); color:#03201c}
+.v-label{font:12px var(--mono); letter-spacing:.08em; text-transform:uppercase; color:var(--muted)}
+.v-title{font:600 24px/1.2 var(--display); letter-spacing:-.01em}
+.v-sub{font-size:13.5px; color:var(--muted)}
+
+.block{margin-top:22px}
+.block-head{display:flex; justify-content:space-between; align-items:baseline; font:500 12px var(--mono); letter-spacing:.08em;
+  text-transform:uppercase; color:var(--faint); margin-bottom:10px}
+.block-head em{font-style:normal; color:var(--muted); text-transform:none; letter-spacing:0}
+
+.ladder{display:grid; grid-template-columns:repeat(5,1fr); gap:6px}
+.rung{border:1px solid var(--line); border-radius:10px; padding:10px 8px 9px; text-align:center; background:var(--bg-2); transition:all .3s}
+.rung b{display:block; font:600 18px var(--display)}
+.rung span{font-size:11.5px; color:var(--faint); line-height:1.25; display:block}
+.rung.on{border-color:var(--c); background:color-mix(in srgb,var(--c) 16%,transparent); box-shadow:0 0 0 1px var(--c) inset, 0 10px 30px -12px var(--c)}
+.rung.on span{color:var(--text)}
+.rung.ref{position:relative}
+.ladder-note{display:flex; justify-content:flex-end; font-size:11.5px; color:var(--faint); margin-top:6px; gap:6px; align-items:center}
+.ladder-note i{display:inline-block; width:40%; height:2px; background:linear-gradient(90deg,transparent,var(--amber))}
+
+.gauge{position:relative; height:74px}
+.gauge .track{position:absolute; left:0; right:0; top:26px; height:10px; border-radius:6px;
+  background:linear-gradient(90deg,var(--g0),var(--g1) 25%,var(--g2) 50%,var(--g3) 75%,var(--g4))}
+.gauge .shade{position:absolute; top:22px; height:18px; border:1px dashed rgba(245,158,11,.7); border-radius:6px; right:0}
+.gauge .tick{position:absolute; top:18px; width:2px; height:26px; background:var(--text); opacity:.75; transform:translateX(-1px)}
+.gauge .tick span{position:absolute; top:28px; left:50%; transform:translateX(-50%); font:11px var(--mono); color:var(--faint); white-space:nowrap}
+.gauge .fold{position:absolute; top:28px; width:7px; height:7px; border-radius:50%; background:#fff; opacity:.55; transform:translate(-50%,0); transition:left .7s cubic-bezier(.2,.8,.2,1)}
+.gauge .marker{position:absolute; top:0; transform:translateX(-50%); transition:left .8s cubic-bezier(.2,.8,.2,1); text-align:center}
+.gauge .marker b{display:block; font:500 11.5px var(--mono); background:var(--text); color:var(--bg); border-radius:5px; padding:1px 6px}
+.gauge .marker i{display:block; width:2px; height:26px; margin:0 auto; background:var(--text)}
+
+.metrics{display:grid; grid-template-columns:repeat(4,1fr); gap:8px}
+@media (max-width:560px){.metrics{grid-template-columns:1fr 1fr}}
+.metric{border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:var(--bg-2)}
+.metric span{display:block; font-size:11.5px; color:var(--faint)}
+.metric b{font:500 16px var(--mono)}
+.metric small{display:block; font-size:11.5px}
+
+.folds{display:grid; gap:6px}
+.fold-row{display:grid; grid-template-columns:52px 1fr 60px; align-items:center; gap:10px; font:12px var(--mono); color:var(--muted)}
+.fold-bar{height:8px; border-radius:5px; background:var(--bg-2); border:1px solid var(--line); overflow:hidden}
+.fold-bar i{display:block; height:100%; border-radius:5px; width:0; transition:width .8s cubic-bezier(.2,.8,.2,1)}
+.fold-row b{text-align:right; color:var(--text); font-weight:500}
+
+.seen{display:grid; grid-template-columns:repeat(2,minmax(0,210px)); gap:10px}
+.seen figure{margin:0; border:1px solid var(--line); border-radius:10px; overflow:hidden; background:#000}
+.seen img{display:block; width:100%; aspect-ratio:1; object-fit:contain}
+.seen figcaption{font:11.5px var(--mono); color:var(--faint); padding:7px 10px; background:var(--bg-2); border-top:1px solid var(--line)}
+
+details.raw{margin-top:18px; border:1px solid var(--line); border-radius:10px; background:var(--bg-2)}
+details.raw summary{cursor:pointer; padding:10px 14px; font:12.5px var(--mono); color:var(--muted)}
+details.raw pre{margin:0; padding:0 14px 14px; font:12px/1.55 var(--mono); color:var(--muted); overflow:auto; max-height:260px}
+.fine{font-size:12.5px; color:var(--faint); margin-top:14px; border-left:2px solid var(--line-2); padding-left:10px}
+
+/* validation */
+.val{display:grid; grid-template-columns:1.2fr .8fr; gap:20px}
+@media (max-width:900px){.val{grid-template-columns:1fr}}
+.legend{display:flex; gap:18px; font-size:13px; color:var(--muted); margin-bottom:18px}
+.legend i{display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:7px; vertical-align:-1px}
+.cmp{display:grid; gap:18px}
+.cmp-row .cmp-name{display:flex; justify-content:space-between; font-size:14px; margin-bottom:7px}
+.cmp-row .cmp-name span{color:var(--muted); font-size:12.5px}
+.bars{display:grid; gap:5px}
+.bar{display:grid; grid-template-columns:1fr 54px; gap:10px; align-items:center}
+.bar .t{height:10px; border-radius:6px; background:var(--bg-2); border:1px solid var(--line); overflow:hidden}
+.bar .t i{display:block; height:100%; border-radius:6px; width:0; transition:width 1.1s cubic-bezier(.2,.8,.2,1)}
+.bar b{font:500 13px var(--mono); text-align:right}
+.findings{display:grid; gap:12px}
+.finding{padding:18px; border-radius:14px; border:1px solid var(--line); background:var(--bg-2)}
+.finding .num{font:600 26px var(--display); letter-spacing:-.02em}
+.finding p{margin:4px 0 0; color:var(--muted); font-size:13.5px}
+.tag{display:inline-block; font:500 11px var(--mono); letter-spacing:.06em; text-transform:uppercase; padding:2px 8px; border-radius:999px; margin-bottom:8px}
+.tag.t{color:var(--teal); background:var(--teal-dim)} .tag.a{color:var(--amber); background:var(--amber-dim)} .tag.r{color:var(--red); background:var(--red-dim)}
+
+/* pipeline */
+.pipe{display:grid; grid-template-columns:repeat(6,1fr); gap:0; counter-reset:step}
+@media (max-width:980px){.pipe{grid-template-columns:repeat(3,1fr)}}
+@media (max-width:560px){.pipe{grid-template-columns:1fr}}
+.step{position:relative; padding:20px 18px 20px; border:1px solid var(--line); margin:-1px 0 0 -1px; background:var(--panel)}
+.step::before{counter-increment:step; content:"0" counter(step); font:500 12px var(--mono); color:var(--retina)}
+.step h3{font:600 15.5px var(--display); margin:8px 0 6px}
+.step p{margin:0; font-size:13px; color:var(--muted)}
+.step code{font:12px var(--mono); color:var(--text); background:var(--bg-2); padding:1px 5px; border-radius:4px}
+.pipe .step:first-child{border-radius:var(--radius) 0 0 var(--radius)}
+.pipe .step:last-child{border-radius:0 var(--radius) var(--radius) 0}
+@media (max-width:980px){.pipe .step{border-radius:0 !important}}
+
+/* limitations */
+.lims{display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px}
+.lim{padding:20px; display:flex; gap:14px}
+.lim .n{flex:none; width:30px; height:30px; border-radius:8px; display:grid; place-items:center; font:500 13px var(--mono);
+  color:var(--amber); background:var(--amber-dim); border:1px solid rgba(245,158,11,.3)}
+.lim p{margin:0; font-size:14px; color:#c9d3e1}
+
+/* api */
+.api{display:grid; grid-template-columns:.8fr 1.2fr; gap:20px}
+@media (max-width:900px){.api{grid-template-columns:1fr}}
+.endpoints{padding:8px 0}
+.ep{display:flex; gap:12px; align-items:baseline; padding:12px 20px; border-bottom:1px solid var(--line)}
+.ep:last-child{border-bottom:0}
+.ep .m{font:600 11px var(--mono); padding:2px 7px; border-radius:5px; flex:none}
+.m.get{color:var(--teal); background:var(--teal-dim)} .m.post{color:var(--amber); background:var(--amber-dim)}
+.ep code{font:13px var(--mono)}
+.ep p{margin:2px 0 0; font-size:13px; color:var(--muted)}
+.code{position:relative; padding:18px 20px; font:12.5px/1.7 var(--mono); color:#c9d3e1; overflow:auto; white-space:pre}
+.code .c{color:var(--faint)} .code .k{color:var(--retina)} .code .s{color:var(--teal)}
+.copy{position:absolute; top:12px; right:12px; font:12px var(--mono); padding:4px 10px; border-radius:6px; border:1px solid var(--line-2);
+  background:var(--panel-2); color:var(--muted); cursor:pointer}
+.copy:hover{color:var(--text)}
+
+/* footer */
+footer{margin-top:80px; border-top:1px solid var(--line); padding:36px 0 48px; color:var(--faint); font-size:13.5px}
+footer .wrap{display:flex; justify-content:space-between; gap:24px; flex-wrap:wrap}
+footer .warn{max-width:36rem}
+footer .warn strong{color:var(--amber)}
+footer nav{position:static; background:none; border:0; backdrop-filter:none; display:flex; gap:18px}
+
+.reveal{opacity:0; transform:translateY(14px); transition:opacity .7s ease, transform .7s ease}
+.reveal.in{opacity:1; transform:none}
+@media (prefers-reduced-motion:reduce){.reveal{opacity:1; transform:none}}
+</style>
+</head>
+<body>
+<div class="glow"></div><div class="grid-bg"></div>
+
+<header>
+<nav><div class="wrap">
+  <a class="brand" href="#top"><span class="brand-dot"></span>APTOS Grader</a>
+  <div class="navlinks">
+    <a href="#analyze">Analyze</a>
+    <a href="#validation">Validation</a>
+    <a class="opt" href="#pipeline">Pipeline</a>
+    <a class="opt" href="#limits">Limitations</a>
+    <a class="opt" href="#api">API</a>
+    <a href="https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy" target="_blank" rel="noopener">GitHub ↗</a>
+  </div>
+</div></nav>
+</header>
+
+<main id="top">
+<div class="wrap">
+
+  <div class="hero">
+    <div>
+      <span class="eyebrow"><span class="pulse"></span>Research demo · not a medical device</span>
+      <h1>Diabetic retinopathy referral from a <span class="accent">single fundus photograph.</span></h1>
+      <p class="lede">A five-fold EfficientNet-B0 ensemble trained on APTOS-2019 and tested, untouched, on a second
+        country's clinic. It returns a severity grade and a referral decision, and it shows you
+        where it is known to be wrong.</p>
+      <div class="cta">
+        <a class="btn primary" href="#analyze">Analyze an image →</a>
+        <a class="btn" href="#validation">See the evidence</a>
+      </div>
+    </div>
+    <div class="hero-art" aria-hidden="true">
+      <svg viewBox="0 0 400 400">
+        <defs>
+          <radialGradient id="fundus" cx="50%" cy="50%" r="50%">
+            <stop offset="0" stop-color="#f0a055"/><stop offset=".62" stop-color="#d0672b"/><stop offset=".92" stop-color="#7a2a10"/><stop offset="1" stop-color="#3a1206"/>
+          </radialGradient>
+          <radialGradient id="disc" cx="50%" cy="50%" r="50%">
+            <stop offset="0" stop-color="#fff4dc"/><stop offset=".6" stop-color="#ffd9a8"/><stop offset="1" stop-color="#f0a055" stop-opacity="0"/>
+          </radialGradient>
+          <radialGradient id="macula" cx="50%" cy="50%" r="50%">
+            <stop offset="0" stop-color="#6b2410" stop-opacity=".85"/><stop offset="1" stop-color="#6b2410" stop-opacity="0"/>
+          </radialGradient>
+          <linearGradient id="beam" x1="0" x2="1"><stop offset="0" stop-color="#2dd4bf" stop-opacity="0"/><stop offset="1" stop-color="#2dd4bf" stop-opacity=".55"/></linearGradient>
+          <clipPath id="eye"><circle cx="200" cy="200" r="150"/></clipPath>
+        </defs>
+        <circle class="ring" cx="200" cy="200" r="190" fill="none" stroke="#2dd4bf" stroke-opacity=".25" stroke-dasharray="2 8"/>
+        <circle cx="200" cy="200" r="170" fill="none" stroke="#1e2a3d"/>
+        <g clip-path="url(#eye)">
+          <circle cx="200" cy="200" r="150" fill="url(#fundus)"/>
+          <circle cx="178" cy="206" r="40" fill="url(#macula)"/>
+          <g fill="none" stroke="#8a2a12" stroke-linecap="round" opacity=".85">
+            <path d="M262 186 C230 150 200 120 120 105" stroke-width="4"/>
+            <path d="M262 186 C225 175 190 160 70 170" stroke-width="3"/>
+            <path d="M262 200 C230 240 200 270 120 300" stroke-width="4"/>
+            <path d="M262 200 C225 215 180 235 70 240" stroke-width="3"/>
+            <path d="M268 180 C300 140 320 110 340 90" stroke-width="3.5"/>
+            <path d="M268 206 C300 250 320 280 335 310" stroke-width="3.5"/>
+            <path d="M200 125 C185 135 170 140 150 138" stroke-width="1.8"/>
+            <path d="M205 272 C188 262 170 262 150 270" stroke-width="1.8"/>
+            <path d="M300 140 C315 160 330 165 345 160" stroke-width="1.6"/>
+          </g>
+          <circle cx="265" cy="193" r="26" fill="url(#disc)"/>
+          <g fill="#ffe7a3"><circle cx="150" cy="240" r="3"/><circle cx="158" cy="233" r="2"/><circle cx="210" cy="150" r="2.5"/></g>
+          <g fill="#7a1a0c"><circle cx="130" cy="190" r="3.2"/><circle cx="222" cy="252" r="2.6"/><circle cx="190" cy="120" r="2"/></g>
+          <g class="scan"><path d="M200 200 L350 200 A150 150 0 0 0 330 125 Z" fill="url(#beam)" opacity=".5"/></g>
+        </g>
+        <g font-family="JetBrains Mono, monospace" font-size="11" fill="#8c9ab0">
+          <line x1="265" y1="193" x2="345" y2="60" stroke="#8c9ab0" stroke-opacity=".5"/><text x="310" y="52">optic disc</text>
+          <line x1="150" y1="240" x2="55" y2="330" stroke="#8c9ab0" stroke-opacity=".5"/><text x="8" y="346">hard exudate</text>
+          <line x1="130" y1="190" x2="40" y2="110" stroke="#8c9ab0" stroke-opacity=".5"/><text x="4" y="102">haemorrhage</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+
+  <div class="stats reveal" id="stats"></div>
+
+  <!-- ANALYZE -->
+  <section id="analyze">
+    <div class="sec-head">
+      <div><div class="kicker">01 · Analyze</div><h2>Grade a fundus photograph</h2></div>
+      <p>Drop a colour fundus image. It is preprocessed exactly as the training data was, scored by all five folds, and discarded. Nothing is stored.</p>
+    </div>
+
+    <div class="analyzer">
+      <div class="card pane">
+        <div class="pane-title">Input <span style="font:12px var(--mono);color:var(--faint)">JPG · PNG</span></div>
+        <div class="drop" id="drop" tabindex="0" role="button" aria-label="Choose a fundus photograph">
+          <div class="hint" id="hint">
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><circle cx="15" cy="10" r="2.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>
+            <strong>Drop an image here</strong>
+            or click to browse · <kbd>Ctrl</kbd>+<kbd>V</kbd> to paste
+          </div>
+          <img id="thumb" alt="" hidden>
+        </div>
+        <input type="file" id="file" accept="image/*" hidden>
+        <div class="file-meta"><span id="fname"></span><span id="fsize"></span></div>
+        <div class="actions">
+          <button class="btn" id="clear" disabled>Clear</button>
+          <button class="btn primary" id="go" disabled>Run ensemble</button>
+        </div>
+        <div class="status" id="status" aria-live="polite"></div>
+        <p class="fine">The free server sleeps when idle. The first request after a pause can take up to a minute while it wakes; after that a grade takes a few seconds.</p>
+      </div>
+
+      <div class="card pane" id="result" aria-live="polite">
+        <div class="pane-title">Result</div>
+        <div class="empty" id="empty">
+          <div>
+            <svg width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+            <div>Results appear here: the referral decision, the grade, where the<br>score sits against the thresholds, and how much the five folds agree.</div>
+          </div>
+        </div>
+        <div id="out" hidden>
+          <div class="verdict" id="verdict">
+            <div class="v-icon" id="v-icon"></div>
+            <div><div class="v-label">Referral decision</div><div class="v-title" id="v-title"></div><div class="v-sub" id="v-sub"></div></div>
+          </div>
+
+          <div class="block">
+            <div class="block-head">ICDRSS grade <em id="grade-text"></em></div>
+            <div class="ladder" id="ladder"></div>
+            <div class="ladder-note"><i></i>grades 2–4 are referable</div>
+          </div>
+
+          <div class="block">
+            <div class="block-head">Ensemble score vs. thresholds <em>white dots: individual folds</em></div>
+            <div class="gauge" id="gauge"></div>
+          </div>
+
+          <div class="block">
+            <div class="metrics">
+              <div class="metric"><span>Raw score</span><b id="m-raw"></b></div>
+              <div class="metric"><span>Fold spread (sd)</span><b id="m-spread"></b><small id="m-agree"></small></div>
+              <div class="metric"><span>Latency</span><b id="m-lat"></b></div>
+              <div class="metric"><span>Backend</span><b id="m-back"></b></div>
+            </div>
+          </div>
+
+          <div class="block">
+            <div class="block-head">Per-fold scores <em>five models, same image</em></div>
+            <div class="folds" id="folds"></div>
+          </div>
+
+          <div class="block">
+            <div class="block-head">What the model saw</div>
+            <div class="seen">
+              <figure><img id="seen-in" alt="uploaded image"><figcaption>uploaded</figcaption></figure>
+              <figure><img id="seen-out" alt="preprocessed image"><figcaption>cropped · padded · scored</figcaption></figure>
+            </div>
+          </div>
+
+          <p class="fine">Trust the <strong>referral decision</strong> more than the exact grade: on an external dataset the referral held up, while
+            the five-way grade compressed at the severe end. No heatmap is shown, deliberately; see <a href="#limits">limitations</a>.</p>
+
+          <details class="raw"><summary>Raw JSON response</summary><pre id="json"></pre></details>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VALIDATION -->
+  <section id="validation">
+    <div class="sec-head">
+      <div><div class="kicker">02 · Evidence</div><h2>Held-out test vs. a different country</h2></div>
+      <p>IDRiD was captured in another clinic, with another camera, graded by another team, at one fixed resolution. The model saw it only once, with no fine-tuning and no refitted thresholds.</p>
+    </div>
+    <div class="val">
+      <div class="card pane reveal">
+        <div class="legend"><span><i style="background:var(--retina)"></i>APTOS test (in-distribution)</span><span><i style="background:var(--teal)"></i>IDRiD (external)</span></div>
+        <div class="cmp" id="cmp"></div>
+      </div>
+      <div class="findings reveal">
+        <div class="finding"><span class="tag a">Shortcut</span><div class="num">QWK 0.652</div>
+          <p>reached by a classifier that sees only file metadata (resolution, brightness, file size) and never the retina. Camera correlates with disease in APTOS.</p></div>
+        <div class="finding"><span class="tag t">Pre-registered test</span><div class="num">Specificity ↑</div>
+          <p>A shortcut-dependent model should have over-called disease on IDRiD, where the shortcut is unavailable. The prediction was written down first. It failed: specificity rose.</p></div>
+        <div class="finding"><span class="tag r">Label ceiling</span><div class="num">≈ 84%</div>
+          <p>Duplicate images carry conflicting grades 29% of the time. No model can be more right than its labels.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PIPELINE -->
+  <section id="pipeline">
+    <div class="sec-head">
+      <div><div class="kicker">03 · Pipeline</div><h2>From upload to decision</h2></div>
+      <p>The same preprocessing code that built the training cache runs on your upload, so the served model cannot drift from the evaluated one.</p>
+    </div>
+    <div class="pipe reveal">
+      <div class="step"><h3>Quality gate</h3><p>Rejects images too dark, too bright or unreadable before any scoring.</p></div>
+      <div class="step"><h3>Auto-crop</h3><p>Finds the circular fundus and trims the black border around it.</p></div>
+      <div class="step"><h3>Square &amp; resize</h3><p>Pads to square at <code>512</code>, then resizes to <code>384</code> and normalises.</p></div>
+      <div class="step"><h3>5-fold ensemble</h3><p>Five EfficientNet-B0 regressors in ONNX Runtime, one CPU thread each.</p></div>
+      <div class="step"><h3>Thresholds</h3><p>The mean score is cut at four thresholds fitted on validation data.</p></div>
+      <div class="step"><h3>Decision</h3><p>Grade 0–4, plus <code>referable</code> when grade ≥ 2.</p></div>
+    </div>
+  </section>
+
+  <!-- LIMITATIONS -->
+  <section id="limits">
+    <div class="sec-head">
+      <div><div class="kicker">04 · Limitations</div><h2>What this model is known to get wrong</h2></div>
+      <p>Served with every response, not buried in a footnote. A demo that hid these would contradict the analysis behind it.</p>
+    </div>
+    <div class="lims" id="lims"></div>
+  </section>
+
+  <!-- API -->
+  <section id="api">
+    <div class="sec-head">
+      <div><div class="kicker">05 · API</div><h2>Use it from code</h2></div>
+      <p>Plain HTTP. Model card at <a href="/model-card">/model-card</a>, interactive docs at <a href="/docs">/docs</a>.</p>
+    </div>
+    <div class="api">
+      <div class="card endpoints reveal">
+        <div class="ep"><span class="m post">POST</span><div><code>/predict</code><p>multipart <code>file</code>. Returns grade, referable, raw score, fold scores and spread. <code>?preview=true</code> adds the preprocessed image.</p></div></div>
+        <div class="ep"><span class="m get">GET</span><div><code>/model-card</code><p>Reported metrics and known limitations as JSON.</p></div></div>
+        <div class="ep"><span class="m get">GET</span><div><code>/health</code><p>Liveness, and whether the ensemble is loaded yet.</p></div></div>
+      </div>
+      <div class="card code reveal" id="curl"><button class="copy" id="copy">copy</button><span class="k">curl</span> -F <span class="s">"file=@fundus.jpg"</span> \
+  <span class="s" id="origin"></span>/predict
+
+<span class="c"># example response (values illustrative)</span>
+<span class="c"># {</span>
+<span class="c">#   "grade": 2, "grade_label": "Moderate", "referable": true,</span>
+<span class="c">#   "raw_score": 1.87, "fold_spread": 0.11,</span>
+<span class="c">#   "fold_scores": [1.79, 1.95, 1.84, 2.01, 1.76],</span>
+<span class="c">#   "thresholds": [0.668, 1.132, 2.324, 3.3],</span>
+<span class="c">#   "model_version": "baseline-6e66147526", ...</span>
+<span class="c"># }</span></div>
+    </div>
+  </section>
+
+</div>
+</main>
+
+<footer><div class="wrap">
+  <div class="warn"><strong>Not a medical device.</strong> A benchmark model trained on one public dataset, with no clinical validation and no
+    regulatory clearance. Do not use it for anyone's care.</div>
+  <nav>
+    <a href="https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy" target="_blank" rel="noopener">Source</a>
+    <a href="https://huggingface.co/senanurcetin/aptos-retinopathy-grader" target="_blank" rel="noopener">Weights</a>
+    <a href="/model-card">Model card</a>
+  </nav>
+</div></footer>
+
+<script>
+const LIMITS = __CARD__;
+const REPORTED = __REPORTED__;
+const SPREAD = __SPREAD__;
+const GRADES = ["No DR", "Mild", "Moderate", "Severe", "Proliferative DR"];
+const GCOL = ["var(--g0)", "var(--g1)", "var(--g2)", "var(--g3)", "var(--g4)"];
+const $ = id => document.getElementById(id);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+
+/* ---------- static sections, filled from the model card ---------- */
+(function stats() {
+  const items = [
+    [REPORTED.aptos_test_qwk.toFixed(3), "QWK, APTOS test", "5-fold ensemble"],
+    [REPORTED.idrid_qwk.toFixed(3), "QWK, IDRiD external", "no fine-tuning"],
+    [REPORTED.idrid_referable_specificity.toFixed(3), "Referral specificity", "on IDRiD"],
+    [REPORTED.idrid_referable_sensitivity.toFixed(3), "Referral sensitivity", "on IDRiD"],
+  ];
+  for (const [v, l, s] of items) {
+    const d = el("div", "stat"); d.append(el("b", null, v), el("span", null, l), el("small", null, s)); $("stats").append(d);
+  }
+})();
+
+(function comparison() {
+  const rows = [
+    ["Quadratic weighted kappa", "five-way grade agreement", "aptos_test_qwk", "idrid_qwk"],
+    ["Referral ROC AUC", "discrimination, grade ≥ 2", "aptos_referable_roc_auc", "idrid_referable_roc_auc"],
+    ["Referral sensitivity", "referable eyes caught", "aptos_referable_sensitivity", "idrid_referable_sensitivity"],
+    ["Referral specificity", "healthy eyes left alone", "aptos_referable_specificity", "idrid_referable_specificity"],
+  ];
+  for (const [name, sub, a, b] of rows) {
+    if (REPORTED[a] == null || REPORTED[b] == null) continue;
+    const r = el("div", "cmp-row");
+    const n = el("div", "cmp-name"); n.append(el("strong", null, name), el("span", null, sub)); r.append(n);
+    const bars = el("div", "bars");
+    for (const [k, c] of [[a, "var(--retina)"], [b, "var(--teal)"]]) {
+      const bar = el("div", "bar"), t = el("div", "t"), i = el("i");
+      i.style.background = c; i.dataset.w = (REPORTED[k] * 100) + "%"; t.append(i);
+      bar.append(t, el("b", null, REPORTED[k].toFixed(3))); bars.append(bar);
+    }
+    r.append(bars); $("cmp").append(r);
+  }
+})();
+
+LIMITS.forEach((text, i) => {
+  const c = el("div", "card lim reveal"); c.append(el("div", "n", String(i + 1).padStart(2, "0")), el("p", null, text)); $("lims").append(c);
+});
+
+$("origin").textContent = location.origin;
+$("copy").onclick = () => {
+  navigator.clipboard?.writeText(`curl -F "file=@fundus.jpg" ${location.origin}/predict`);
+  $("copy").textContent = "copied"; setTimeout(() => $("copy").textContent = "copy", 1400);
+};
+
+/* reveal on scroll; bars grow when their card appears */
+const io = new IntersectionObserver(entries => {
+  for (const e of entries) if (e.isIntersecting) {
+    e.target.classList.add("in");
+    e.target.querySelectorAll("[data-w]").forEach(i => i.style.width = i.dataset.w);
+    io.unobserve(e.target);
+  }
+}, { threshold: .15 });
+document.querySelectorAll(".reveal").forEach(n => io.observe(n));
+
+/* ---------- analyzer ---------- */
+let current = null, previewUrl = null;
+
+function pick(file) {
+  if (!file || !file.type.startsWith("image/")) { setStatus("That file is not an image.", true); return; }
+  current = file;
+  if (previewUrl) URL.revokeObjectURL(previewUrl);
+  previewUrl = URL.createObjectURL(file);
+  $("thumb").src = previewUrl; $("thumb").hidden = false; $("hint").hidden = true;
+  $("fname").textContent = file.name || "pasted image";
+  $("fsize").textContent = (file.size / 1024 / 1024).toFixed(2) + " MB";
+  $("go").disabled = false; $("clear").disabled = false;
+  setStatus("");
+}
+
+function clearAll() {
+  current = null; $("file").value = "";
+  $("thumb").hidden = true; $("hint").hidden = false; $("fname").textContent = ""; $("fsize").textContent = "";
+  $("go").disabled = true; $("clear").disabled = true;
+  $("out").hidden = true; $("empty").hidden = false; setStatus("");
+}
+
+function setStatus(text, err) { $("status").textContent = text; $("status").className = "status" + (err ? " err" : ""); }
+
+const drop = $("drop");
+drop.onclick = () => $("file").click();
+drop.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("file").click(); } };
+$("file").onchange = e => pick(e.target.files[0]);
+["dragenter", "dragover"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => pick(e.dataTransfer.files[0]));
+window.addEventListener("paste", e => {
+  const item = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith("image/"));
+  if (item) pick(item.getAsFile());
+});
+$("clear").onclick = clearAll;
+$("go").onclick = run;
+
+async function run() {
+  if (!current) return;
+  $("go").disabled = true; drop.classList.add("busy");
+  setStatus("Running the five-fold ensemble…");
+  const slow = setTimeout(() => setStatus("Still working. The server was probably asleep; waking it can take up to a minute."), 8000);
+  try {
+    const body = new FormData(); body.append("file", current);
+    const r = await fetch("/predict?preview=true", { method: "POST", body });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.detail || `The server answered ${r.status}.`);
+    render(data); setStatus("");
+  } catch (err) {
+    setStatus(err.message || "The request failed.", true);
+  } finally {
+    clearTimeout(slow); drop.classList.remove("busy"); $("go").disabled = false;
+  }
+}
+
+function render(d) {
+  $("empty").hidden = true; $("out").hidden = false;
+
+  const v = $("verdict");
+  v.className = "verdict " + (d.referable ? "refer" : "norefer");
+  $("v-icon").innerHTML = d.referable
+    ? '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 8v5M12 16.5v.5"/><path d="M10.3 3.9 2.4 17.5A2 2 0 0 0 4.1 20.5h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>'
+    : '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  $("v-title").textContent = d.referable ? "Referable retinopathy" : "No referable retinopathy";
+  $("v-sub").textContent = d.referable
+    ? `Predicted grade ${d.grade} (${d.grade_label}) is at or above the referable cut.`
+    : `Predicted grade ${d.grade} (${d.grade_label}) is below the referable cut.`;
+
+  $("grade-text").textContent = `${d.grade} · ${d.grade_label}`;
+  const ladder = $("ladder"); ladder.textContent = "";
+  GRADES.forEach((g, i) => {
+    const rung = el("div", "rung" + (i === d.grade ? " on" : ""));
+    rung.style.setProperty("--c", GCOL[i]);
+    rung.append(el("b", null, i), el("span", null, g)); ladder.append(rung);
+  });
+
+  drawGauge(d);
+
+  $("m-raw").textContent = d.raw_score.toFixed(3);
+  $("m-spread").textContent = d.fold_spread.toFixed(3);
+  const pr = spreadPercentile(d.fold_spread);
+  const col = pr < 75 ? "var(--teal)" : pr < 95 ? "var(--amber)" : "var(--red)";
+  $("m-agree").textContent = pr < 75 ? `typical: above ${pr}% of test images`
+                           : pr < 95 ? `higher than ${pr}% of test images`
+                           : `higher than ${pr}%: weigh this less`;
+  $("m-agree").style.color = col;
+  $("m-agree").title = "Compared with " + SPREAD.source;
+  $("m-lat").textContent = Math.round(d.latency_ms) + " ms";
+  $("m-back").textContent = (d.backend || "torch").toUpperCase();
+
+  const folds = $("folds"); folds.textContent = "";
+  const max = 4.5;
+  (d.fold_scores || []).forEach((s, i) => {
+    const row = el("div", "fold-row"), bar = el("div", "fold-bar"), fill = el("i");
+    const g = d.thresholds.filter(t => s >= t).length;
+    fill.style.background = GCOL[g]; bar.append(fill);
+    row.append(el("span", null, `fold ${i + 1}`), bar, el("b", null, s.toFixed(3)));
+    folds.append(row);
+    requestAnimationFrame(() => requestAnimationFrame(() => fill.style.width = Math.max(2, Math.min(100, s / max * 100)) + "%"));
+  });
+
+  $("seen-in").src = previewUrl;
+  if (d.preview) { $("seen-out").src = d.preview; $("seen-out").parentElement.hidden = false; }
+  else $("seen-out").parentElement.hidden = true;
+
+  const shown = { ...d }; if (shown.preview) shown.preview = "data:image/jpeg;base64,… (" + Math.round(d.preview.length / 1024) + " kB)";
+  $("json").textContent = JSON.stringify(shown, null, 2);
+  $("result").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+// Percentile rank of a fold spread among the APTOS test images, by linear
+// interpolation between the stored 5-percentile steps.
+function spreadPercentile(x) {
+  const v = SPREAD.values, step = SPREAD.percentiles_step;
+  if (x <= v[0]) return 0;
+  for (let i = 1; i < v.length; i++) if (x <= v[i])
+    return Math.round((i - 1 + (x - v[i - 1]) / (v[i] - v[i - 1] || 1)) * step);
+  return 100;
+}
+
+function drawGauge(d) {
+  const g = $("gauge"); g.textContent = "";
+  const lo = -0.5, hi = 4.5, pct = x => ((Math.min(hi, Math.max(lo, x)) - lo) / (hi - lo) * 100);
+  g.append(el("div", "track"));
+  const shade = el("div", "shade"); shade.style.left = pct(d.thresholds[1]) + "%"; shade.title = "referable region"; g.append(shade);
+  d.thresholds.forEach((t, i) => {
+    const tick = el("div", "tick"); tick.style.left = pct(t) + "%";
+    tick.append(el("span", null, t.toFixed(2))); g.append(tick);
+  });
+  (d.fold_scores || []).forEach(s => { const f = el("div", "fold"); f.style.left = pct(lo) + "%"; g.append(f);
+    requestAnimationFrame(() => requestAnimationFrame(() => f.style.left = pct(s) + "%")); });
+  const m = el("div", "marker"); m.append(el("b", null, d.raw_score.toFixed(2)), el("i")); m.style.left = pct(lo) + "%"; g.append(m);
+  requestAnimationFrame(() => requestAnimationFrame(() => m.style.left = pct(d.raw_score) + "%"));
+}
+</script>
+</body>
+</html>

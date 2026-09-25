@@ -33,7 +33,6 @@ COPY src ./src
 RUN pip install --no-cache-dir --no-deps .
 
 COPY configs ./configs
-COPY serving/app.py ./serving/app.py
 
 # The weights live in a Hugging Face model repository, not in git: 80 MB of
 # binaries do not belong in a source repository. The revision is pinned to a
@@ -46,6 +45,11 @@ COPY serving/fetch_weights.py ./serving/fetch_weights.py
 RUN python serving/fetch_weights.py \
         --repo "${WEIGHTS_REPO}" --revision "${WEIGHTS_REVISION}" \
         --sweep "${SWEEP}" --out models/onnx
+
+# After the weights on purpose: the page and the app change far more often than
+# the model, and a change here should not re-download 80 MB.
+COPY serving/app.py ./serving/app.py
+COPY serving/static ./serving/static
 
 RUN useradd -m -u 1000 app && chown -R app /app
 USER app

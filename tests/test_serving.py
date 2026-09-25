@@ -101,3 +101,54 @@ def test_numpy_transform_matches_torchvision_exactly():
         actual = grader._to_input(bgr)
         assert actual.shape == expected.shape == (1, 3, 384, 384)
         assert np.array_equal(actual, expected)
+
+
+# ------------------------------------------------------------------------ page
+
+@pytest.fixture
+def app_module():
+    pytest.importorskip("fastapi")
+    return _load("serving_app_page", "serving/app.py")
+
+
+@pytest.mark.torch
+def test_page_has_every_placeholder_filled(app_module):
+    """The page reads its numbers from MODEL_CARD. A placeholder left in would
+    ship as a JavaScript syntax error and a blank page."""
+    html = app_module.index()
+    for placeholder in ("__CARD__", "__REPORTED__", "__SPREAD__"):
+        assert placeholder not in html
+
+
+@pytest.mark.torch
+def test_every_metric_the_page_names_exists_in_the_model_card(app_module):
+    """The comparison skips a row whose key is missing, so a renamed key would
+    silently drop a metric from the page rather than fail."""
+    import re
+
+    page = (ROOT / "serving" / "static" / "index.html").read_text(encoding="utf-8")
+    named = set(re.findall(r"\b((?:aptos|idrid)_[a-z_]+)\b", page))
+    assert named, "the page no longer names any metric"
+    assert named <= set(app_module.MODEL_CARD["reported"])
+
+
+@pytest.mark.torch
+def test_fold_spread_reference_is_a_usable_percentile_table(app_module):
+    ref = app_module.MODEL_CARD["fold_spread_reference"]
+    values = ref["values"]
+    assert len(values) == 100 // ref["percentiles_step"] + 1
+    assert all(a <= b for a, b in zip(values[:-1], values[1:], strict=True))
+
+
+@pytest.mark.torch
+def test_preview_is_a_small_jpeg_data_url(app_module):
+    import base64
+
+    import cv2
+
+    url = app_module.preview_data_url(np.full((512, 512, 3), 90, np.uint8))
+    prefix = "data:image/jpeg;base64,"
+    assert url.startswith(prefix)
+    decoded = cv2.imdecode(np.frombuffer(base64.b64decode(url[len(prefix):]), np.uint8),
+                           cv2.IMREAD_COLOR)
+    assert decoded.shape == (320, 320, 3)
