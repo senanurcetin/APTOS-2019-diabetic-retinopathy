@@ -166,7 +166,10 @@ def split_counts(df: pd.DataFrame) -> pd.DataFrame:
     )
     table.columns = [GRADES[c] for c in table.columns]
     table["total"] = table.sum(axis=1)
-    table["imbalance"] = (table.iloc[:, :-1].max(axis=1) / table.iloc[:, :-1].replace(0, pd.NA).min(axis=1)).round(2)
+    # Absent grades become NaN, not pd.NA: pd.NA turns the column into object
+    # dtype, which some pandas versions then refuse to round.
+    counts = table.iloc[:, :-1]
+    table["imbalance"] = (counts.max(axis=1) / counts.where(counts > 0).min(axis=1)).round(2)
     return table.reindex(list(SPLITS))
 
 

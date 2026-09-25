@@ -91,3 +91,11 @@ extend-immutable-calls = [
 [tool.coverage.run]
 source = ["aptos"]
 omit = ["*/reporting/figures.py"]
+
+[tool.coverage.report]
+# Measured at 69% in the CI configuration (no dataset, CPU torch) when the floor
+# was introduced; set a few points under so noise cannot fail a build. It is a
+# ratchet: raise it when coverage rises, never lower it to make a change pass.
+fail_under = 65
+skip_covered = true
+show_missing = true
