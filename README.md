@@ -374,7 +374,7 @@ shortcut was tested rather than only reported, and IDRiD was run. What remains:
 
 - **Calibration is measured but deliberately not corrected.** On IDRiD the ROC
   AUC is 0.984 against APTOS test's 0.983 — discrimination transfers intact —
-  but ECE rises from 0.019 to 0.117 and the model becomes systematically
+  but ECE rises from 0.032 to 0.117 and the model becomes systematically
   *under*-confident, so a threshold fitted on APTOS under-refers elsewhere
   (sensitivity 0.816 against the 0.90 it was set for). It is a one-parameter
   problem and fixing it needs labelled data from the target population, which is

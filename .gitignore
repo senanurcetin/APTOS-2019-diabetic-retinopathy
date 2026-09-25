@@ -48,3 +48,6 @@ htmlcov/
 # ...except the report outputs, which are delivered work.
 !reports/figures/*.png
 !reports/*.csv
+
+# Local run logs
+/logs/

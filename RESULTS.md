@@ -54,6 +54,42 @@ Mean ± standard deviation:
 | baseline | 0.8958 ± 0.0028 | 0.8986 ± 0.0033 | 0.7832 ± 0.0150 |
 | clahe | 0.9045 ± 0.0021 | 0.8954 ± 0.0146 | 0.7923 ± 0.0237 |
 
+### Rerunning seed 42, a year on
+
+The trainer was moved into the package (`aptos.training.single`) with its
+behaviour meant to be unchanged. On 25 September 2026 baseline seed 42 was rerun
+with the same settings as the recorded run: no leak exclusion, 15 epochs, 384px,
+batch 16. The one forced change was `--workers 0` instead of 2, because another
+heavy job shared the machine and worker processes are what exhaust the Windows
+commit limit.
+
+| run | valid QWK | test QWK | test acc | test macro F1 |
+|---|---|---|---|---|
+| recorded (original `train.py`) | 0.8980 | 0.8960 | 0.7732 | 0.5680 |
+| ported trainer, 2026-09-25 | 0.8919 | **0.8853** | 0.7978 | 0.5477 |
+| original `train.py` from git, 2026-09-25 | 0.8919 | **0.8853** | 0.7978 | 0.5477 |
+
+The rerun lands 0.011 below the recorded run, about three standard deviations
+of the three-seed spread above. That could have been a porting error, so the
+pre-port `train.py` was checked out of git history and run under the same
+conditions. It matches the ported trainer **exactly**: every epoch's training
+loss, validation loss and validation QWK agree to four decimals, and so do the
+final metrics. The port is faithful.
+
+The 0.011 therefore comes from the run environment, not the code: the worker
+count changes the order in which augmentation draws random numbers, and the
+library stack has moved on since the recorded runs. Two conclusions:
+
+- **Three seeds understated the noise.** The recorded seed spread (±0.0033)
+  implied test QWK was pinned to about ±0.003. The same code and seed moved by
+  0.011 across environments, which is in line with the ±0.0086 spread between
+  cross-validation folds on this same test set. Differences between single runs
+  smaller than about 0.01 should not be read as effects.
+- **An exact numeric reproduction needs the environment as well as the seed.**
+  The code is reproducible - two implementations agree bit for bit - but the
+  recorded numbers are tied to a worker count and library versions that were
+  not pinned when they were produced.
+
 ### QWK 0.90 but macro F1 0.57
 
 The gap is not noise. Errors land on neighbouring grades rather than far away,
@@ -555,11 +591,15 @@ rather than only reported, and external validation was run on IDRiD — all on
   each other but does not remove the shortcut, and IDRiD answers the underlying
   question outright. Left undone deliberately, not overlooked.
 
-- **Calibration was never addressed, and IDRiD exposed it.** The model issues 8
-  grade-4 predictions where 64 exist, because thresholds fitted on APTOS
-  validation are carried across unchanged. Temperature scaling, or reporting a
-  recalibrated variant beside the fixed-threshold one, would separate
-  calibration drift from discrimination loss. Neither was done.
+- **Calibration is measured but not corrected for new populations.** The
+  regression score is turned into a referral probability by Platt scaling fitted
+  on out-of-fold predictions: ECE 0.019 out of fold, 0.032 on APTOS test (see
+  *Calibration and the clinical operating point* above). On IDRiD it rises to
+  0.117 and the
+  five-way grade compresses - 8 grade-4 predictions where 64 exist - while
+  discrimination holds (ROC AUC 0.984). Correcting that needs labelled data from
+  the target population, which a deployment would have to collect and this
+  project does not have.
 
 - **The external result rests on one mirror of one dataset.** 455 images from a
   Kaggle copy of IDRiD rather than the full official distribution, and 129
