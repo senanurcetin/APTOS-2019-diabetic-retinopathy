@@ -54,9 +54,22 @@ MODEL_CARD = {
         "aptos_test_qwk": 0.9091,
         "aptos_referable_sensitivity": 0.956,
         "aptos_referable_specificity": 0.917,
+        "aptos_referable_roc_auc": 0.983,
         "idrid_qwk": 0.8045,
         "idrid_referable_sensitivity": 0.885,
         "idrid_referable_specificity": 0.987,
+        "idrid_referable_roc_auc": 0.984,
+    },
+    # How much the five folds disagree on ordinary images: the standard
+    # deviation of the fold scores on each of the 366 APTOS test images, at
+    # every 5th percentile (0, 5, ..., 100). Lets a response's fold_spread be
+    # read against something measured instead of an invented cut-off.
+    "fold_spread_reference": {
+        "source": "APTOS test, 366 images, sweep baseline-6e66147526",
+        "percentiles_step": 5,
+        "values": [0.048, 0.123, 0.14, 0.166, 0.188, 0.207, 0.229, 0.239, 0.254,
+                   0.263, 0.272, 0.281, 0.303, 0.317, 0.332, 0.345, 0.379, 0.395,
+                   0.431, 0.472, 0.725],
     },
     "known_limitations": [
         "Not a medical device. No clinical validation, no regulatory clearance.",
@@ -154,7 +167,9 @@ class Grader:
             "raw_score": round(raw, 4),
             "fold_spread": round(float(np.std(raws, ddof=1)), 4),
             "thresholds": [round(float(t), 4) for t in self.thresholds],
+            "fold_scores": [round(r, 4) for r in raws],
             "model_version": self.sweep,
+            "_processed": processed,
         }
 
 
@@ -243,8 +258,10 @@ class OnnxGrader:
             "raw_score": round(raw, 4),
             "fold_spread": round(float(np.std(raws, ddof=1)), 4),
             "thresholds": [round(float(t), 4) for t in self.thresholds],
+            "fold_scores": [round(r, 4) for r in raws],
             "model_version": self.sweep,
             "backend": "onnx",
+            "_processed": processed,
         }
 
 
@@ -287,6 +304,7 @@ def model_card() -> dict[str, Any]:
 async def predict(
     file: UploadFile = File(...),
     explain: bool = Query(False, description="deliberately not offered - see reports/attention.md"),
+    preview: bool = Query(False, description="return the preprocessed image the model scored"),
 ) -> JSONResponse:
     grader = get_grader()
     started = time.time()
@@ -296,6 +314,9 @@ async def predict(
         raise HTTPException(400, str(exc)) from exc
 
     result["latency_ms"] = round((time.time() - started) * 1000, 1)
+    processed = result.pop("_processed")
+    if preview:
+        result["preview"] = preview_data_url(processed)
     result["disclaimer"] = (
         "Not a medical device. The referable flag is the output validated "
         "externally; the five-way grade degrades under distribution shift."
@@ -311,41 +332,32 @@ async def predict(
     return JSONResponse(result)
 
 
+def preview_data_url(bgr: np.ndarray, size: int = 320) -> str:
+    """The preprocessed image as a small JPEG data URL.
+
+    Shows what the model actually scored - cropped, padded to square - which is
+    not the same picture that was uploaded, and is the honest thing to display
+    next to a grade.
+    """
+    import base64
+
+    import cv2
+
+    small = cv2.resize(bgr, (size, size), interpolation=cv2.INTER_AREA)
+    ok, buf = cv2.imencode(".jpg", small, [cv2.IMWRITE_JPEG_QUALITY, 85])
+    if not ok:
+        return ""
+    return "data:image/jpeg;base64," + base64.b64encode(buf.tobytes()).decode()
+
+
+PAGE = pathlib.Path(__file__).with_name("static") / "index.html"
+
+
 @app.get("/", response_class=HTMLResponse)
 def index() -> str:
-    return _PAGE.replace("__CARD__", json.dumps(MODEL_CARD["known_limitations"]))
-
-
-_PAGE = """
-<!doctype html><meta charset="utf-8">
-<title>APTOS retinopathy grader</title>
-<style>
- body{font:16px/1.6 system-ui,sans-serif;max-width:46rem;margin:3rem auto;padding:0 1rem}
- .warn{border-left:3px solid #b45309;background:#fffbeb;padding:.75rem 1rem;margin:1rem 0}
- li{margin:.35rem 0} pre{background:#f6f8fa;padding:1rem;overflow:auto}
-</style>
-<h1>APTOS retinopathy grader</h1>
-<p>Upload a colour fundus photograph. The service returns an ICDRSS grade and a
-referral decision.</p>
-<div class="warn"><strong>Not a medical device.</strong> This is a benchmark
-model trained on one public dataset, with no clinical validation and no
-regulatory clearance. Do not use it for care.</div>
-<input type="file" id="f" accept="image/*">
-<button onclick="go()">Grade</button>
-<pre id="out">—</pre>
-<h2>What this model is known to get wrong</h2>
-<ul id="lim"></ul>
-<script>
- document.getElementById('lim').innerHTML =
-   __CARD__.map(t => '<li>' + t + '</li>').join('');
- async function go(){
-   const f = document.getElementById('f').files[0];
-   if(!f){ return; }
-   const d = new FormData(); d.append('file', f);
-   document.getElementById('out').textContent = 'scoring...';
-   const r = await fetch('/predict', {method:'POST', body:d});
-   document.getElementById('out').textContent =
-     JSON.stringify(await r.json(), null, 2);
- }
-</script>
-"""
+    # Numbers and caveats are injected from MODEL_CARD, so the page cannot
+    # quote a figure the API does not.
+    return (PAGE.read_text(encoding="utf-8")
+            .replace("__CARD__", json.dumps(MODEL_CARD["known_limitations"]))
+            .replace("__REPORTED__", json.dumps(MODEL_CARD["reported"]))
+            .replace("__SPREAD__", json.dumps(MODEL_CARD["fold_spread_reference"])))
