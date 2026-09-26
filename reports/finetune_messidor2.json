@@ -1,0 +1,102 @@
+{
+  "design": "docs/finetune-prediction.md",
+  "finetune": {
+    "lr": 0.0001,
+    "weight_decay": 0.0001,
+    "epochs": 8,
+    "seed": 42
+  },
+  "none": {
+    "Messidor-2 test half": {
+      "n": 872,
+      "referable_auc": 0.8301799017976598,
+      "qwk": 0.5173960599960438,
+      "moderate_below_2": 0.783625730994152,
+      "moderate_n": 171,
+      "moderate_without_dme_median_raw": 0.40166014432907104,
+      "moderate_with_dme_median_raw": 1.146386742591858,
+      "accuracy": 0.6032110091743119,
+      "macro_f1": 0.3047815643075549
+    },
+    "IDRiD": {
+      "n": 455,
+      "referable_auc": 0.9844457999302892,
+      "qwk": 0.8045258469523743,
+      "moderate_below_2": 0.21153846153846154,
+      "moderate_n": 156,
+      "accuracy": 0.5868131868131868,
+      "macro_f1": 0.4609217342131718
+    },
+    "APTOS test": {
+      "n": 366,
+      "referable_auc": 0.9829789946769515,
+      "qwk": 0.9091086323822256,
+      "moderate_below_2": 0.05747126436781609,
+      "moderate_n": 87,
+      "accuracy": 0.8032786885245902,
+      "macro_f1": 0.5450113575454478
+    }
+  },
+  "adjudicated": {
+    "Messidor-2 test half": {
+      "n": 872,
+      "referable_auc": 0.9250714785360653,
+      "qwk": 0.7581609713331341,
+      "moderate_below_2": 0.4502923976608187,
+      "moderate_n": 171,
+      "moderate_without_dme_median_raw": 1.2458984851837158,
+      "moderate_with_dme_median_raw": 2.4007811546325684,
+      "accuracy": 0.6628440366972477,
+      "macro_f1": 0.42884996916017454
+    },
+    "IDRiD": {
+      "n": 455,
+      "referable_auc": 0.9603520390379923,
+      "qwk": 0.7613088597321026,
+      "moderate_below_2": 0.11538461538461539,
+      "moderate_n": 156,
+      "accuracy": 0.46813186813186813,
+      "macro_f1": 0.39854490046193003
+    },
+    "APTOS test": {
+      "n": 366,
+      "referable_auc": 0.9647786313071749,
+      "qwk": 0.8672768878718535,
+      "moderate_below_2": 0.08045977011494253,
+      "moderate_n": 87,
+      "accuracy": 0.6857923497267759,
+      "macro_f1": 0.4636038699881877
+    }
+  },
+  "control": {
+    "Messidor-2 test half": {
+      "n": 872,
+      "referable_auc": 0.8338506047661413,
+      "qwk": 0.4943552690997167,
+      "moderate_below_2": 0.8245614035087719,
+      "moderate_n": 171,
+      "moderate_without_dme_median_raw": 0.2818450927734375,
+      "moderate_with_dme_median_raw": 1.4259765148162842,
+      "accuracy": 0.6055045871559633,
+      "macro_f1": 0.2836803384409018
+    },
+    "IDRiD": {
+      "n": 455,
+      "referable_auc": 0.9805899268037646,
+      "qwk": 0.7546965843652769,
+      "moderate_below_2": 0.34615384615384615,
+      "moderate_n": 156,
+      "accuracy": 0.5362637362637362,
+      "macro_f1": 0.40404475764177905
+    },
+    "APTOS test": {
+      "n": 366,
+      "referable_auc": 0.9759665954801899,
+      "qwk": 0.8667577965361255,
+      "moderate_below_2": 0.13793103448275862,
+      "moderate_n": 87,
+      "accuracy": 0.7759562841530054,
+      "macro_f1": 0.536429835365874
+    }
+  }
+}

@@ -309,3 +309,21 @@ def test_messidor2_split_never_separates_a_group():
     assert split.groupby("group")["part"].nunique().max() == 1
     assert set(split["part"]) == {"test", "tune-train", "tune-valid"}
     assert abs((split["part"] == "test").mean() - 0.5) < 0.1
+
+
+def test_finetune_summary_measures_the_moderate_boundary_and_reports_it():
+    from aptos.training.finetune import format_report, summarise
+
+    frame = pd.DataFrame({"id_code": ["a", "b", "c", "d", "e", "f"],
+                          "diagnosis": [0, 1, 2, 2, 2, 3],
+                          "raw": [0.1, 0.9, 0.8, 2.1, 1.9, 2.9],
+                          "pred": [0, 1, 1, 2, 2, 3]})
+    dme = pd.Series({"c": 0, "d": 1, "e": 0})
+    out = summarise({"Messidor-2 test half": frame}, dme)["Messidor-2 test half"]
+    assert out["moderate_below_2"] == pytest.approx(1 / 3)
+    assert out["moderate_without_dme_median_raw"] == pytest.approx(1.35)
+    assert out["moderate_with_dme_median_raw"] == pytest.approx(2.1)
+    assert out["referable_auc"] == pytest.approx(1.0 - 1 / 8)
+
+    text = format_report({"none": {"Messidor-2 test half": out}})
+    assert "| Moderate graded below 2 | 0.333 |" in text

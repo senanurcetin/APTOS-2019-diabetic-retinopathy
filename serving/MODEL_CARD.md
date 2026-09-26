@@ -59,7 +59,10 @@ referable AUC >= 0.93; it came out 0.819. The next section says why.
   83% of Moderate eyes were graded below 2. Moderate eyes with exudates were
   caught; those defined by subtler signs were scored like Mild. The model
   learned where APTOS's single graders draw that line, and a specialist panel
-  draws it lower. Read the referral flag as "exudate-level disease or worse".
+  draws it lower. Fine-tuning on adjudicated labels moves the line (45% below 2,
+  AUC 0.925) while a same-image control does not, which confirms the cause - but
+  that model over-grades APTOS, so it is not the one published here. Read the
+  referral flag as "exudate-level disease or worse".
 - **A shortcut exists in the training data.** A classifier given only file
   metadata - resolution, aspect ratio, brightness, file size - reaches QWK 0.652
   on APTOS without looking at the retina, because camera correlates with disease

@@ -107,3 +107,60 @@ much or more.
 - A fine-tuned model has seen Messidor-2; its Messidor-2 score is no longer an
   external result. The external tests remain IDRiD for the fine-tuned model, and
   the numbers already reported for the unchanged one.
+
+---
+
+## Outcome (26 September 2026, after the run)
+
+Added after the run, below the predictions, which are unchanged from commit
+`238587b`. Full tables: `reports/finetune_messidor2.md`.
+
+| | none | adjudicated | control |
+|---|---|---|---|
+| Messidor-2 test half, referable AUC | 0.830 | **0.925** | 0.834 |
+| Messidor-2 test half, Moderate graded below 2 | 78.4% | **45.0%** | 82.5% |
+| Messidor-2 test half, five-way QWK | 0.517 | 0.758 | 0.494 |
+| IDRiD, referable AUC | 0.984 | 0.960 | 0.981 |
+| APTOS test, referable AUC | 0.983 | 0.965 | 0.976 |
+| APTOS test, five-way QWK | 0.909 | 0.867 | 0.867 |
+| APTOS test, accuracy | 0.803 | 0.686 | 0.776 |
+
+The control arm's labels - the unchanged ensemble's own grades - agree with the
+panel on 59.4% of the tune images, so the two arms really were trained on
+different boundaries.
+
+**F1 - held.** Referable AUC on the Messidor-2 test half rises from 0.830 to
+0.925.
+
+**F2 - held.** The share of Moderate test-half eyes graded below 2 falls from
+78.4% to 45.0%.
+
+**F3 - held, with a cost the prediction did not cover.** Referable AUC stays
+above 0.95 on IDRiD (0.960) and APTOS test (0.965). But the grade-level numbers
+drop: APTOS test accuracy 0.803 to 0.686, QWK 0.909 to 0.867. The fine-tuned
+ensemble scores everything higher, and its thresholds were fitted on Messidor-2,
+so on APTOS it over-grades. Referral ranking survives; the five-way grade on the
+original population does not.
+
+**F4 - held.** The control, trained on the same images with the APTOS boundary,
+gains nothing: AUC 0.834 against 0.830, and 82.5% of Moderate eyes still graded
+below 2. Domain adaptation to Messidor-2's cameras does not explain the
+improvement. The labels do.
+
+**F5 - failed.** The hypothesis put the gain in Moderate eyes *without*
+exudates. Their median score rose by 0.84 (0.40 to 1.25), but that of Moderate
+eyes *with* exudates rose more, by 1.26 (1.15 to 2.40). Fine-tuning moved the
+whole Moderate grade up rather than the subtle cases specifically. The
+exudate-free cases now cross the referral line, but because everything moved,
+not because the model learned to see what it was missing.
+
+### What it means
+
+- The post-hoc reading of the Messidor-2 failure is now a tested result, in its
+  main part: **the failure was the training labels.** Adjudicated labels fix it
+  and APTOS-boundary labels on the same images do not.
+- Its finer part is not supported. There is no evidence the model learned new
+  lesion features; it re-drew the boundary.
+- The fine-tuned ensemble is not a drop-in replacement for the deployed one. It
+  trades APTOS grade accuracy for Messidor-2 referral, and it has seen
+  Messidor-2. The deployed model stays unchanged.

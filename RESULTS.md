@@ -22,6 +22,7 @@ thresholds tuned on validation.
 | Preprocessing ideas tested | **2 of 2 came back null** |
 | External validation (IDRiD) | **QWK 0.8045**, referable specificity **0.987** |
 | Second external set (Messidor-2, adjudicated labels) | referable AUC **0.819**; pre-registered prediction **failed** |
+| Fine-tuned on adjudicated labels (Messidor-2 test half) | AUC 0.830 -> **0.925**; a same-image control gains nothing |
 
 The score is not the interesting part of this project. Public APTOS solutions
 reach 0.93+. What follows — the shortcut floor, the label ceiling, and two
@@ -457,6 +458,53 @@ reference standard, because Moderate disease without exudates is under-graded.
 
 Generated reports: `reports/external_validation_messidor2.md`, `reports/calibration.md`.
 
+### Fine-tuning on adjudicated labels: the cause, tested
+
+The labels reading above was made after seeing the data. It was then tested,
+with the design and five predictions committed first
+(`docs/finetune-prediction.md`, commit `238587b`).
+
+Messidor-2 was split in half by patient group - a patient's two eyes never
+separated - and each of the five deployed fold models was fine-tuned on the tune
+half for 8 epochs. The confound is that fine-tuning changes the labels *and*
+the camera. So a control arm was fine-tuned on the same images with the
+unchanged ensemble's own grades as labels: Messidor-2's cameras, APTOS's
+boundary. Those labels agree with the panel on 59.4% of images.
+
+| | unchanged | fine-tuned, adjudicated labels | fine-tuned, control labels |
+|---|---|---|---|
+| Messidor-2 test half, referable AUC | 0.830 | **0.925** | 0.834 |
+| Messidor-2 test half, Moderate graded below 2 | 78.4% | **45.0%** | 82.5% |
+| IDRiD, referable AUC | 0.984 | 0.960 | 0.981 |
+| APTOS test, referable AUC | 0.983 | 0.965 | 0.976 |
+| APTOS test, accuracy | 0.803 | 0.686 | 0.776 |
+
+| prediction | outcome |
+|---|---|
+| F1 - Messidor-2 test AUC >= 0.90 | held (0.925) |
+| F2 - Moderate below 2 <= 50% | held (45.0%) |
+| F3 - IDRiD and APTOS AUC >= 0.95 | held (0.960, 0.965), with a grade-level cost |
+| F4 - control does not reach it (AUC < 0.87, Moderate below 2 > 70%) | held (0.834, 82.5%) |
+| F5 - the gain concentrates in Moderate eyes without exudates | **failed** |
+
+The control settles the main question. Trained on exactly the same images, it
+gains nothing: domain adaptation to the camera does not explain the
+improvement, and the labels do. The Messidor-2 failure was the training labels.
+
+F5 limits how far that goes. Median scores of Moderate eyes rose by 0.84 without
+exudates and by 1.26 with them: the whole grade moved up, not the subtle cases
+in particular. There is no evidence the model learned to see something it had
+missed; it moved its boundary to where the panel draws it.
+
+And F3's letter hides a cost. Referral AUC stays above 0.95 elsewhere, but APTOS
+test accuracy falls from 0.803 to 0.686 and QWK from 0.909 to 0.867: the
+fine-tuned model scores everything higher, and with thresholds fitted on
+Messidor-2 it over-grades APTOS. It is not a drop-in replacement, and the
+deployed model is unchanged. A model meant for both populations would need
+labels of one standard across both.
+
+Generated report: `reports/finetune_messidor2.md`; split: `reports/messidor2_split.csv`.
+
 ---
 
 ## Calibration and the clinical operating point
@@ -710,12 +758,13 @@ closed one gap and opened another. What remains:
   does not transfer between them (*Recalibrating at a new site*), so a
   deployment would need labelled data from each site it serves.
 
-- **Moderate disease without exudates is under-graded against an adjudicated
-  standard.** Messidor-2 found it (83% of Moderate eyes graded below 2). The fix
-  would be training or fine-tuning on better labels - adjudicated grades such as
-  Messidor-2's, or APTOS relabelled - which this project does not have for
-  training. Until then the referral flag should be read as "exudate-level
-  disease or worse".
+- **The deployed model under-grades Moderate disease against an adjudicated
+  standard.** Messidor-2 found it (83% of Moderate eyes graded below 2), and
+  fine-tuning on adjudicated labels was shown to fix it (45%, with a same-image
+  control that does not improve). But the fine-tuned model over-grades APTOS, so
+  the deployed one is unchanged. Closing this properly needs one labelling
+  standard across all training data - APTOS regraded by adjudication - which
+  this project does not have.
 
 - **Per-class test figures remain thin.** 17 Severe images in the test split;
   one case moves that class's recall by 0.06. Cross-validation improved the
