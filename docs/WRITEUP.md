@@ -165,6 +165,9 @@ the prediction down first.
   [IDRiD](external-validation-prediction.md),
   [Messidor-2](second-external-validation-prediction.md) and
   [fine-tuning](finetune-prediction.md).
+- A Kaggle notebook recomputes the metadata shortcut on the Kaggle copy of the
+  dataset and walks through the three experiments:
+  [APTOS: Three Predictions I Wrote Before the Data](https://www.kaggle.com/code/senanuretin/aptos-three-predictions-i-wrote-before-the-data).
 - The model is served, with these limitations attached, at
   [aptos-2019-diabetic-retinopathy.onrender.com](https://aptos-2019-diabetic-retinopathy.onrender.com).
   It is not a medical device.
