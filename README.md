@@ -368,9 +368,11 @@ check failed.
 
 ## Known gaps
 
-Documented rather than hidden. Four earlier entries here are now closed —
+Documented rather than hidden. Six earlier entries here are now closed —
 cross-validation completed, `squash` was trained and came back null, the
-shortcut was tested rather than only reported, and IDRiD was run. What remains:
+shortcut was tested rather than only reported, IDRiD was run, the ported
+trainer was shown to reproduce the original exactly, and confound-aware folds
+were run (no change: ensemble QWK 0.9071 against 0.9091). What remains:
 
 - **Calibration is measured but deliberately not corrected.** On IDRiD the ROC
   AUC is 0.984 against APTOS test's 0.983 — discrimination transfers intact —
@@ -385,11 +387,6 @@ shortcut was tested rather than only reported, and IDRiD was run. What remains:
   channel has been trained. So the finding is "CLAHE at these settings does
   nothing", not "CLAHE cannot help" — though two independent designs now put
   the effect at zero.
-- **Confound-aware fold splitting is implemented but unrun.**
-  `configs/cv_resolution.yaml` stratifies folds jointly on (diagnosis,
-  resolution). After the IDRiD result its value dropped: it makes folds
-  comparable to each other without removing the shortcut, and IDRiD answers the
-  underlying question outright. Left undone deliberately.
 - **The external result rests on one mirror of one dataset.** 455 images from a
   Kaggle copy of IDRiD rather than the full official distribution, and 129
   healthy eyes is a small denominator for the specificity the conclusion leans
