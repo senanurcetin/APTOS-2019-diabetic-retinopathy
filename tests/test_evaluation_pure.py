@@ -282,3 +282,30 @@ def test_messidor2_labels_explain_how_to_get_them(tmp_path):
 def test_unknown_external_dataset_names_the_known_ones():
     with pytest.raises(ValueError, match="idrid"):
         external.dataset("nope")
+
+
+# -------------------------------------------------------------- fine-tune split
+
+def test_patient_groups_keep_both_eyes_together():
+    from aptos.training.finetune import patient_groups
+
+    ids = pd.Series(["20051020_43808_0100_PP", "20051020_43832_0100_PP",
+                     "20060411_1_0200_PP", "IM000012", "IM000013", "IM000056", "IM000057",
+                     "IM000058"])
+    groups = patient_groups(ids)
+    assert groups[0] == groups[1] != groups[2]           # same exam date
+    assert groups[3] == groups[4] != groups[5]           # consecutive IM numbers
+    assert groups[5] == groups[6] == groups[7]           # a run joins, never splits
+
+
+def test_messidor2_split_never_separates_a_group():
+    from aptos.training.finetune import make_split
+
+    rng = np.random.default_rng(0)
+    # 200 patients: two consecutive numbers each, a gap before the next patient.
+    ids = [f"IM{3 * i + eye:06d}" for i in range(200) for eye in (0, 1)]
+    labels = pd.DataFrame({"id_code": ids, "diagnosis": rng.integers(0, 5, len(ids))})
+    split = make_split(labels)
+    assert split.groupby("group")["part"].nunique().max() == 1
+    assert set(split["part"]) == {"test", "tune-train", "tune-valid"}
+    assert abs((split["part"] == "test").mean() - 0.5) < 0.1
