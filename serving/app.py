@@ -274,7 +274,7 @@ class OnnxGrader:
         }
 
 
-app = FastAPI(title="APTOS retinopathy grader", version="0.2.0")
+app = FastAPI(title="APTOS retinopathy grader", version="1.0.0")
 _grader: Grader | OnnxGrader | None = None
 
 

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aptos"
-version = "0.2.0"
+version = "1.0.0"
 description = "Diabetic retinopathy grading on APTOS-2019: reproducible pipeline, measured confound analysis, external validation."
 readme = "README.md"
 requires-python = ">=3.10"

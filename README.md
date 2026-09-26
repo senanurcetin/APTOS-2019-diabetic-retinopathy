@@ -311,20 +311,36 @@ External validation, with no fine-tuning and no threshold refitting:
 kaggle datasets download mariaherrerot/idrid-dataset -p data/external --unzip
 python -m aptos.evaluation.external --sweep models/cv/baseline-<id>
 python -m aptos.evaluation.confound --sweeps models/cv/baseline-<id>
+
+# the second external set, Messidor-2 (adjudicated grades + images)
+kaggle datasets download google-brain/messidor2-dr-grades -p data/external/messidor2 --unzip
+kaggle datasets download mariaherrerot/messidor2preprocess -p data/external/messidor2 --unzip
+python -m aptos.evaluation.external --sweep models/cv/baseline-<id> --dataset messidor2
+python -m aptos.evaluation.calibration --sweep models/cv/baseline-<id>
+
+# the fine-tuning experiment: patient-grouped split, then both arms
+python -m aptos.training.finetune split
+python -m aptos.training.finetune run
 ```
+
+Each external run was preceded by a prediction committed to `docs/` before the
+data was touched; the files keep the prediction and append the outcome.
 
 ## Tests
 
 ```bash
-pytest                      # 79 tests
-pytest -m pure              # the 62 that need neither torch nor the dataset
+pytest                      # 177 tests
+pytest -m pure              # the 121 that need neither torch nor the dataset
 python tests/test_preprocessing.py   # 31 of those, without pytest at all
+pytest --cov                # coverage; CI fails below the floor in pyproject.toml
 ```
 
 The preprocessing tests build synthetic fundus images, so they run on a machine
 that has never downloaded the dataset — which is why CI checks them on Python
 3.10, 3.11 and 3.12, and why the Colab notebook can run them too. A second CI
-job installs CPU torch and runs everything.
+job installs CPU torch and runs everything, including an end-to-end training
+run on synthetic images and a resume-after-a-lost-fold check, and enforces a
+65% coverage floor (measured at 69%).
 
 ## Things worth knowing
 
@@ -471,14 +487,18 @@ src/aptos/
   tracking.py          MLflow, with BigQuery as an optional extra sink
   data/                labels, datasets, cache manifests
   modeling/            QWK, threshold search, clinical metrics (no torch)
-  training/            model, epoch loop, resumable cross-validation
-  evaluation/          confound stratification, external validation
+  training/            model, epoch loop, resumable cross-validation,
+                       fine-tuning on adjudicated labels
+  evaluation/          confound stratification, external validation (IDRiD,
+                       Messidor-2), calibration and site transfer, Grad-CAM
 configs/               base + one file per variant, and the CV variants
 scripts/               legacy scripts, ported progressively
   preprocessing.py     thin re-export, kept for the scripts that import by path
   run_cv.sh            the sweep runner
-tests/                 79 tests; `-m pure` needs neither torch nor the dataset
-docs/                  the pre-registered external-validation prediction
+serving/               FastAPI app, ONNX export, the demo page, Dockerfile, model card
+tests/                 177 tests; `-m pure` needs neither torch nor the dataset
+docs/                  three pre-registered predictions with their outcomes,
+                       and WRITEUP.md, the project in one read
 reports/               generated markdown, CSVs and 16 figures
 ```
 
