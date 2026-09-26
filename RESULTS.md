@@ -360,7 +360,43 @@ the referable-DR framing is the part that transfers.
 squash, for comparison: QWK 0.7859, sensitivity 0.862, specificity 0.993, 3 of
 148 severe missed - marginally worse throughout, consistent with the null result.
 
-Generated reports: `reports/confound_evaluation.md`, `reports/external_validation.md`.
+### Across folds: confound-aware splitting changes nothing
+
+The last check asks whether cross-validation itself was flattered. Folds
+stratified on diagnosis alone could, in principle, give some folds a
+resolution-to-label mix the others lack, and let a model profit from a mapping
+it is never tested against. So the baseline sweep was rerun with folds
+stratified jointly on (diagnosis, resolution bucket) - `configs/cv_resolution.yaml`,
+sweep `baseline-d665175a1a`, 26 September 2026. Everything else is identical,
+including the pool of 3247 leak-cleaned images and the 366-image test set.
+
+| | diagnosis-stratified | diagnosis + resolution |
+|---|---|---|
+| fold test QWK | 0.8902 ± 0.0086 | 0.8898 ± 0.0055 |
+| fold valid QWK | 0.8951 ± 0.0073 | 0.8954 ± 0.0075 |
+| ensemble test QWK | 0.9091 | 0.9071 |
+| ensemble accuracy / macro F1 | 0.8033 / 0.5450 | 0.8060 / 0.5697 |
+| referable sensitivity / specificity | 0.956 / 0.917 | 0.964 / 0.917 |
+
+The fold means differ by 0.0004 (Welch's t-test p = 0.93; the folds are
+different splits, so the comparison is unpaired). The ensembles score the same
+366 test images, so they can be compared image by image: a paired bootstrap puts
+the difference at -0.002 with a 95% interval of [-0.017, +0.013], and the two
+ensembles give the same grade to 93.7% of test images.
+
+This is a null result, and the expected one after IDRiD. Stratifying folds on
+resolution makes them comparable to one another; it cannot remove a shortcut
+that every fold contains, and the external set had already shown the model
+does not lean on it. What this run adds is narrower but still worth having:
+the cross-validation estimates above were not inflated by uneven folds.
+
+One caveat on the comparison: this sweep ran with `workers: 0` because another
+job shared the machine, where the original used 2. The seed-42 rerun above
+showed that change alone moves a single run by about 0.01, which is larger than
+any difference in this table.
+
+Generated reports: `reports/confound_evaluation.md`, `reports/external_validation.md`;
+fold arrays under `models/cv/baseline-d665175a1a/`, summary rows in `reports/runs.csv`.
 
 ---
 
@@ -572,10 +608,12 @@ area on average. Preprocessing turns 8 GiB of PNGs into 184 MB of 512px JPEGs.
 
 ## What was not finished
 
-Four gaps listed here previously are now closed: cross-validation completed,
+Six gaps listed here previously are now closed: cross-validation completed,
 `squash` was validated by training and came back null, the shortcut was tested
-rather than only reported, and external validation was run on IDRiD — all on
-24 September 2026. What remains:
+rather than only reported, and external validation was run on IDRiD (all on
+24 September 2026); seed 42 was rerun and the ported trainer shown identical to
+the original (25 September); and confound-aware fold splitting was run and came
+back null (26 September). What remains:
 
 - **CLAHE parameters were never properly tuned.** Only clip=2.0 on the LAB
   lightness channel has been trained; a sweep with training-free proxies could
@@ -583,13 +621,6 @@ rather than only reported, and external validation was run on IDRiD — all on
   does nothing", not "CLAHE cannot help". Given that two independent designs
   now put the effect at zero, further tuning looks a poor use of GPU time, but
   it has not been ruled out.
-
-- **Confound-aware fold splitting is implemented but was not run.** Folds
-  stratified jointly on (diagnosis, resolution) are available in
-  `configs/cv_resolution.yaml`. After the stratified and external results above
-  its expected value dropped: joint stratification makes folds comparable to
-  each other but does not remove the shortcut, and IDRiD answers the underlying
-  question outright. Left undone deliberately, not overlooked.
 
 - **Calibration is measured but not corrected for new populations.** The
   regression score is turned into a referral probability by Platt scaling fitted

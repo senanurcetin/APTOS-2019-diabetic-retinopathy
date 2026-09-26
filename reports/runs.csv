@@ -4,6 +4,11 @@ cv-baseline-6e66147526-fold2,baseline,cv-fold,2,6e66147526,diagnosis,,3ed79f2,0.
 cv-baseline-6e66147526-fold3,baseline,cv-fold,3,6e66147526,diagnosis,,3ed79f2,0.894105,0.893587,,0.778689,0.528946,,,,,,,,,,14.0
 cv-baseline-6e66147526-fold4,baseline,cv-fold,4,6e66147526,diagnosis,,3ed79f2,0.891293,0.880236,,0.770492,0.521156,,,,,,,,,,14.0
 cv-baseline-6e66147526-fold5,baseline,cv-fold,5,6e66147526,diagnosis,,3ed79f2,0.886538,0.903038,,0.781421,0.514959,,,,,,,,,,14.0
+cv-baseline-d665175a1a-fold1,baseline,cv-fold,1,d665175a1a,diagnosis+resolution,,6bf6732,0.898484,0.89435,,0.765027,0.540808,,,,,,,,,,12.0
+cv-baseline-d665175a1a-fold2,baseline,cv-fold,2,d665175a1a,diagnosis+resolution,,6bf6732,0.894906,0.886939,,0.795082,0.587869,,,,,,,,,,10.0
+cv-baseline-d665175a1a-fold3,baseline,cv-fold,3,d665175a1a,diagnosis+resolution,,6bf6732,0.906343,0.882074,,0.759563,0.505139,,,,,,,,,,9.0
+cv-baseline-d665175a1a-fold4,baseline,cv-fold,4,d665175a1a,diagnosis+resolution,,6bf6732,0.890397,0.895397,,0.770492,0.526583,,,,,,,,,,15.0
+cv-baseline-d665175a1a-fold5,baseline,cv-fold,5,d665175a1a,diagnosis+resolution,,6bf6732,0.887004,0.890165,,0.775956,0.528761,,,,,,,,,,12.0
 cv-clahe-fb9a9f18b6-fold1,clahe,cv-fold,1,fb9a9f18b6,diagnosis,,3ed79f2,0.899973,0.88264,,0.745902,0.525354,,,,,,,,,,12.0
 cv-clahe-fb9a9f18b6-fold2,clahe,cv-fold,2,fb9a9f18b6,diagnosis,,3ed79f2,0.903355,0.893709,,0.775956,0.568932,,,,,,,,,,15.0
 cv-clahe-fb9a9f18b6-fold3,clahe,cv-fold,3,fb9a9f18b6,diagnosis,,3ed79f2,0.897819,0.892266,,0.778689,0.512516,,,,,,,,,,12.0
@@ -15,11 +20,13 @@ cv-squash-d9db05d81f-fold3,squash,cv-fold,3,d9db05d81f,diagnosis,,3ed79f2,0.9056
 cv-squash-d9db05d81f-fold4,squash,cv-fold,4,d9db05d81f,diagnosis,,3ed79f2,0.888137,0.901842,,0.759563,0.518782,,,,,,,,,,14.0
 cv-squash-d9db05d81f-fold5,squash,cv-fold,5,d9db05d81f,diagnosis,,3ed79f2,0.886348,0.902052,,0.781421,0.546768,,,,,,,,,,13.0
 cv-baseline-6e66147526-summary,baseline,cv-summary,,6e66147526,diagnosis,,3ed79f2,,,,,,0.895102,0.007267,0.890214,0.008617,0.909109,0.803279,0.545011,0.956204,0.917031,
+cv-baseline-d665175a1a-summary,baseline,cv-summary,,d665175a1a,diagnosis+resolution,,6bf6732,,,,,,0.895427,0.0075,0.889785,0.005478,0.907086,0.806011,0.569709,0.963504,0.917031,
 cv-clahe-fb9a9f18b6-summary,clahe,cv-summary,,fb9a9f18b6,diagnosis,,3ed79f2,,,,,,0.894499,0.010128,0.889671,0.00486,0.896513,0.814208,0.580835,0.970803,0.917031,
 cv-squash-d9db05d81f-summary,squash,cv-summary,,d9db05d81f,diagnosis,,3ed79f2,,,,,,0.891378,0.008462,0.894046,0.008822,0.909772,0.803279,0.569672,0.970803,0.917031,
 historical-baseline-seed42,baseline,single,,,,results_md,,0.898,0.896,0.7732,,0.568,,,,,,,,,,
 historical-baseline-seed43,baseline,single,,,,results_md,,0.8968,0.9024,0.776,,0.5777,,,,,,,,,,
 historical-baseline-seed44,baseline,single,,,,results_md,,0.8927,0.8976,0.8005,,0.5919,,,,,,,,,,
+single-baseline-seed42-d296d18f,baseline,single,,,,observed,cfc601d,0.891891,0.885306,,0.797814,0.547667,,,,,,,,,,15.0
 historical-clahe-seed42,clahe,single,,,,results_md,,0.9059,0.9112,0.8197,,0.606,,,,,,,,,,
 historical-clahe-seed43,clahe,single,,,,results_md,,0.902,0.8823,0.7787,,0.5439,,,,,,,,,,
 historical-clahe-seed44,clahe,single,,,,results_md,,0.9054,0.8927,0.7787,,0.485,,,,,,,,,,
