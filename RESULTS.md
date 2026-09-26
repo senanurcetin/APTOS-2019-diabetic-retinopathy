@@ -21,6 +21,7 @@ thresholds tuned on validation.
 | Estimated label ceiling | **~84%** single-label accuracy |
 | Preprocessing ideas tested | **2 of 2 came back null** |
 | External validation (IDRiD) | **QWK 0.8045**, referable specificity **0.987** |
+| Second external set (Messidor-2, adjudicated labels) | referable AUC **0.819**; pre-registered prediction **failed** |
 
 The score is not the interesting part of this project. Public APTOS solutions
 reach 0.93+. What follows — the shortcut floor, the label ceiling, and two
@@ -398,6 +399,64 @@ any difference in this table.
 Generated reports: `reports/confound_evaluation.md`, `reports/external_validation.md`;
 fold arrays under `models/cv/baseline-d665175a1a/`, summary rows in `reports/runs.csv`.
 
+### A second external set: where the transfer stops
+
+IDRiD was one dataset of 455 images. To test whether its result generalises,
+Messidor-2 was added: France rather than India, 1744 gradable images, and a
+different kind of label - each image graded by a panel of three retina
+specialists who adjudicated disagreements (Krause et al. 2018), against APTOS's
+single graders. Four predictions were committed and pushed before any image was
+downloaded (`docs/second-external-validation-prediction.md`, commit `ffd6ce9`).
+
+Same ensemble, no fine-tuning, APTOS thresholds and operating point unchanged:
+
+| | APTOS test | IDRiD | Messidor-2 |
+|---|---|---|---|
+| referable ROC AUC | 0.983 | 0.984 | **0.819** |
+| sensitivity at the APTOS operating point | 0.920 | 0.816 | **0.260** |
+| specificity at the APTOS operating point | 0.934 | 1.000 | 0.991 |
+| five-way QWK | 0.9091 | 0.8045 | 0.4928 |
+| ECE (APTOS calibrator) | 0.032 | 0.117 | 0.152 |
+
+| prediction | outcome |
+|---|---|
+| P1 - referable AUC >= 0.93 | **failed** (0.819) |
+| P2 - sensitivity < 0.90 at the APTOS cut, under-confident, ECE > 0.05 | held (0.260, +0.149, 0.152) |
+| P3 - grade 4 under-called | held (3 predicted, 35 true) |
+| P4 - a calibrator refitted at one new site improves the other | held as written; not useful in practice (below) |
+
+The failure is in one place. **83% of the 347 Moderate eyes are graded below
+2**, against 21% on IDRiD. Median ensemble score by true grade:
+
+| true grade | 0 | 1 | 2 | 3 | 4 |
+|---|---|---|---|---|---|
+| APTOS test | 0.03 | 1.31 | 1.93 | 2.47 | 2.73 |
+| IDRiD | 0.42 | 0.60 | 1.68 | 2.21 | 2.60 |
+| Messidor-2 | 0.22 | 0.28 | **0.54** | 1.79 | 2.10 |
+
+Grades 3 and 4 are still recognised as disease; grade 2 is scored like grade 1.
+What follows is analysis after the fact, not prediction. The pattern holds in
+both parts of Messidor-2 (original Messidor AUC 0.848, the later Brest images
+0.765), so it is not one sub-source. The adjudicated DME flag separates it:
+Moderate eyes also marked for referable macular oedema - hard exudates near the
+fovea - have a median score of 1.02 (n = 86); Moderate eyes without it, 0.46
+(n = 261). The model recognises moderate disease when there are exudates to see
+and misses the moderate disease defined by subtler signs.
+
+The likeliest reading is the reference standard. Adjudication by a specialist
+panel is known to catch subtle findings single graders miss, and APTOS's
+single-grader labels disagree with themselves on 29% of duplicates. A model
+trained on them learns where single graders put the Mild/Moderate boundary;
+Messidor-2's panel puts it lower. This is a different failure from the one
+IDRiD tested for. The model does read the retina - IDRiD settled that - but it
+reads it through the labels it was trained on.
+
+So the claim this project can make is narrower than before: the referral
+decision transferred to IDRiD, and does not transfer to an adjudicated
+reference standard, because Moderate disease without exudates is under-graded.
+
+Generated reports: `reports/external_validation_messidor2.md`, `reports/calibration.md`.
+
 ---
 
 ## Calibration and the clinical operating point
@@ -408,7 +467,7 @@ positive costs an appointment.
 
 The operating point is chosen at **sensitivity >= 0.90 on out-of-fold
 predictions** - each pool image scored by the fold model that held it out - and
-then applied unchanged to the held-out test split and to IDRiD. Choosing it on
+then applied unchanged to the held-out test split and to both external sets. Choosing it on
 test and reporting test performance at that choice would measure the selection.
 
 Chosen cut: **1.336** on the raw ordinal score.
@@ -418,10 +477,12 @@ Chosen cut: **1.336** on the raw ordinal score.
 | APTOS out-of-fold (selection) | 3247 | 0.404 | 0.900 | 0.926 | 0.891 | 40.8% | 0.974 |
 | APTOS test | 366 | 0.374 | 0.920 | 0.934 | 0.894 | 38.5% | **0.983** |
 | IDRiD | 455 | 0.668 | 0.816 | 1.000 | 1.000 | 54.5% | **0.984** |
+| Messidor-2 | 1744 | 0.262 | 0.260 | 0.991 | 0.908 | 7.5% | **0.819** |
 
-### Discrimination transfers; calibration does not
+### Discrimination transfers to IDRiD; calibration does not
 
-This is the cleanest statement of what external validation found.
+This is the cleanest statement of what the IDRiD test found. Messidor-2 then
+showed discrimination does not always transfer either (section above).
 
 **ROC AUC is 0.983 on APTOS test and 0.984 on IDRiD.** The model ranks patients
 on an unseen population exactly as well as on its own. Nothing about its ability
@@ -439,24 +500,42 @@ Expected calibration error says the same thing:
 | APTOS out-of-fold | 0.0190 |
 | APTOS test | 0.0317 |
 | **IDRiD** | **0.1174** |
+| **Messidor-2** | **0.1516** |
 
 And the reliability table gives it a direction: every IDRiD bin is
 *under*-confident. The model predicts 0.27 probability of referable in a bin
 where 80% are referable. It is not confused about who is sick; it is
 systematically too cautious about saying so.
 
-That is a one-parameter problem. Refitting the cut on target-population data
-would recover the sensitivity, and the AUC says the information is there to
-recover. It is left unfixed here because fixing it would require labelled data
-from the target population, which is exactly what a deployment would have to
-obtain and this project does not have.
+On IDRiD that is a one-parameter problem: refitting the cut on local data
+would recover the sensitivity, and the AUC says the information is there.
+Messidor-2 is under-confident in the same direction (+0.149, ECE 0.152), but
+there it sits on top of a real loss of discrimination, so no cut recovers it.
+
+### Recalibrating at a new site
+
+With two external sets, one can play the site that supplies a few labels and
+the other the site the result is judged on. Refit the Platt calibrator and the
+sensitivity-0.90 operating point on one, apply both to the other:
+
+| fitted on | applied to | ECE, APTOS calibrator | ECE, refitted | cut | sensitivity | specificity |
+|---|---|---|---|---|---|---|
+| IDRiD | Messidor-2 | 0.152 | 0.097 | 1.336 -> 1.082 | 0.260 -> 0.341 | 0.991 -> 0.988 |
+| Messidor-2 | IDRiD | 0.117 | 0.095 | 1.336 -> 0.202 | 0.816 -> 0.997 | 1.000 -> **0.132** |
+
+Calibration error falls in both directions, so a probability learned at one new
+site is better than one learned on APTOS. The operating point does not travel:
+the Messidor-2 cut, pushed down to reach 90% sensitivity there, turns IDRiD
+specificity from 1.000 into 0.132. **A deployment would have to set its
+threshold on its own labelled data, site by site.**
 
 ### Decision curve
 
 Net benefit against treating everyone and treating no one, across thresholds
 from 0.05 to 0.70: the model beats **both trivial policies at every threshold
-tested, on all three sets including IDRiD**. Miscalibrated and still useful -
-those are separate questions, and separating them is the point of running this.
+tested, on APTOS and IDRiD**, and at 79% of them on Messidor-2. Miscalibrated
+and still useful - those are separate questions, and separating them is the
+point of running this.
 
 Generated report: `reports/calibration.md`.
 
@@ -608,12 +687,13 @@ area on average. Preprocessing turns 8 GiB of PNGs into 184 MB of 512px JPEGs.
 
 ## What was not finished
 
-Six gaps listed here previously are now closed: cross-validation completed,
+Seven gaps listed here previously are now closed: cross-validation completed,
 `squash` was validated by training and came back null, the shortcut was tested
 rather than only reported, and external validation was run on IDRiD (all on
 24 September 2026); seed 42 was rerun and the ported trainer shown identical to
-the original (25 September); and confound-aware fold splitting was run and came
-back null (26 September). What remains:
+the original (25 September); confound-aware fold splitting was run and came
+back null, and a second external set was added (26 September). The second set
+closed one gap and opened another. What remains:
 
 - **CLAHE parameters were never properly tuned.** Only clip=2.0 on the LAB
   lightness channel has been trained; a sweep with training-free proxies could
@@ -622,21 +702,20 @@ back null (26 September). What remains:
   now put the effect at zero, further tuning looks a poor use of GPU time, but
   it has not been ruled out.
 
-- **Calibration is measured but not corrected for new populations.** The
+- **Calibration is measured, and correcting it has to be done per site.** The
   regression score is turned into a referral probability by Platt scaling fitted
-  on out-of-fold predictions: ECE 0.019 out of fold, 0.032 on APTOS test (see
-  *Calibration and the clinical operating point* above). On IDRiD it rises to
-  0.117 and the
-  five-way grade compresses - 8 grade-4 predictions where 64 exist - while
-  discrimination holds (ROC AUC 0.984). Correcting that needs labelled data from
-  the target population, which a deployment would have to collect and this
-  project does not have.
+  on out-of-fold predictions: ECE 0.019 out of fold, 0.032 on APTOS test. Both
+  external sets are under-confident (ECE 0.117 on IDRiD, 0.152 on Messidor-2).
+  Refitting on one external set lowers the other's ECE, but the operating point
+  does not transfer between them (*Recalibrating at a new site*), so a
+  deployment would need labelled data from each site it serves.
 
-- **The external result rests on one mirror of one dataset.** 455 images from a
-  Kaggle copy of IDRiD rather than the full official distribution, and 129
-  healthy eyes is a small denominator for the specificity figure the conclusion
-  leans on — it moves by 0.008 per image. A second external set would make the
-  claim much harder to dismiss.
+- **Moderate disease without exudates is under-graded against an adjudicated
+  standard.** Messidor-2 found it (83% of Moderate eyes graded below 2). The fix
+  would be training or fine-tuning on better labels - adjudicated grades such as
+  Messidor-2's, or APTOS relabelled - which this project does not have for
+  training. Until then the referral flag should be read as "exudate-level
+  disease or worse".
 
 - **Per-class test figures remain thin.** 17 Severe images in the test split;
   one case moves that class's recall by 0.06. Cross-validation improved the

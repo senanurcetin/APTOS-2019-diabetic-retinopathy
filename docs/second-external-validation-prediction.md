@@ -88,3 +88,82 @@ extrapolate from with any confidence.
 - **P4** is the result that decides whether the deployment note in the README
   can say "recalibrate on a small local sample", or has to say "recalibrate at
   every site".
+
+---
+
+## Outcome (26 September 2026, after the run)
+
+Added after the run and kept below the predictions, which are unchanged from
+commit `ffd6ce9`. The ensemble scored 1744 images: the Kaggle mirror had
+already dropped the 4 images the panel marked ungradable, which is the
+exclusion fixed above, but it happened before the data reached this project.
+All 1744 passed the quality gate.
+
+| | APTOS test | IDRiD | Messidor-2 |
+|---|---|---|---|
+| referable ROC AUC | 0.983 | 0.984 | **0.819** |
+| sensitivity at the APTOS operating point | 0.920 | 0.816 | **0.260** |
+| specificity at the APTOS operating point | 0.934 | 1.000 | 0.991 |
+| five-way QWK | 0.9091 | 0.8045 | 0.4928 |
+| ECE (APTOS calibrator) | 0.032 | 0.117 | 0.152 |
+
+**P1 - failed.** Referable AUC is 0.819, below the 0.93 committed to. The
+IDRiD result did not generalise to this population and this reference standard.
+
+**P2 - held, more strongly than predicted.** Sensitivity at the APTOS cut is
+0.260 against the 0.90 it was chosen for. The calibrator is under-confident
+(observed referable rate minus mean predicted probability +0.149) with ECE
+0.152 - the same direction as IDRiD, and larger.
+
+**P3 - held.** 3 grade-4 predictions where 35 exist.
+
+**P4 - held as written, and the practical answer is still "per site".**
+Refitting the calibrator on IDRiD lowers Messidor-2 ECE from 0.152 to 0.097, and
+refitting on Messidor-2 lowers IDRiD ECE from 0.117 to 0.095; the IDRiD cut
+moves Messidor-2 sensitivity from 0.260 to 0.341, closer to 0.90 as predicted.
+But closer is not close. The reverse direction, which was not predicted, is
+worse: the cut fitted on Messidor-2 drops IDRiD specificity from 1.000 to
+0.132. A threshold learned at one new site does not carry to another.
+
+### Where it fails
+
+This part is analysis after the fact, not prediction, and is labelled as such.
+
+The failure has one location: **grade 2, Moderate.** 83% of the 347 Moderate
+eyes are graded below 2, against 21% on IDRiD. The median ensemble score by
+true grade shows it directly:
+
+| true grade | 0 | 1 | 2 | 3 | 4 |
+|---|---|---|---|---|---|
+| APTOS test | 0.03 | 1.31 | 1.93 | 2.47 | 2.73 |
+| IDRiD | 0.42 | 0.60 | 1.68 | 2.21 | 2.60 |
+| Messidor-2 | 0.22 | 0.28 | **0.54** | 1.79 | 2.10 |
+
+It is not a sub-source artefact: the pattern holds in both parts of Messidor-2,
+the original Messidor images (AUC 0.848) and the later Brest images (0.765).
+
+The adjudicated DME flag separates it. Moderate eyes that the panel also marked
+for referable macular oedema - hard exudates near the fovea - have a median
+score of 1.02 (n = 86). Moderate eyes without it have 0.46 (n = 261). The model
+recognises moderate disease when there are exudates to see. It misses the
+moderate disease that is defined by subtler signs: more than microaneurysms, but
+without exudates.
+
+The likeliest explanation, and it is only that, is the reference standard.
+Krause et al. showed that adjudication by a retina-specialist panel catches
+exactly these subtle findings that single graders miss. APTOS is single-grader,
+and its duplicates disagree 29% of the time. A model trained on those labels
+learns where single graders put the Mild/Moderate boundary, and Messidor-2's
+panel puts it lower. The metadata shortcut does not come into it: IDRiD had
+already shown the model reads the retina, and here it reads it the way its
+training labels did.
+
+### What changes
+
+- The README claim that "the referral decision transfers" is now bounded: it
+  transferred to IDRiD. Against an adjudicated reference standard it does not,
+  because the model under-grades Moderate disease.
+- The deployment note becomes "recalibrate at every site, on local labels";
+  P4 shows one site's recalibration does not serve the next.
+- The five-way grade was already not to be trusted outside APTOS. Now the
+  referral flag carries that caveat too, at the Mild/Moderate boundary.

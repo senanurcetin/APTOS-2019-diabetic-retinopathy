@@ -1,0 +1,55 @@
+{
+  "dataset": "Messidor-2",
+  "n": 1744,
+  "variant": "baseline",
+  "sweep": "baseline-6e66147526",
+  "thresholds": [
+    0.6680000000000001,
+    1.1319999999999997,
+    2.3239999999999994,
+    3.3
+  ],
+  "refitted": false,
+  "qwk": 0.49284010213885376,
+  "accuracy": 0.5940366972477065,
+  "macro_f1": 0.2923178707950302,
+  "recall_grade_0": 0.9301868239921337,
+  "recall_grade_1": 0.06296296296296296,
+  "recall_grade_2": 0.16714697406340057,
+  "recall_grade_3": 0.17333333333333334,
+  "recall_grade_4": 0.05714285714285714,
+  "ref_tp": 150,
+  "ref_fp": 13,
+  "ref_tn": 1274,
+  "ref_fn": 307,
+  "ref_sensitivity": 0.3282275711159737,
+  "ref_specificity": 0.98989898989899,
+  "ref_precision": 0.9202453987730062,
+  "ref_referral_rate": 0.09346330275229357,
+  "severe_total": 110,
+  "severe_missed": 18,
+  "per_class_recall": {
+    "0": 0.9301868239921337,
+    "1": 0.06296296296296296,
+    "2": 0.16714697406340057,
+    "3": 0.17333333333333334,
+    "4": 0.05714285714285714
+  },
+  "predicted_distribution": {
+    "0": 1417,
+    "1": 164,
+    "2": 135,
+    "3": 25,
+    "4": 3
+  },
+  "true_distribution": {
+    "0": 1017,
+    "1": 270,
+    "2": 347,
+    "3": 75,
+    "4": 35
+  },
+  "healthy_n": 1017,
+  "healthy_called_healthy": 0.9301868239921337,
+  "healthy_called_referable": 0.011799410029498525
+}

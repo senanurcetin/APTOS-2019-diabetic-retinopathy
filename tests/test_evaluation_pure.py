@@ -244,3 +244,41 @@ def test_external_report_shows_the_comparison_when_given_one():
     assert "APTOS test" not in alone
     assert "| QWK | 0.8000 | 0.9000 |" in both
     assert "Severe cases missed: 1/3." in both
+
+
+def _messidor_csv(cfg, text):
+    path = cfg.paths.external / external.MESSIDOR2_DIR / external.MESSIDOR2_LABELS
+    path.parent.mkdir(parents=True)
+    path.write_text(text, encoding="utf-8")
+
+
+def test_messidor2_labels_keep_gradable_images_and_use_the_file_stem(tmp_path):
+    """Google's table names files with their extension, and the Brest images end
+    in .JPG where the rest end in .png - the cache needs one naming scheme."""
+    cfg = _cfg(tmp_path)
+    _messidor_csv(cfg, "image_id,adjudicated_dr_grade,adjudicated_dme,adjudicated_gradable\n"
+                       "20051020_43808_0100_PP.png,0,0,1\n"
+                       "IM000123.JPG,2,1,1\n"
+                       "IM000124.JPG,,,0\n")
+    df = external.load_messidor2_labels(cfg)
+    assert df["id_code"].tolist() == ["20051020_43808_0100_PP", "IM000123"]
+    assert df["source_name"].tolist() == ["20051020_43808_0100_PP.png", "IM000123.JPG"]
+    assert df["diagnosis"].tolist() == [0, 2]
+    source = external.dataset("messidor2").source(cfg, df.iloc[1])
+    assert source.name == "IM000123.JPG"
+
+
+def test_messidor2_labels_accept_the_kaggle_column_names(tmp_path):
+    cfg = _cfg(tmp_path)
+    _messidor_csv(cfg, "id_code,diagnosis,adjudicated_dme,adjudicated_gradable\na.png,4,0,1\n")
+    assert external.load_messidor2_labels(cfg)["diagnosis"].tolist() == [4]
+
+
+def test_messidor2_labels_explain_how_to_get_them(tmp_path):
+    with pytest.raises(FileNotFoundError, match="google-brain/messidor2-dr-grades"):
+        external.load_messidor2_labels(_cfg(tmp_path))
+
+
+def test_unknown_external_dataset_names_the_known_ones():
+    with pytest.raises(ValueError, match="idrid"):
+        external.dataset("nope")

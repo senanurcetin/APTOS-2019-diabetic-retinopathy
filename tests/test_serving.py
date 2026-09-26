@@ -127,7 +127,7 @@ def test_every_metric_the_page_names_exists_in_the_model_card(app_module):
     import re
 
     page = (ROOT / "serving" / "static" / "index.html").read_text(encoding="utf-8")
-    named = set(re.findall(r"\b((?:aptos|idrid)_[a-z_]+)\b", page))
+    named = set(re.findall(r"\b((?:aptos|idrid|messidor2)_[a-z_]+)\b", page))
     assert named, "the page no longer names any metric"
     assert named <= set(app_module.MODEL_CARD["reported"])
 

@@ -167,3 +167,29 @@ def test_git_commit_is_the_short_hash_or_says_unknown(tmp_path):
     assert tracking.git_commit(tmp_path) == "unknown"   # not a repository
     head = tracking.git_commit(ROOT)
     assert head == "unknown" or (len(head) >= 7 and int(head, 16) >= 0)
+
+
+@pytest.mark.torch
+def test_calibration_in_the_large_has_the_sign_of_under_confidence(cal):
+    assert cal.calibration_in_the_large([1, 1, 0, 0], [0.2, 0.2, 0.2, 0.2]) == pytest.approx(0.3)
+    assert cal.calibration_in_the_large([0, 0], [0.4, 0.4]) == pytest.approx(-0.4)
+
+
+@pytest.mark.torch
+def test_recalibrating_on_a_site_with_the_same_shift_helps_the_next_one(cal):
+    """Two new sites share a downward score shift the APTOS calibrator never saw.
+    Refitting on one should repair calibration on the other."""
+    rng = np.random.default_rng(0)
+
+    def site(n, shift):
+        y = rng.random(n) < 0.4
+        raw = np.where(y, rng.normal(2.0, 0.6, n), rng.normal(0.3, 0.5, n)) - shift
+        return pd.DataFrame({"referable": y, "raw": raw})
+
+    aptos, a, b = site(2000, 0.0), site(800, 0.8), site(800, 0.8)
+    aptos_cal = cal.fit_calibrator(aptos["referable"], aptos["raw"])
+    aptos_cut = cal.pick_operating_point(aptos["referable"], aptos["raw"])["cut"]
+    out = cal.site_transfer(a, b, aptos_cal, aptos_cut)
+    assert out["ece_refitted"] < out["ece_aptos_calibrator"]
+    assert out["sensitivity_refitted_cut"] > out["sensitivity_aptos_cut"]
+    assert out["cut_refitted"] < out["cut_aptos"]
