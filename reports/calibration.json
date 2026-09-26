@@ -37,6 +37,42 @@
       "PPV": 1.0,
       "referral rate": 0.545054945054945,
       "ROC AUC": 0.9844457999302892
+    },
+    {
+      "set": "Messidor-2",
+      "n": 1744,
+      "prevalence": 0.26204128440366975,
+      "sensitivity": 0.2603938730853392,
+      "specificity": 0.9906759906759907,
+      "PPV": 0.9083969465648855,
+      "referral rate": 0.07511467889908256,
+      "ROC AUC": 0.8188168505455158
+    }
+  ],
+  "transfer": [
+    {
+      "fitted on": "IDRiD",
+      "applied to": "Messidor-2",
+      "ece_aptos_calibrator": 0.15161592985519864,
+      "ece_refitted": 0.09713213815581863,
+      "cut_aptos": 1.3359375,
+      "cut_refitted": 1.081543,
+      "sensitivity_aptos_cut": 0.2603938730853392,
+      "sensitivity_refitted_cut": 0.3413566739606127,
+      "specificity_aptos_cut": 0.9906759906759907,
+      "specificity_refitted_cut": 0.9875679875679876
+    },
+    {
+      "fitted on": "Messidor-2",
+      "applied to": "IDRiD",
+      "ece_aptos_calibrator": 0.1174457223107427,
+      "ece_refitted": 0.0949017133970445,
+      "cut_aptos": 1.3359375,
+      "cut_refitted": 0.20155029,
+      "sensitivity_aptos_cut": 0.8157894736842105,
+      "sensitivity_refitted_cut": 0.9967105263157895,
+      "specificity_aptos_cut": 1.0,
+      "specificity_refitted_cut": 0.13245033112582782
     }
   ]
 }

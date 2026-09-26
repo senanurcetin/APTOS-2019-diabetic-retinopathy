@@ -11,15 +11,24 @@ so geometry carries exactly zero label information - and the prior attached to
 that geometry is inverted relative to APTOS, where all 52 images at 4288x2848
 are diseased against IDRiD's 28.4% healthy.
 
+Messidor-2 is the second external set: France rather than India, graded by an
+adjudicating panel of three retina specialists (Krause et al. 2018) rather than
+by single readers. It is not a second shortcut test - it was captured at more
+than one resolution and the available mirror is already cropped - but a second
+population, with the best labels of any set here. Its predictions were written
+down first, in docs/second-external-validation-prediction.md.
+
 Nothing here refits. The thresholds stay exactly as fitted on APTOS validation,
-because refitting them on IDRiD would answer a much easier question than the
-one being asked.
+because refitting them on an external set would answer a much easier question
+than the one being asked.
 """
 from __future__ import annotations
 
 import concurrent.futures as futures
+import dataclasses
 import json
 import pathlib
+from collections.abc import Callable
 
 import cv2
 import numpy as np
@@ -64,16 +73,85 @@ def load_idrid_labels(cfg: Config) -> pd.DataFrame:
     return df.reset_index(drop=True)
 
 
-def build_cache(cfg: Config, *, force: bool = False) -> pathlib.Path:
-    """Put IDRiD through the identical preprocessing pipeline.
+MESSIDOR2_DIR = "messidor2"
+MESSIDOR2_LABELS = "messidor_data.csv"
+MESSIDOR2_IMAGES = "messidor-2/messidor-2/preprocess"
+
+
+def load_messidor2_labels(cfg: Config) -> pd.DataFrame:
+    """Read Google's adjudicated Messidor-2 grades.
+
+    Only images the panel marked gradable are kept - the one exclusion fixed in
+    advance. `id_code` is the file stem, so the processed cache can use the same
+    `<id_code>.jpg` naming as every other set.
+    """
+    path = cfg.paths.external / MESSIDOR2_DIR / MESSIDOR2_LABELS
+    if not path.exists():
+        raise FileNotFoundError(
+            f"{path} not found. Download it first:\n"
+            f"    kaggle datasets download google-brain/messidor2-dr-grades "
+            f"-p data/external/messidor2 --unzip\n"
+            f"    kaggle datasets download mariaherrerot/messidor2preprocess "
+            f"-p data/external/messidor2 --unzip"
+        )
+    df = pd.read_csv(path)
+    # The Kaggle copy renames Google's image_id/adjudicated_dr_grade columns.
+    df = df.rename(columns={"image_id": "id_code", "adjudicated_dr_grade": "diagnosis"})
+    if "adjudicated_gradable" in df:
+        df = df[df["adjudicated_gradable"] == 1]
+    df = df.dropna(subset=["id_code", "diagnosis"]).copy()
+    df["source_name"] = df["id_code"].astype(str)
+    df["id_code"] = df["source_name"].map(lambda name: pathlib.Path(name).stem)
+    df["diagnosis"] = df["diagnosis"].astype(int)
+
+    bad = set(df["diagnosis"]) - set(range(5))
+    if bad:
+        raise ValueError(f"unexpected Messidor-2 grades: {sorted(bad)}")
+    return df[["id_code", "diagnosis", "source_name"]].reset_index(drop=True)
+
+
+@dataclasses.dataclass(frozen=True)
+class ExternalSet:
+    """Where one external dataset lives and how its labels are read."""
+
+    name: str
+    prefix: str
+    load_labels: Callable[[Config], pd.DataFrame]
+    source: Callable[[Config, pd.Series], pathlib.Path]
+
+
+DATASETS = {
+    "idrid": ExternalSet(
+        name="IDRiD", prefix="idrid", load_labels=load_idrid_labels,
+        source=lambda cfg, row: cfg.paths.external / IDRID_IMAGES / f"{row['id_code']}.jpg",
+    ),
+    "messidor2": ExternalSet(
+        name="Messidor-2", prefix="messidor2", load_labels=load_messidor2_labels,
+        source=lambda cfg, row: (cfg.paths.external / MESSIDOR2_DIR / MESSIDOR2_IMAGES
+                                 / row["source_name"]),
+    ),
+}
+
+
+def dataset(key: str) -> ExternalSet:
+    try:
+        return DATASETS[key]
+    except KeyError:
+        raise ValueError(f"unknown external dataset {key!r}; "
+                         f"known: {sorted(DATASETS)}") from None
+
+
+def build_cache(cfg: Config, *, dataset_key: str = "idrid", force: bool = False) -> pathlib.Path:
+    """Put an external set through the identical preprocessing pipeline.
 
     The whole comparison rests on only the images changing, so this uses the
     same `preprocess()` and the same settings recorded in the APTOS cache's
     manifest - not a reimplementation that happens to look similar.
     """
-    labels = load_idrid_labels(cfg)
-    source = cfg.paths.external / IDRID_IMAGES
-    target = cfg.paths.external / f"idrid_{cfg.variant}"
+    ds = dataset(dataset_key)
+    labels = ds.load_labels(cfg)
+    rows = {row["id_code"]: row for _, row in labels.iterrows()}
+    target = cfg.paths.external / f"{ds.prefix}_{cfg.variant}"
 
     settings = cfg.manifest_fields()
     if target.exists() and not force:
@@ -84,7 +162,7 @@ def build_cache(cfg: Config, *, force: bool = False) -> pathlib.Path:
             pass  # rebuild below
 
     target.mkdir(parents=True, exist_ok=True)
-    print(f"preprocessing {len(labels)} IDRiD images -> {target.name} "
+    print(f"preprocessing {len(labels)} {ds.name} images -> {target.name} "
           f"({manifest_mod.describe({**settings, 'n_images': len(labels)})})")
 
     def one(id_code: str) -> tuple[str, bool]:
@@ -92,7 +170,7 @@ def build_cache(cfg: Config, *, force: bool = False) -> pathlib.Path:
         if out_path.exists() and not force:
             return id_code, True
         image, _info = preprocess(
-            source / f"{id_code}.jpg",
+            ds.source(cfg, rows[id_code]),
             size=settings["size"],
             use_clahe=settings["clahe"],
             clip_limit=settings["clip_limit"] or 2.0,
@@ -195,25 +273,53 @@ def predict(cfg: Config, cache: pathlib.Path, labels: pd.DataFrame,
     return np.mean(fold_raws, axis=0)
 
 
-def evaluate(cfg: Config, sweep: pathlib.Path, *, device: str | None = None) -> dict:
-    """Run the whole external test and return the report payload."""
+def score(cfg: Config, sweep: pathlib.Path, dataset_key: str = "idrid", *,
+          device: str | None = None, force: bool = False) -> pd.DataFrame:
+    """Per-image raw ensemble scores for one external set, computed once.
+
+    Saved next to the cache as `<prefix>_<variant>_<sweep>_scores.csv`, so the
+    external report and the calibration experiments read the same numbers
+    instead of each re-running five models.
+    """
+    ds = dataset(dataset_key)
+    out = cfg.paths.external / f"{ds.prefix}_{cfg.variant}_{sweep.name}_scores.csv"
+    if out.exists() and not force:
+        return pd.read_csv(out)
+
     from aptos.training.loop import pick_device
 
-    device = device or pick_device()
-    labels = load_idrid_labels(cfg)
-    cache = build_cache(cfg)
+    labels = ds.load_labels(cfg)
+    cache = build_cache(cfg, dataset_key=dataset_key)
+    kept = {p.stem for p in cache.glob("*.jpg")}
+    dropped = int((~labels["id_code"].isin(kept)).sum())
+    if dropped:
+        print(f"  {dropped} image(s) failed the quality gate and are not scored")
+    labels = labels[labels["id_code"].isin(kept)].reset_index(drop=True)
 
-    states, thresholds = load_ensemble(sweep)
-    print(f"scoring {len(labels)} images with {len(states)} folds, "
-          f"APTOS thresholds {np.round(thresholds, 3).tolist()} (not refitted)")
+    states, _ = load_ensemble(sweep)
+    print(f"scoring {len(labels)} {ds.name} images with {len(states)} folds")
+    raw = predict(cfg, cache, labels, states, device or pick_device())
+    frame = pd.DataFrame({"id_code": labels["id_code"], "diagnosis": labels["diagnosis"],
+                          "raw": raw})
+    frame.to_csv(out, index=False)
+    return frame
 
-    raw = predict(cfg, cache, labels, states, device)
+
+def evaluate(cfg: Config, sweep: pathlib.Path, *, dataset_key: str = "idrid",
+             device: str | None = None) -> dict:
+    """Run the whole external test and return the report payload."""
+    ds = dataset(dataset_key)
+    scores = score(cfg, sweep, dataset_key, device=device)
+    _, thresholds = load_ensemble(sweep)
+    print(f"APTOS thresholds {np.round(thresholds, 3).tolist()} (not refitted)")
+
+    raw = scores["raw"].to_numpy()
     pred = apply_thresholds(raw, thresholds)
-    true = labels["diagnosis"].to_numpy()
+    true = scores["diagnosis"].to_numpy()
 
     report = {
-        "dataset": "IDRiD",
-        "n": int(len(labels)),
+        "dataset": ds.name,
+        "n": int(len(scores)),
         "variant": cfg.variant,
         "sweep": sweep.name,
         "thresholds": [float(t) for t in thresholds],
@@ -244,7 +350,7 @@ def format_report(report: dict, aptos_reference: dict | None = None) -> str:
         f"{len(report['thresholds'])}-threshold fold ensemble from sweep `{report['sweep']}`",
         "- no fine-tuning, and the APTOS validation thresholds were **not refitted**",
         "",
-        "| metric | IDRiD |" + (" APTOS test |" if aptos_reference else ""),
+        f"| metric | {report['dataset']} |" + (" APTOS test |" if aptos_reference else ""),
         "|---|---|" + ("---|" if aptos_reference else ""),
     ]
     rows = [("QWK", "qwk"), ("accuracy", "accuracy"), ("macro F1", "macro_f1"),
@@ -273,15 +379,21 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--sweep", required=True, help="models/cv/<sweep-dir>")
     parser.add_argument("--variant", default=None)
-    parser.add_argument("--out", default="reports/external_validation.md")
+    parser.add_argument("--dataset", default="idrid", choices=sorted(DATASETS))
+    parser.add_argument("--out", default=None,
+                        help="default: reports/external_validation.md for IDRiD, "
+                             "reports/external_validation_<dataset>.md otherwise")
     args = parser.parse_args(argv)
+    if args.out is None:
+        args.out = ("reports/external_validation.md" if args.dataset == "idrid"
+                    else f"reports/external_validation_{args.dataset}.md")
 
     sweep = pathlib.Path(args.sweep)
     variant = args.variant or sweep.name.split("-")[0]
     cfg = Config.load(f"configs/{variant}.yaml")
     cfg.train.size = Config.load("configs/cv.yaml").train.size
 
-    report = evaluate(cfg, sweep)
+    report = evaluate(cfg, sweep, dataset_key=args.dataset)
     out = cfg.paths.root / args.out
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(format_report(report), encoding="utf-8")

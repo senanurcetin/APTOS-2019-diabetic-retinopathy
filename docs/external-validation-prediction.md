@@ -84,7 +84,7 @@ stories. Grade-0 specificity is not.
 
 Stated now, so it is not quietly dropped later if the result is flattering.
 
-- **IDRiD differs from APTOS in more than one way at once.** Camera, country,
+- **IDRiD differs from APTOS in more than one way at once.** Camera, country [correction, 26 Sep 2026: not country - APTOS and IDRiD were both collected in India; the difference is clinic],
   grading team and class balance all change together. A drop cannot be
   attributed to the confound alone; it can only be attributed to "everything
   that differs between these two datasets". The inverted-prior argument above
@@ -177,7 +177,7 @@ consistent with squash being the null result cross-validation found it to be.
 The caveats written before the experiment stand, and the favourable result does
 not retire them:
 
-- IDRiD differs from APTOS in camera, country, grading team and class balance
+- IDRiD differs from APTOS in camera, country [correction, 26 Sep 2026: not country - APTOS and IDRiD were both collected in India; the difference is clinic], grading team and class balance
   simultaneously. The result shows transfer survived; it does not isolate
   *which* difference the model was robust to.
 - 129 healthy eyes is a small denominator. Specificity moves by 0.008 per image.

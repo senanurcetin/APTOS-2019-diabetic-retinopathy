@@ -10,11 +10,16 @@ Data: Kaggle [`mariaherrerot/aptos2019`](https://www.kaggle.com/datasets/mariahe
 the APTOS 2019 Blindness Detection set pre-split into train/valid/test.
 
 **Best test QWK: 0.9098**, a five-fold ensemble. That is not the interesting
-part — public solutions reach 0.93+. The four findings below are.
+part — public solutions reach 0.93+. The five findings below are.
+
+**In one read:** [Two predictions, one failure each way](docs/WRITEUP.md) —
+the findings as a story, from the metadata shortcut to two pre-registered
+external tests. Live demo:
+[aptos-2019-diabetic-retinopathy.onrender.com](https://aptos-2019-diabetic-retinopathy.onrender.com).
 
 ---
 
-## Four findings
+## Five findings
 
 ### A model can score well without looking at the retina
 
@@ -92,6 +97,31 @@ population the model has never seen. What does degrade is calibration at the
 top of the scale — 8 grade-4 predictions against 64 true cases — while missed
 referrals stay at 2 of 148. It compresses the scale rather than failing to see
 disease.
+
+### …and where it stops
+
+One external set can be luck, so a second was added: **Messidor-2**, France,
+1744 images graded by a panel of three retina specialists who adjudicated
+disagreements — better labels than APTOS or IDRiD. Four predictions were
+pushed to GitHub before any image was downloaded
+([`docs/second-external-validation-prediction.md`](docs/second-external-validation-prediction.md)).
+
+The main one failed:
+
+| | APTOS test | IDRiD | Messidor-2 |
+|---|---|---|---|
+| referable ROC AUC | 0.983 | 0.984 | **0.819** (predicted ≥ 0.93) |
+| sensitivity at the APTOS operating point | 0.920 | 0.816 | **0.260** |
+| specificity at the APTOS operating point | 0.934 | 1.000 | 0.991 |
+
+The failure has one address: **83% of Moderate (grade 2) eyes are graded below
+2**, against 21% on IDRiD. Moderate eyes with hard exudates are caught (median
+score 1.02); Moderate eyes without them are scored like Mild (0.46). The model
+reads the retina — IDRiD showed that — but it reads it through its training
+labels, and APTOS's single graders put the Mild/Moderate line higher than an
+adjudicating panel does. And recalibrating at one new site does not fix the
+next: a threshold fitted on Messidor-2 takes IDRiD specificity from 1.00 to
+0.13.
 
 Full numbers, tables and statistics: **[RESULTS.md](RESULTS.md)**. For a walk
 through the findings that recomputes them from the committed reports, open
@@ -368,29 +398,36 @@ check failed.
 
 ## Known gaps
 
-Documented rather than hidden. Six earlier entries here are now closed —
+Documented rather than hidden. Seven earlier entries here are now closed —
 cross-validation completed, `squash` was trained and came back null, the
 shortcut was tested rather than only reported, IDRiD was run, the ported
-trainer was shown to reproduce the original exactly, and confound-aware folds
-were run (no change: ensemble QWK 0.9071 against 0.9091). What remains:
+trainer was shown to reproduce the original exactly (test QWK 0.8853 from both
+the port and the original on today's stack), confound-aware folds were run (no
+change: ensemble QWK 0.9071 against 0.9091), and a second external set was
+added. That last one opened the first gap below. What remains:
 
-- **Calibration is measured but deliberately not corrected.** On IDRiD the ROC
-  AUC is 0.984 against APTOS test's 0.983 — discrimination transfers intact —
-  but ECE rises from 0.032 to 0.117 and the model becomes systematically
-  *under*-confident, so a threshold fitted on APTOS under-refers elsewhere
-  (sensitivity 0.816 against the 0.90 it was set for). It is a one-parameter
-  problem and fixing it needs labelled data from the target population, which is
-  what a deployment would have to obtain and this project does not have. See
+- **Moderate disease without exudates is under-graded.** Against Messidor-2's
+  adjudicated labels, 83% of Moderate eyes are graded below 2 and referable AUC
+  is 0.819. Fixing it needs better training labels — adjudicated grades, or
+  APTOS relabelled — which this project does not have. Until then, read the
+  referral flag as "exudate-level disease or worse".
+
+
+- **Calibration has to be corrected per site.** ECE rises from 0.032 on APTOS
+  test to 0.117 on IDRiD and 0.152 on Messidor-2, under-confident on both, so a
+  threshold fitted on APTOS under-refers elsewhere (IDRiD sensitivity 0.816
+  against the 0.90 it was set for). Refitting the calibrator at one external
+  site improves the other, but the operating point does not travel between
+  them, so a deployment needs labelled data from every site it serves. See
   [`reports/calibration.md`](reports/calibration.md).
 
 - **CLAHE parameters were never tuned.** Only clip=2.0 on the LAB lightness
   channel has been trained. So the finding is "CLAHE at these settings does
   nothing", not "CLAHE cannot help" — though two independent designs now put
   the effect at zero.
-- **The external result rests on one mirror of one dataset.** 455 images from a
-  Kaggle copy of IDRiD rather than the full official distribution, and 129
-  healthy eyes is a small denominator for the specificity the conclusion leans
-  on — it moves by 0.008 per image.
+- **Both external sets are Kaggle mirrors.** IDRiD is 455 images rather than
+  the full official distribution, and the Messidor-2 copy was already cropped
+  and resized to 512px by a third party before this project saw it.
 - **The deployed service sleeps.** Render's free tier stops the container after
   inactivity, so the first request after a quiet spell waits for a cold start.
 - **There is no working attention explanation.** Grad-CAM is implemented and
@@ -402,13 +439,6 @@ were run (no change: ensemble QWK 0.9071 against 0.9091). What remains:
   cache went through a quality-95 JPEG round-trip that an upload does not, so
   raw scores differ slightly — up to 0.12 on six held-out images, with every
   predicted grade agreeing. Small, real, and not worth hiding.
-- **The ported single-split trainer has not yet reproduced a recorded run.**
-  `aptos.training.single` keeps the original's model, loss, schedule, threshold
-  search and early stopping, and a smoke run passes end to end, but a full
-  seed-42 run without leak exclusion - the comparison against the recorded
-  0.8960 test QWK - has not been made. Worker seeding differs (two workers,
-  not four), so an exact match is not expected; a result outside the
-  +/-0.0033 seed spread would be.
 
 ## Layout
 

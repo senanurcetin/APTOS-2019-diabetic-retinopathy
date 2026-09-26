@@ -18,7 +18,7 @@
   --teal:#2dd4bf; --teal-dim:rgba(45,212,191,.14);
   --amber:#f59e0b; --amber-dim:rgba(245,158,11,.14);
   --red:#f87171; --red-dim:rgba(248,113,113,.14);
-  --retina:#e8893a; --retina-2:#b4491d; --disc:#ffd9a8;
+  --retina:#e8893a; --retina-2:#b4491d; --disc:#ffd9a8; --violet:#a78bfa;
   --g0:#2dd4bf; --g1:#a3e635; --g2:#facc15; --g3:#fb923c; --g4:#f87171;
   --radius:16px;
   --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
@@ -291,7 +291,7 @@ footer nav{position:static; background:none; border:0; backdrop-filter:none; dis
       <span class="eyebrow"><span class="pulse"></span>Research demo · not a medical device</span>
       <h1>Diabetic retinopathy referral from a <span class="accent">single fundus photograph.</span></h1>
       <p class="lede">A five-fold EfficientNet-B0 ensemble trained on APTOS-2019 and tested, untouched, on a second
-        country's clinic. It returns a severity grade and a referral decision, and it shows you
+        clinic in India and a French screening set graded by a specialist panel. It returns a severity grade and a referral decision, and it shows you
         where it is known to be wrong.</p>
       <div class="cta">
         <a class="btn primary" href="#analyze">Analyze an image →</a>
@@ -421,7 +421,7 @@ footer nav{position:static; background:none; border:0; backdrop-filter:none; dis
           </div>
 
           <p class="fine">Trust the <strong>referral decision</strong> more than the exact grade: on an external dataset the referral held up, while
-            the five-way grade compressed at the severe end. No heatmap is shown, deliberately; see <a href="#limits">limitations</a>.</p>
+            the five-way grade compressed at the severe end. Against Messidor-2's specialist-panel labels, Moderate disease without exudates was often missed. No heatmap is shown, deliberately; see <a href="#limits">limitations</a>.</p>
 
           <details class="raw"><summary>Raw JSON response</summary><pre id="json"></pre></details>
         </div>
@@ -432,12 +432,12 @@ footer nav{position:static; background:none; border:0; backdrop-filter:none; dis
   <!-- VALIDATION -->
   <section id="validation">
     <div class="sec-head">
-      <div><div class="kicker">02 · Evidence</div><h2>Held-out test vs. a different country</h2></div>
-      <p>IDRiD was captured in another clinic, with another camera, graded by another team, at one fixed resolution. The model saw it only once, with no fine-tuning and no refitted thresholds.</p>
+      <div><div class="kicker">02 · Evidence</div><h2>Held-out test vs. two other populations</h2></div>
+      <p>IDRiD: another clinic and camera, one fixed resolution. Messidor-2: France, graded by a panel of three retina specialists. The model saw each once, with no fine-tuning and no refitted thresholds.</p>
     </div>
     <div class="val">
       <div class="card pane reveal">
-        <div class="legend"><span><i style="background:var(--retina)"></i>APTOS test (in-distribution)</span><span><i style="background:var(--teal)"></i>IDRiD (external)</span></div>
+        <div class="legend"><span><i style="background:var(--retina)"></i>APTOS test (in-distribution)</span><span><i style="background:var(--teal)"></i>IDRiD</span><span><i style="background:var(--violet)"></i>Messidor-2</span></div>
         <div class="cmp" id="cmp"></div>
       </div>
       <div class="findings reveal">
@@ -447,6 +447,8 @@ footer nav{position:static; background:none; border:0; backdrop-filter:none; dis
           <p>A shortcut-dependent model should have over-called disease on IDRiD, where the shortcut is unavailable. The prediction was written down first. It failed: specificity rose.</p></div>
         <div class="finding"><span class="tag r">Label ceiling</span><div class="num">≈ 84%</div>
           <p>Duplicate images carry conflicting grades 29% of the time. No model can be more right than its labels.</p></div>
+        <div class="finding"><span class="tag r">Second external set</span><div class="num">AUC 0.819</div>
+          <p>On Messidor-2 the prediction written first (AUC ≥ 0.93) failed. Moderate eyes without exudates are scored like Mild: the model learned where APTOS's single graders draw that line.</p></div>
       </div>
     </div>
   </section>
@@ -510,6 +512,7 @@ footer nav{position:static; background:none; border:0; backdrop-filter:none; dis
     regulatory clearance. Do not use it for anyone's care.</div>
   <nav>
     <a href="https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy" target="_blank" rel="noopener">Source</a>
+    <a href="https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy/blob/main/docs/WRITEUP.md" target="_blank" rel="noopener">Write-up</a>
     <a href="https://huggingface.co/senanurcetin/aptos-retinopathy-grader" target="_blank" rel="noopener">Weights</a>
     <a href="/model-card">Model card</a>
   </nav>
@@ -530,7 +533,7 @@ const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls)
     [REPORTED.aptos_test_qwk.toFixed(3), "QWK, APTOS test", "5-fold ensemble"],
     [REPORTED.idrid_qwk.toFixed(3), "QWK, IDRiD external", "no fine-tuning"],
     [REPORTED.idrid_referable_specificity.toFixed(3), "Referral specificity", "on IDRiD"],
-    [REPORTED.idrid_referable_sensitivity.toFixed(3), "Referral sensitivity", "on IDRiD"],
+    [REPORTED.messidor2_referable_roc_auc.toFixed(3), "Referral AUC, Messidor-2", "prediction failed"],
   ];
   for (const [v, l, s] of items) {
     const d = el("div", "stat"); d.append(el("b", null, v), el("span", null, l), el("small", null, s)); $("stats").append(d);
@@ -539,19 +542,19 @@ const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls)
 
 (function comparison() {
   const rows = [
-    ["Quadratic weighted kappa", "five-way grade agreement", "aptos_test_qwk", "idrid_qwk"],
-    ["Referral ROC AUC", "discrimination, grade ≥ 2", "aptos_referable_roc_auc", "idrid_referable_roc_auc"],
-    ["Referral sensitivity", "referable eyes caught", "aptos_referable_sensitivity", "idrid_referable_sensitivity"],
-    ["Referral specificity", "healthy eyes left alone", "aptos_referable_specificity", "idrid_referable_specificity"],
+    ["Quadratic weighted kappa", "five-way grade agreement", "aptos_test_qwk", "idrid_qwk", "messidor2_qwk"],
+    ["Referral ROC AUC", "discrimination, grade ≥ 2", "aptos_referable_roc_auc", "idrid_referable_roc_auc", "messidor2_referable_roc_auc"],
+    ["Referral sensitivity", "referable eyes caught", "aptos_referable_sensitivity", "idrid_referable_sensitivity", "messidor2_referable_sensitivity"],
+    ["Referral specificity", "healthy eyes left alone", "aptos_referable_specificity", "idrid_referable_specificity", "messidor2_referable_specificity"],
   ];
-  for (const [name, sub, a, b] of rows) {
-    if (REPORTED[a] == null || REPORTED[b] == null) continue;
+  for (const [name, sub, a, b, c] of rows) {
+    if (REPORTED[a] == null || REPORTED[b] == null || REPORTED[c] == null) continue;
     const r = el("div", "cmp-row");
     const n = el("div", "cmp-name"); n.append(el("strong", null, name), el("span", null, sub)); r.append(n);
     const bars = el("div", "bars");
-    for (const [k, c] of [[a, "var(--retina)"], [b, "var(--teal)"]]) {
+    for (const [k, colour] of [[a, "var(--retina)"], [b, "var(--teal)"], [c, "var(--violet)"]]) {
       const bar = el("div", "bar"), t = el("div", "t"), i = el("i");
-      i.style.background = c; i.dataset.w = (REPORTED[k] * 100) + "%"; t.append(i);
+      i.style.background = colour; i.dataset.w = (REPORTED[k] * 100) + "%"; t.append(i);
       bar.append(t, el("b", null, REPORTED[k].toFixed(3))); bars.append(bar);
     }
     r.append(bars); $("cmp").append(r);

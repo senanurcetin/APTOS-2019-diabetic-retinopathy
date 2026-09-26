@@ -226,6 +226,46 @@ def decision_curve(y, prob, thresholds=None) -> pd.DataFrame:
     return table
 
 
+# ------------------------------------------------------------ site transfer
+
+def calibration_in_the_large(y, prob) -> float:
+    """Observed rate minus mean predicted probability.
+
+    Positive means under-confident - more referable cases than the model
+    expects - which is the direction IDRiD showed.
+    """
+    return float(np.asarray(y, dtype=float).mean() - np.asarray(prob, dtype=float).mean())
+
+
+def site_transfer(fit: pd.DataFrame, test: pd.DataFrame, aptos_calibrator,
+                  aptos_cut: float, min_sensitivity: float = 0.90) -> dict:
+    """Recalibrate on one new site, then measure the effect on another.
+
+    The question a deployment faces: labels from a new site are scarce, so is
+    one local recalibration enough for the next site too, or does every site
+    need its own? `fit` plays the site that supplied labels; `test` is the one
+    the result is judged on. Both frames need `referable` and `raw`.
+    """
+    local = fit_calibrator(fit["referable"], fit["raw"])
+    local_point = pick_operating_point(fit["referable"], fit["raw"], min_sensitivity)
+    before, _ = expected_calibration_error(test["referable"],
+                                           probabilities(aptos_calibrator, test["raw"]))
+    after, _ = expected_calibration_error(test["referable"],
+                                          probabilities(local, test["raw"]))
+    at_aptos = apply_operating_point(test["referable"], test["raw"], aptos_cut)
+    at_local = apply_operating_point(test["referable"], test["raw"], local_point["cut"])
+    return {
+        "ece_aptos_calibrator": float(before),
+        "ece_refitted": float(after),
+        "cut_aptos": float(aptos_cut),
+        "cut_refitted": float(local_point["cut"]),
+        "sensitivity_aptos_cut": at_aptos["sensitivity"],
+        "sensitivity_refitted_cut": at_local["sensitivity"],
+        "specificity_aptos_cut": at_aptos["specificity"],
+        "specificity_refitted_cut": at_local["specificity"],
+    }
+
+
 # --------------------------------------------------------------------- report
 
 def _md_table(frame: pd.DataFrame, floats: int = 3) -> list[str]:
@@ -268,21 +308,19 @@ def main(argv=None) -> int:
     test = load_sweep_predictions(cfg, sweep)
     test["referable"] = test["diagnosis"] >= REFERABLE_FROM
 
-    print("scoring IDRiD:")
-    idrid_labels = external.load_idrid_labels(cfg)
-    idrid_cache = external.build_cache(cfg)
-    states, _ = external.load_ensemble(sweep)
-    from aptos.training.loop import pick_device
-    idrid_raw = external.predict(cfg, idrid_cache, idrid_labels, states, pick_device())
-    idrid = pd.DataFrame({
-        "diagnosis": idrid_labels["diagnosis"].to_numpy(),
-        "raw": idrid_raw,
-    })
-    idrid["referable"] = idrid["diagnosis"] >= REFERABLE_FROM
+    externals = {}
+    for key in external.DATASETS:
+        ds = external.dataset(key)
+        print(f"scoring {ds.name}:")
+        try:
+            frame = external.score(cfg, sweep, key)
+        except FileNotFoundError as exc:
+            print(f"  skipped - {str(exc).splitlines()[0]}")
+            continue
+        frame["referable"] = frame["diagnosis"] >= REFERABLE_FROM
+        externals[ds.name] = frame
 
-    sets = {"APTOS out-of-fold (selection)": oof,
-            "APTOS test": test,
-            "IDRiD": idrid}
+    sets = {"APTOS out-of-fold (selection)": oof, "APTOS test": test, **externals}
 
     lines = [
         "# Calibration and the clinical operating point",
@@ -291,7 +329,7 @@ def main(argv=None) -> int:
         "",
         f"Operating point selected on **out-of-fold** predictions at "
         f"sensitivity >= {args.min_sensitivity:.2f}, then applied unchanged to the "
-        f"held-out test split and to IDRiD. Selecting on test and then reporting "
+        f"held-out test split and to the external sets. Selecting on test and then reporting "
         f"test performance would measure the selection, not the model.",
         "",
         f"Chosen cut: **{point['cut']:.3f}** on the raw ordinal score.",
@@ -314,11 +352,28 @@ def main(argv=None) -> int:
         })
     lines += _md_table(pd.DataFrame(rows)) + [""]
 
+    # Computed rather than written in: this sentence used to quote IDRiD's
+    # numbers as literal text, which could not cover a second external set.
+    from aptos.modeling.thresholds import apply_thresholds
+
+    _, thresholds = external.load_ensemble(sweep)
+    top, boundary = [], []
+    for name, frame in externals.items():
+        pred = apply_thresholds(frame["raw"].to_numpy(), thresholds)
+        true = frame["diagnosis"].to_numpy()
+        top.append(f"{name} {int((pred == 4).sum())} grade-4 predictions where "
+                   f"{int((true == 4).sum())} exist")
+        moderate = true == 2
+        if moderate.any():
+            boundary.append(f"{name} {(pred[moderate] < 2).mean():.0%} of "
+                            f"{int(moderate.sum())}")
     lines += [
-        "The referral decision is the part that transfers. The five-way grade "
-        "degrades on IDRiD - the model issues 8 grade-4 predictions where 64 "
-        "exist - but the binary question survives, because compressing the top "
-        "of the scale does not move a case back across the referral boundary.",
+        "Where the grade goes wrong decides whether the referral does. At the top "
+        "of the scale the external sets show " + ("; ".join(top) or "nothing yet")
+        + " - compressing grades 3 and 4 against each other costs no referrals. "
+        "At the referral boundary, the share of true grade-2 (Moderate) eyes "
+        "graded below 2 is " + ("; ".join(boundary) or "not measured")
+        + ". Those are missed referrals.",
         "",
         "## Calibration",
         "",
@@ -331,8 +386,34 @@ def main(argv=None) -> int:
     for name, frame in sets.items():
         prob = probabilities(calibrator, frame["raw"])
         ece, table = expected_calibration_error(frame["referable"], prob)
-        lines += [f"### {name} - ECE {ece:.4f}", ""]
+        gap = calibration_in_the_large(frame["referable"], prob)
+        verdict = ("well calibrated on average" if abs(gap) < 0.01
+                   else "under-confident" if gap > 0 else "over-confident")
+        lines += [f"### {name} - ECE {ece:.4f}", "",
+                  f"Observed referable rate minus mean predicted probability: "
+                  f"{gap:+.4f} ({verdict}).", ""]
         lines += _md_table(table) + [""]
+
+    transfer = []
+    names = list(externals)
+    if len(names) >= 2:
+        lines += [
+            "## Recalibrating at a new site",
+            "",
+            "Labels from a new site are scarce. So: refit the calibrator and the "
+            "operating point on one external set, then judge them on the other. "
+            "If that helps in both directions, one local recalibration transfers; "
+            "if not, every site needs its own.",
+            "",
+        ]
+        for fit_name in names:
+            for test_name in names:
+                if fit_name == test_name:
+                    continue
+                result = site_transfer(externals[fit_name], externals[test_name],
+                                       calibrator, point["cut"], args.min_sensitivity)
+                transfer.append({"fitted on": fit_name, "applied to": test_name, **result})
+        lines += _md_table(pd.DataFrame(transfer)) + [""]
 
     lines += ["## Decision curve", "",
               "Net benefit against treating everyone and treating no one. A model "
@@ -350,7 +431,8 @@ def main(argv=None) -> int:
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines) + "\n", encoding="utf-8")
     (out.with_suffix(".json")).write_text(
-        json.dumps({"operating_point": point, "applied": rows}, indent=2), encoding="utf-8"
+        json.dumps({"operating_point": point, "applied": rows, "transfer": transfer},
+                   indent=2), encoding="utf-8"
     )
     print(f"written to {out}")
     return 0

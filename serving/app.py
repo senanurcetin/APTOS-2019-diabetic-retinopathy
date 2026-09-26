@@ -59,6 +59,10 @@ MODEL_CARD = {
         "idrid_referable_sensitivity": 0.885,
         "idrid_referable_specificity": 0.987,
         "idrid_referable_roc_auc": 0.984,
+        "messidor2_qwk": 0.4928,
+        "messidor2_referable_sensitivity": 0.328,
+        "messidor2_referable_specificity": 0.990,
+        "messidor2_referable_roc_auc": 0.819,
     },
     # How much the five folds disagree on ordinary images: the standard
     # deviation of the fold scores on each of the 366 APTOS test images, at
@@ -78,11 +82,16 @@ MODEL_CARD = {
         "in the training data.",
         "Labels carry roughly 29% disagreement between duplicate pairs, putting "
         "a single label's accuracy near 84%. The model cannot exceed its labels.",
-        "Grade calibration degrades under distribution shift: on an external "
-        "dataset the model under-calls the most severe grade. The referable "
-        "decision is the robust output.",
-        "Trained on a single population. Performance elsewhere is unknown "
-        "except for one external set of 455 images.",
+        "Moderate disease without hard exudates is under-graded. Against "
+        "Messidor-2's adjudicated labels, 83% of Moderate eyes were graded below "
+        "2 and referral ROC AUC fell to 0.819. Read the referral flag as "
+        "'exudate-level disease or worse'.",
+        "Calibration drifts between sites and must be set locally: both external "
+        "sets are under-confident, and a threshold fitted at one new site did not "
+        "transfer to the other.",
+        "Trained on a single population and measured on two others: IDRiD (455 "
+        "images, India) and Messidor-2 (1744 images, France). Performance "
+        "anywhere else is unknown.",
     ],
 }
 
@@ -318,8 +327,10 @@ async def predict(
     if preview:
         result["preview"] = preview_data_url(processed)
     result["disclaimer"] = (
-        "Not a medical device. The referable flag is the output validated "
-        "externally; the five-way grade degrades under distribution shift."
+        "Not a medical device. The referable flag held up on one external set "
+        "(IDRiD) but under-calls Moderate disease without exudates against "
+        "adjudicated labels (Messidor-2); the five-way grade degrades under "
+        "distribution shift."
     )
     if explain:
         result["explain"] = (
