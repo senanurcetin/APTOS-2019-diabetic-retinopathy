@@ -12,9 +12,9 @@ the APTOS 2019 Blindness Detection set pre-split into train/valid/test.
 **Best test QWK: 0.9098**, a five-fold ensemble. That is not the interesting
 part — public solutions reach 0.93+. The five findings below are.
 
-**In one read:** [Two predictions, one failure each way](docs/WRITEUP.md) —
-the findings as a story, from the metadata shortcut to two pre-registered
-external tests. Live demo:
+**In one read:** [Three predictions written first](docs/WRITEUP.md) — the
+findings as a story, from the metadata shortcut through two pre-registered
+external tests to the experiment that found the cause. Live demo:
 [aptos-2019-diabetic-retinopathy.onrender.com](https://aptos-2019-diabetic-retinopathy.onrender.com).
 
 ---
@@ -122,6 +122,26 @@ labels, and APTOS's single graders put the Mild/Moderate line higher than an
 adjudicating panel does. And recalibrating at one new site does not fix the
 next: a threshold fitted on Messidor-2 takes IDRiD specificity from 1.00 to
 0.13.
+
+That last reading was made after seeing the data, so it was then tested
+([`docs/finetune-prediction.md`](docs/finetune-prediction.md), predictions
+committed first). Half of Messidor-2 was used to fine-tune; a control arm was
+fine-tuned on the **same images** with the model's own grades as labels, so any
+gain from the camera alone would show up there too.
+
+| | unchanged | fine-tuned, adjudicated labels | fine-tuned, control labels |
+|---|---|---|---|
+| Messidor-2 test half, referable AUC | 0.830 | **0.925** | 0.834 |
+| Messidor-2 test half, Moderate graded below 2 | 78.4% | **45.0%** | 82.5% |
+| IDRiD, referable AUC | 0.984 | 0.960 | 0.981 |
+| APTOS test, referable AUC | 0.983 | 0.965 | 0.976 |
+| APTOS test, accuracy | 0.803 | 0.686 | 0.776 |
+
+The adjudicated labels fix it; the same images with APTOS-style labels do
+not. **The failure was the training labels, not the camera.** Two limits,
+both reported: the whole Moderate grade shifted up rather than the subtle cases
+specifically (the fifth prediction failed), and the fine-tuned model over-grades
+APTOS, so the deployed model is unchanged.
 
 Full numbers, tables and statistics: **[RESULTS.md](RESULTS.md)**. For a walk
 through the findings that recomputes them from the committed reports, open
@@ -406,11 +426,12 @@ the port and the original on today's stack), confound-aware folds were run (no
 change: ensemble QWK 0.9071 against 0.9091), and a second external set was
 added. That last one opened the first gap below. What remains:
 
-- **Moderate disease without exudates is under-graded.** Against Messidor-2's
-  adjudicated labels, 83% of Moderate eyes are graded below 2 and referable AUC
-  is 0.819. Fixing it needs better training labels — adjudicated grades, or
-  APTOS relabelled — which this project does not have. Until then, read the
-  referral flag as "exudate-level disease or worse".
+- **The deployed model under-grades Moderate disease.** Against Messidor-2's
+  adjudicated labels, 83% of Moderate eyes are graded below 2. Fine-tuning on
+  adjudicated labels fixes that (45%, AUC 0.925) but over-grades APTOS (accuracy
+  0.803 to 0.686), so it was not deployed. A model right on both needs one
+  labelling standard across all its training data, which this project does not
+  have. Until then, read the referral flag as "exudate-level disease or worse".
 
 
 - **Calibration has to be corrected per site.** ECE rises from 0.032 on APTOS

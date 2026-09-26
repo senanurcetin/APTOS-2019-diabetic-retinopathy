@@ -1,4 +1,4 @@
-# Two predictions, one failure each way
+# Three predictions written first: what a retinopathy model learned
 
 *What a diabetic retinopathy model learned, what it didn't, and how the project
 found out. September 2026.*
@@ -112,20 +112,49 @@ A cut chosen to reach 90% sensitivity on Messidor-2 turned IDRiD's specificity
 from 1.00 into 0.13. A deployment would have to set its threshold on its own
 labelled data, site by site.
 
+## 6. The cause, tested
+
+"It was the labels" was a reading made after seeing the data, so it got its own
+pre-registered experiment. Half of Messidor-2 - split by patient, so no one's
+two eyes landed on both sides - was used to fine-tune the five fold models on
+the panel's grades.
+
+The obvious objection is that fine-tuning also shows the model Messidor-2's
+cameras, and that alone might help. So a second arm was fine-tuned on the same
+images with the original model's own grades as labels: the new cameras, the old
+boundary.
+
+| | unchanged | adjudicated labels | control labels |
+|---|---|---|---|
+| referable AUC, Messidor-2 held-out half | 0.830 | **0.925** | 0.834 |
+| Moderate eyes graded below 2 | 78% | **45%** | 83% |
+
+The control gains nothing. The adjudicated arm moves the boundary. The failure
+was the labels.
+
+Two things did not go the way the hypothesis said. The whole Moderate grade
+moved up, cases with exudates more than without, so there is no sign the model
+learned to see anything new; it redrew a line. And the fine-tuned model now
+over-grades the APTOS test set (accuracy 0.80 to 0.69), so it stays an
+experiment rather than the deployed model. A model that is right everywhere
+needs every training image graded to the same standard.
+
 ## What this adds up to
 
 - **The shortcut was real, and the model does not depend on it.** The IDRiD
   test was designed to catch exactly that and found the opposite.
 - **The model inherits its labels.** It reads the retina the way APTOS's single
   graders did, and an adjudicated reference standard exposes the difference at
-  the one boundary that decides referral.
+  the one boundary that decides referral. Re-labelled training data moves that
+  boundary; the same images with the old labels do not.
 - **The ceiling on this project is label quality, not architecture.** The next
   step is not a bigger network; it is training on better grades.
 
-Two pre-registered predictions, one falsified in the model's favour and one
-against it. Both results were more informative than a higher kappa would have
-been, and neither could have been claimed honestly without writing the
-prediction down first.
+Three pre-registered experiments: one prediction falsified in the model's
+favour, one against it, and a third that confirmed the explanation for the
+second while refuting its finer detail. Each was more informative than a higher
+kappa would have been, and none could have been claimed honestly without writing
+the prediction down first.
 
 ## Method notes
 
@@ -133,8 +162,9 @@ prediction down first.
   (`python -m aptos.pipeline`), recorded in MLflow and exported to
   `reports/runs.csv`. Details and caveats: [RESULTS.md](../RESULTS.md).
 - The predictions and their outcomes, in the order they were written:
-  [IDRiD](external-validation-prediction.md) and
-  [Messidor-2](second-external-validation-prediction.md).
+  [IDRiD](external-validation-prediction.md),
+  [Messidor-2](second-external-validation-prediction.md) and
+  [fine-tuning](finetune-prediction.md).
 - The model is served, with these limitations attached, at
   [aptos-2019-diabetic-retinopathy.onrender.com](https://aptos-2019-diabetic-retinopathy.onrender.com).
   It is not a medical device.
