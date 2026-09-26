@@ -16,6 +16,9 @@ part — public solutions reach 0.93+. The five findings below are.
 findings as a story, from the metadata shortcut through two pre-registered
 external tests to the experiment that found the cause. Live demo:
 [aptos-2019-diabetic-retinopathy.onrender.com](https://aptos-2019-diabetic-retinopathy.onrender.com).
+On Kaggle: [APTOS: Three Predictions I Wrote Before the Data](https://www.kaggle.com/code/senanuretin/aptos-three-predictions-i-wrote-before-the-data)
+recomputes the metadata shortcut live on the Kaggle copy of the dataset and walks
+through the three experiments.
 
 ---
 
