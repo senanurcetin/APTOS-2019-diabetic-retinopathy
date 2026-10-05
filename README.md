@@ -15,7 +15,9 @@ part — public solutions reach 0.93+. The five findings below are.
 **In one read:** [Three predictions written first](docs/WRITEUP.md) — the
 findings as a story, from the metadata shortcut through two pre-registered
 external tests to the experiment that found the cause. Live demo:
-[aptos-2019-diabetic-retinopathy.onrender.com](https://aptos-2019-diabetic-retinopathy.onrender.com).
+[aptos-2019-diabetic-retinopathy.onrender.com](https://aptos-2019-diabetic-retinopathy.onrender.com),
+or in the browser with no server at
+[huggingface.co/spaces/senanurcetin/aptos-retinopathy-referral](https://huggingface.co/spaces/senanurcetin/aptos-retinopathy-referral).
 On Kaggle: [APTOS: Three Predictions I Wrote Before the Data](https://www.kaggle.com/code/senanuretin/aptos-three-predictions-i-wrote-before-the-data)
 recomputes the metadata shortcut live on the Kaggle copy of the dataset and walks
 through the three experiments.
