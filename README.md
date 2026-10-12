@@ -1,5 +1,7 @@
 # APTOS-2019 Diabetic Retinopathy Grading
 
+**Technical reviewer brief:** [Methods, evidence and responsible-use boundaries](docs/hiring-summary.md).
+
 [![tests](https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy/actions/workflows/tests.yml/badge.svg)](https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy/actions/workflows/tests.yml) [![licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 
 Predicting diabetic retinopathy severity (ICDRSS grades 0-4) from 3662 retinal
