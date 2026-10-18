@@ -105,6 +105,26 @@ def out_of_fold_predictions(cfg: Config, sweep: pathlib.Path) -> pd.DataFrame:
 
 # ------------------------------------------------------------- operating point
 
+def _validated_binary_scores(y_referable, score, *, both_classes: bool) -> tuple[np.ndarray, np.ndarray]:
+    """Validate fixed ordinal scores without silently changing labels or shapes."""
+    try:
+        y = np.asarray(y_referable, dtype=float)
+        raw = np.asarray(score, dtype=float)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("binary labels and raw scores must be numeric") from exc
+    if y.ndim != 1 or raw.ndim != 1:
+        raise ValueError("binary labels and raw scores must be 1-D")
+    if len(y) == 0 or len(y) != len(raw):
+        raise ValueError("binary labels and raw scores need identical nonempty lengths")
+    if not np.all(np.isfinite(y)) or not np.all(np.isfinite(raw)):
+        raise ValueError("binary labels and raw scores must be finite")
+    if not np.all(np.isin(y, (0, 1))):
+        raise ValueError("referable labels must be binary 0/1")
+    if both_classes and len(np.unique(y)) < 2:
+        raise ValueError("ROC threshold selection requires both classes")
+    return y.astype(int), raw
+
+
 def pick_operating_point(y_referable, score, min_sensitivity: float = 0.90) -> dict:
     """The lowest-cost cut that still reaches the required sensitivity.
 
@@ -112,8 +132,15 @@ def pick_operating_point(y_referable, score, min_sensitivity: float = 0.90) -> d
     referral risks sight while a false positive costs an appointment. Among the
     cuts that clear the bar, this takes the one with the best specificity.
     """
-    y = np.asarray(y_referable).astype(int)
-    score = np.asarray(score, dtype=float)
+    y, score = _validated_binary_scores(y_referable, score, both_classes=True)
+    if isinstance(min_sensitivity, bool) or not np.isscalar(min_sensitivity):
+        raise ValueError("min_sensitivity must lie in (0, 1]")
+    try:
+        min_sensitivity = float(min_sensitivity)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("min_sensitivity must lie in (0, 1]") from exc
+    if not np.isfinite(min_sensitivity) or not 0 < min_sensitivity <= 1:
+        raise ValueError("min_sensitivity must lie in (0, 1]")
     fpr, tpr, cuts = roc_curve(y, score)
 
     eligible = tpr >= min_sensitivity
@@ -133,8 +160,16 @@ def pick_operating_point(y_referable, score, min_sensitivity: float = 0.90) -> d
 
 
 def apply_operating_point(y_referable, score, cut: float) -> dict:
-    y = np.asarray(y_referable).astype(int)
-    flag = np.asarray(score, dtype=float) >= cut
+    y, score = _validated_binary_scores(y_referable, score, both_classes=False)
+    if isinstance(cut, bool) or not np.isscalar(cut):
+        raise ValueError("cut must be finite")
+    try:
+        cut = float(cut)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("cut must be finite") from exc
+    if not np.isfinite(cut):
+        raise ValueError("cut must be finite")
+    flag = score >= cut
     tp = int((y.astype(bool) & flag).sum())
     fn = int((y.astype(bool) & ~flag).sum())
     tn = int((~y.astype(bool) & ~flag).sum())

@@ -243,3 +243,53 @@ def test_probabilities_at_exact_zero_and_one_are_not_dropped(cal):
     assert cal.calibration_in_the_large(y, p) == pytest.approx(0.0)
     curve = cal.decision_curve(y, p, thresholds=[0.5])
     assert len(curve) == 1
+
+
+# ---------------------------------------------------- ROC operating point guard
+
+
+@pytest.mark.torch
+@pytest.mark.parametrize("labels,scores,error", [
+    ([], [], "identical nonempty lengths"),
+    ([0, 1], [0.25], "identical nonempty lengths"),
+    ([[0], [1]], [0.25, 0.75], "1-D"),
+    ([0, 2], [0.25, 0.75], "binary 0/1"),
+    ([0, 0.5], [0.25, 0.75], "binary 0/1"),
+    ([0, 1], [0.25, float("nan")], "finite"),
+    ([0, 1], [float("inf"), 0.75], "finite"),
+])
+def test_operating_point_selection_and_application_reject_malformed_arrays(cal, labels, scores, error):
+    for run in (cal.pick_operating_point,
+                lambda y, s: cal.apply_operating_point(y, s, cut=0.5)):
+        with pytest.raises(ValueError, match=error):
+            run(labels, scores)
+
+
+@pytest.mark.torch
+@pytest.mark.parametrize("invalid", [0, -0.2, 1.01, float("nan"), float("inf"), True, "bad"])
+def test_roc_threshold_selection_rejects_invalid_sensitivity_targets(cal, invalid):
+    with pytest.raises(ValueError, match="min_sensitivity"):
+        cal.pick_operating_point([0, 1], [0.0, 1.0], min_sensitivity=invalid)
+
+
+@pytest.mark.torch
+@pytest.mark.parametrize("invalid", [float("nan"), float("inf"), -float("inf"), True, "bad"])
+def test_operating_point_application_rejects_invalid_cuts(cal, invalid):
+    with pytest.raises(ValueError, match="cut must be finite"):
+        cal.apply_operating_point([0, 1], [0.0, 1.0], cut=invalid)
+
+
+@pytest.mark.torch
+def test_roc_selection_requires_two_classes_but_application_allows_one(cal):
+    with pytest.raises(ValueError, match="requires both classes"):
+        cal.pick_operating_point([0, 0, 0], [0.1, 0.4, 0.9])
+    applied = cal.apply_operating_point([0, 0, 0], [0.1, 0.4, 0.9], cut=0.5)
+    assert (applied["tp"], applied["fn"], applied["tn"], applied["fp"]) == (0, 0, 2, 1)
+    assert np.isnan(applied["roc_auc"])
+
+
+@pytest.mark.torch
+def test_operating_point_boundary_at_full_sensitivity_remains_finite(cal):
+    chosen = cal.pick_operating_point([0, 1, 0, 1], [0, 2, 1, 3], min_sensitivity=1.0)
+    assert np.isfinite(chosen["cut"])
+    assert chosen["sensitivity"] == pytest.approx(1.0)
