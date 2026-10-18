@@ -42,6 +42,7 @@ from typing import Any
 import numpy as np
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from aptos.config import GRADES, REFERABLE_FROM, Config
 from aptos.modeling.thresholds import apply_thresholds
@@ -275,6 +276,9 @@ class OnnxGrader:
 
 
 app = FastAPI(title="APTOS retinopathy grader", version="1.0.0")
+app.mount("/static", StaticFiles(directory=pathlib.Path(__file__).with_name("static")), name="static")
+MAX_IMAGE_BYTES = 10 * 1024 * 1024
+ACCEPTED_IMAGE_TYPES = frozenset({"image/jpeg", "image/png"})
 _grader: Grader | OnnxGrader | None = None
 
 
@@ -315,10 +319,17 @@ async def predict(
     explain: bool = Query(False, description="deliberately not offered - see reports/attention.md"),
     preview: bool = Query(False, description="return the preprocessed image the model scored"),
 ) -> JSONResponse:
+    if file.content_type not in ACCEPTED_IMAGE_TYPES:
+        raise HTTPException(415, "Only JPG and PNG images are accepted")
+    payload = await file.read(MAX_IMAGE_BYTES + 1)
+    if len(payload) > MAX_IMAGE_BYTES:
+        raise HTTPException(413, "Image exceeds the 10 MB size limit")
+    if not payload:
+        raise HTTPException(400, "Image is empty")
     grader = get_grader()
     started = time.time()
     try:
-        result = grader.grade(await file.read())
+        result = grader.grade(payload)
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
 
@@ -327,10 +338,10 @@ async def predict(
     if preview:
         result["preview"] = preview_data_url(processed)
     result["disclaimer"] = (
-        "Not a medical device. The referable flag held up on one external set "
-        "(IDRiD) but under-calls Moderate disease without exudates against "
-        "adjudicated labels (Messidor-2); the five-way grade degrades under "
-        "distribution shift."
+        "Research demo only, not a medical device. Referable sensitivity was "
+        "88.5% on IDRiD but only 32.8% on Messidor-2 (150/457), despite "
+        "unchanged thresholds. False negatives make this unsuitable for "
+        "clinical screening, diagnosis, or referral decisions."
     )
     if explain:
         result["explain"] = (
