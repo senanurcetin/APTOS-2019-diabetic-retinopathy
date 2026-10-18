@@ -266,7 +266,7 @@ def test_operating_point_selection_and_application_reject_malformed_arrays(cal, 
 
 
 @pytest.mark.torch
-@pytest.mark.parametrize("invalid", [0, -0.2, 1.01, float("nan"), float("inf"), True])
+@pytest.mark.parametrize("invalid", [0, -0.2, 1.01, float("nan"), float("inf"), True, "bad"])
 def test_roc_threshold_selection_rejects_invalid_sensitivity_targets(cal, invalid):
     with pytest.raises(ValueError, match="min_sensitivity"):
         cal.pick_operating_point([0, 1], [0.0, 1.0], min_sensitivity=invalid)
