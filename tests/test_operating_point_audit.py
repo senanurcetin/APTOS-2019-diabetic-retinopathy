@@ -60,7 +60,7 @@ def test_rejects_tampered_referral_rate(tmp_path):
     root = _write_test_reports(tmp_path)
     path = root / "calibration.json"
     report = json.loads(path.read_text())
-    report["applied"][1]["referral rate"] = 0.01
+    report["applied"][1]["referral rate"] = 0.5
     path.write_text(json.dumps(report))
     with pytest.raises(ValueError, match="referral rate contradicts"):
         audit_operating_points(root)
