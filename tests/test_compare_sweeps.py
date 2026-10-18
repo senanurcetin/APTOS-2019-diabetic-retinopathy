@@ -124,3 +124,34 @@ def test_model_families_are_not_interchangeable():
     cfg = Config.load().to_dict()
     with pytest.raises(ValueError, match="reg baseline and ordinal"):
         compare_sweep_configs(cfg, cfg)
+
+
+@pytest.mark.pure
+def test_missing_grade_recall_is_json_null_not_nan():
+    import json
+
+    eyes = [f"e{i}" for i in range(20)]
+    labels = [0, 2] * 10
+    frame = pd.DataFrame({"id_code": eyes, "diagnosis": labels, "raw": labels})
+    result = compare_frames(frame, frame, [0.5, 1.5, 2.5, 3.5],
+                            [0.5, 1.5, 2.5, 3.5], n_resamples=200)
+    assert result["baseline"]["metrics"]["recall_grade_1"] is None
+    assert result["candidate"]["metrics"]["recall_grade_4"] is None
+    json.dumps(result, allow_nan=False)
+
+
+@pytest.mark.pure
+def test_kaggle_experiment_notebook_is_valid_and_off_by_default():
+    import ast
+    import json
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parents[1] / "notebooks" / "ordinal_experiment_matrix.ipynb"
+    notebook = json.loads(path.read_text(encoding="utf-8"))
+    code_cells = [cell for cell in notebook["cells"] if cell["cell_type"] == "code"]
+    assert code_cells
+    combined = "\n".join("".join(cell["source"]) for cell in code_cells)
+    assert "RUN_EXPERIMENTS = False" in combined
+    for cell in code_cells:
+        assert cell["execution_count"] is None and cell["outputs"] == []
+        ast.parse("".join(cell["source"]))

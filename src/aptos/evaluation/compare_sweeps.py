@@ -128,8 +128,12 @@ def compare_frames(
         actual, a_pred, b_pred, unit=unit, patient_ids=patients,
         n_resamples=n_resamples, seed=seed,
     )
+    # Some cohorts lack rare classes; absent-grade recall is undefined, not
+    # zero. JSON null preserves that distinction without writing NaN tokens.
     metric_a = grade_metrics(actual, a_pred)
     metric_b = grade_metrics(actual, b_pred)
+    metric_a = {k: (float(v) if np.isfinite(v) else None) for k, v in metric_a.items()}
+    metric_b = {k: (float(v) if np.isfinite(v) else None) for k, v in metric_b.items()}
     return {
         "schema_version": 1,
         "research_only": True,
@@ -145,8 +149,11 @@ def compare_frames(
             "referable": referable_confusion(actual, b_pred),
         },
         "ordinal_minus_baseline": {
-            "qwk": metric_b["qwk"] - metric_a["qwk"],
-            "macro_f1": metric_b["macro_f1"] - metric_a["macro_f1"],
+            "qwk": (metric_b["qwk"] - metric_a["qwk"]
+                    if metric_b["qwk"] is not None and metric_a["qwk"] is not None else None),
+            "macro_f1": (metric_b["macro_f1"] - metric_a["macro_f1"]
+                         if metric_b["macro_f1"] is not None
+                         and metric_a["macro_f1"] is not None else None),
         },
         "paired_referral_uncertainty": paired,
         "limitations": [
