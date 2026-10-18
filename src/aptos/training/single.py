@@ -140,7 +140,7 @@ def train(cfg: Config, data_dir: pathlib.Path, *, label: str, limit: int = 0,
         tr_loss, _, _ = run_epoch(model, loaders["train"], criterion, device, mode,
                                   optimizer, scaler)
         va_loss, va_raw, va_true = run_epoch(model, loaders["valid"], criterion, device, mode)
-        if mode == "reg":
+        if mode in ("reg", "ordinal"):
             thr, va_qwk = optimize_thresholds(va_true, va_raw, cfg.thresholds)
         else:
             thr, va_qwk = None, qwk(va_true, va_raw.astype(int))
@@ -173,7 +173,7 @@ def train(cfg: Config, data_dir: pathlib.Path, *, label: str, limit: int = 0,
     predictions = {}
     for split in ("valid", "test"):
         _, raw, true = run_epoch(model, loaders[split], criterion, device, mode)
-        pred = apply_thresholds(raw, best_thr) if mode == "reg" else raw.astype(int)
+        pred = apply_thresholds(raw, best_thr) if mode in ("reg", "ordinal") else raw.astype(int)
         predictions[split] = (raw, true)
         for k, v in grade_metrics(true, pred).items():
             result[f"{split}_{k}"] = v
@@ -228,7 +228,7 @@ def save_run(out: pathlib.Path, cfg: Config, state: dict, result: dict,
 def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     # The original script's flags, with its defaults, so existing callers work.
-    ap.add_argument("--mode", choices=["cls", "reg"], default="reg")
+    ap.add_argument("--mode", choices=["cls", "reg", "ordinal"], default="reg")
     ap.add_argument("--model", default="efficientnet_b0")
     ap.add_argument("--size", type=int, default=384)
     ap.add_argument("--batch", type=int, default=16)

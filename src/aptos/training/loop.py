@@ -119,13 +119,18 @@ def build_model(cfg: Config, device: str, *, pretrained: bool = True):
     """
     import timm
 
-    num_classes = 1 if cfg.train.mode == "reg" else N_GRADES
-    return timm.create_model(cfg.train.model, pretrained=pretrained,
-                             num_classes=num_classes).to(device)
+    num_classes = N_GRADES if cfg.train.mode == "cls" else 1
+    backbone = timm.create_model(cfg.train.model, pretrained=pretrained,
+                                 num_classes=num_classes)
+    if cfg.train.mode == "ordinal":
+        from aptos.training.ordinal import CumulativeOrdinalHead
+
+        return CumulativeOrdinalHead(backbone).to(device)
+    return backbone.to(device)
 
 
 def build_criterion(cfg: Config, train_df, device: str):
-    """MSE for ordinal regression, class-weighted cross-entropy for classification.
+    """MSE for scalar regression, cumulative BCE for ordinal, weighted CE for classes.
 
     The weight vector is built over all five grades explicitly. The original
     used `value_counts()` directly, which silently produced a shorter tensor
@@ -134,6 +139,8 @@ def build_criterion(cfg: Config, train_df, device: str):
     """
     if cfg.train.mode == "reg":
         return nn.MSELoss()
+    if cfg.train.mode == "ordinal":
+        return nn.BCEWithLogitsLoss()
 
     counts = np.zeros(N_GRADES, dtype=float)
     observed = train_df["diagnosis"].value_counts()
@@ -169,7 +176,14 @@ def run_epoch(model, loader, criterion, device, mode, optimizer=None, scaler=Non
         for imgs, labels in loader:
             imgs = imgs.to(device, non_blocking=True)
             labels = labels.to(device)
-            target = labels.float().unsqueeze(1) if mode == "reg" else labels
+            if mode == "reg":
+                target = labels.float().unsqueeze(1)
+            elif mode == "ordinal":
+                from aptos.training.ordinal import cumulative_targets
+
+                target = cumulative_targets(labels)
+            else:
+                target = labels
 
             with torch.autocast("cuda", enabled=scaler is not None):
                 out = model(imgs)
@@ -186,7 +200,14 @@ def run_epoch(model, loader, criterion, device, mode, optimizer=None, scaler=Non
                     optimizer.step()
 
             total_loss += loss.item() * imgs.size(0)
-            raw = out.squeeze(1) if mode == "reg" else out.argmax(1)
+            if mode == "reg":
+                raw = out.squeeze(1)
+            elif mode == "ordinal":
+                from aptos.training.ordinal import ordinal_expected_grade
+
+                raw = ordinal_expected_grade(out)
+            else:
+                raw = out.argmax(1)
             preds.append(raw.float().detach().cpu().numpy())
             trues.append(labels.cpu().numpy())
 

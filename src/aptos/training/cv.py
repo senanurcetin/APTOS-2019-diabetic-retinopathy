@@ -236,6 +236,8 @@ def load_fold(directory: pathlib.Path, fold: int) -> tuple[dict, np.ndarray, np.
 def run_cv(cfg: Config, *, resume: bool = True, track: bool = True,
            limit: int | None = None) -> dict:
     """Run (or resume) the full sweep for one variant."""
+    if cfg.train.mode not in ("reg", "ordinal"):
+        raise ValueError("cross-validation requires reg or ordinal mode; cls is single-split only")
     device = pick_device()
     print(f"device: {torch.cuda.get_device_name(0) if device == 'cuda' else 'CPU'}")
 
@@ -430,6 +432,8 @@ def main(argv=None) -> int:
     parser.add_argument("--folds", type=int, default=None)
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--epochs", type=int, default=None)
+    parser.add_argument("--mode", choices=["reg", "ordinal"], default=None,
+                        help="ordinal research uses a cumulative-link head")
     parser.add_argument("--stratify", default=None,
                         choices=["diagnosis", "diagnosis+resolution"])
     parser.add_argument("--no-resume", action="store_true",
@@ -444,7 +448,8 @@ def main(argv=None) -> int:
     if args.variant:
         overrides["variant"] = args.variant
     train_over = {k: v for k, v in
-                  [("seed", args.seed), ("epochs", args.epochs)] if v is not None}
+                  [("seed", args.seed), ("epochs", args.epochs),
+                   ("mode", args.mode)] if v is not None}
     if train_over:
         overrides["train"] = train_over
     cv_over = {k: v for k, v in
