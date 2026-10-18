@@ -197,6 +197,36 @@ def build_cache(cfg: Config, *, dataset_key: str = "idrid", force: bool = False)
 
 # ---------------------------------------------------------------------- scoring
 
+def validate_sweep_contract(cfg: Config, sweep: pathlib.Path) -> None:
+    """Fail closed on ordinal checkpoint/config mismatches and wrong input sizes.
+
+    The versioned flat config is authoritative for new sweeps. Historical
+    scalar sweeps lacking config.json are supported only in regression mode.
+    """
+    manifest = sweep / "config.json"
+    if not manifest.is_file():
+        if cfg.train.mode != "reg":
+            raise ValueError("ordinal evaluation requires the training sweep config.json")
+        return
+    data = json.loads(manifest.read_text(encoding="utf-8"))
+    fields = {
+        "variant": cfg.variant,
+        "train.mode": cfg.train.mode,
+        "train.model": cfg.train.model,
+        "train.size": cfg.train.size,
+        "preprocess.square_mode": cfg.preprocess.square_mode,
+        "preprocess.clahe": cfg.preprocess.clahe,
+        "preprocess.size": cfg.preprocess.size,
+        "preprocess.clip_limit": cfg.preprocess.clip_limit,
+    }
+    for field, value in fields.items():
+        if field not in data or data[field] != value:
+            raise ValueError(f"sweep config mismatch for {field}: "
+                             f"stored={data.get(field)!r}, requested={value!r}")
+    if cfg.train.mode not in ("reg", "ordinal"):
+        raise ValueError("external research comparison supports reg and ordinal modes only")
+
+
 def load_ensemble(sweep: pathlib.Path) -> tuple[list[dict], np.ndarray]:
     """Per-fold weights and the APTOS-fitted threshold set.
 
@@ -256,7 +286,9 @@ def predict(cfg: Config, cache: pathlib.Path, labels: pd.DataFrame,
                         shuffle=False, num_workers=cfg.train.workers,
                         pin_memory=True)
 
-    model = build_model(cfg, device)
+    # The saved fold contains full trained weights: avoid downloading ImageNet
+    # parameters only to overwrite them, including when using Kaggle offline.
+    model = build_model(cfg, device, pretrained=False)
     model.eval()
 
     fold_raws = []
@@ -267,7 +299,16 @@ def predict(cfg: Config, cache: pathlib.Path, labels: pd.DataFrame,
             for images, _ in loader:
                 images = images.to(device, non_blocking=True)
                 with torch.autocast("cuda", enabled=device == "cuda"):
-                    outputs.append(model(images).squeeze(1).float().cpu().numpy())
+                    logits = model(images)
+                    if cfg.train.mode == "ordinal":
+                        from aptos.training.ordinal import ordinal_expected_grade
+
+                        raw = ordinal_expected_grade(logits)
+                    else:
+                        raw = logits.squeeze(1)
+                    if raw.ndim != 1 or raw.shape[0] != images.shape[0]:
+                        raise ValueError("external model produced invalid raw-score shape")
+                    outputs.append(raw.float().cpu().numpy())
         fold_raws.append(np.concatenate(outputs))
         print(f"  fold {i}/{len(states)} scored")
     return np.mean(fold_raws, axis=0)
@@ -281,6 +322,7 @@ def score(cfg: Config, sweep: pathlib.Path, dataset_key: str = "idrid", *,
     external report and the calibration experiments read the same numbers
     instead of each re-running five models.
     """
+    validate_sweep_contract(cfg, sweep)
     ds = dataset(dataset_key)
     out = cfg.paths.external / f"{ds.prefix}_{cfg.variant}_{sweep.name}_scores.csv"
     if out.exists() and not force:
@@ -322,6 +364,7 @@ def evaluate(cfg: Config, sweep: pathlib.Path, *, dataset_key: str = "idrid",
         "n": int(len(scores)),
         "variant": cfg.variant,
         "sweep": sweep.name,
+        "training_mode": cfg.train.mode,
         "thresholds": [float(t) for t in thresholds],
         "refitted": False,
         **grade_metrics(true, pred),
@@ -379,20 +422,31 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--sweep", required=True, help="models/cv/<sweep-dir>")
     parser.add_argument("--variant", default=None)
+    parser.add_argument("--mode", choices=("reg", "ordinal"), default=None,
+                        help="assert the stored sweep's training mode")
     parser.add_argument("--dataset", default="idrid", choices=sorted(DATASETS))
     parser.add_argument("--out", default=None,
                         help="default: reports/external_validation.md for IDRiD, "
                              "reports/external_validation_<dataset>.md otherwise")
     args = parser.parse_args(argv)
-    if args.out is None:
-        args.out = ("reports/external_validation.md" if args.dataset == "idrid"
-                    else f"reports/external_validation_{args.dataset}.md")
-
     sweep = pathlib.Path(args.sweep)
     variant = args.variant or sweep.name.split("-")[0]
     cfg = Config.load(f"configs/{variant}.yaml")
-    cfg.train.size = Config.load("configs/cv.yaml").train.size
+    saved = sweep / "config.json"
+    params = json.loads(saved.read_text(encoding="utf-8")) if saved.is_file() else {}
+    cfg.train.size = params.get("train.size", Config.load("configs/cv.yaml").train.size)
+    cfg.train.model = params.get("train.model", cfg.train.model)
+    cfg.train.mode = params.get("train.mode", "reg")
+    if args.mode is not None and args.mode != cfg.train.mode:
+        raise ValueError(f"requested mode {args.mode} disagrees with stored {cfg.train.mode}")
+    validate_sweep_contract(cfg, sweep)
 
+    if args.out is None:
+        if cfg.train.mode == "ordinal":
+            args.out = f"reports/research/ordinal_{sweep.name}_{args.dataset}.md"
+        else:
+            args.out = ("reports/external_validation.md" if args.dataset == "idrid"
+                        else f"reports/external_validation_{args.dataset}.md")
     report = evaluate(cfg, sweep, dataset_key=args.dataset)
     out = cfg.paths.root / args.out
     out.parent.mkdir(parents=True, exist_ok=True)

@@ -29,10 +29,24 @@ statistical uncertainty, not only aggregate QWK. Keep all seeds/configs,
 checkpoint hashes and aligned OOF predictions.
 
 The default model remains `reg`, and existing checkpoints/results are
-unchanged. These experiments do NOT yet have an ordinal-aware external
-IDRiD/Messidor-2 inference adapter. Do not load four-logit checkpoints
-through existing single-output external evaluation or ONNX serving. Implement
-and test that adapter before any external-performance claims.
+unchanged. The research-only external evaluation adapter now understands
+cumulative ordinal logits and converts them to expected grades before applying
+**unchanged APTOS validation thresholds**. It checks the saved sweep's original
+training mode, model, input shape and preprocessing settings before reading
+even cached scores.
+
+```sh
+python -m aptos.evaluation.external --sweep models/cv/baseline-ORDINAL_RUN_ID \
+  --dataset idrid --mode ordinal
+python -m aptos.evaluation.external --sweep models/cv/baseline-ORDINAL_RUN_ID \
+  --dataset messidor2 --mode ordinal
+```
+
+Replace the placeholder with the actual new sweep folder. Reports for ordinal
+runs are written below `reports/research/`, never over the committed clinical
+baseline report. The legacy ONNX serving path remains **scalar-regression only**;
+do not load an ordinal checkpoint into the demo. No external dataset has been
+scored by the new model yet.
 
 The data remain under their respective licenses and outside this public
 repository; no clinical decisions, claims of safety, or product rollout.
