@@ -208,7 +208,7 @@ class ThresholdConfig:
 @dataclass
 class TrainConfig:
     model: str = "efficientnet_b0"
-    mode: str = "reg"  # "reg" (ordinal regression) or "cls"
+    mode: str = "reg"  # "reg" MSE scalar, "cls" CE, "ordinal" cumulative-link BCE
     size: int = 384
     batch: int = 16
     grad_accum: int = 1
@@ -358,7 +358,7 @@ class Config:
             raise ValueError(f"unknown variant {self.variant!r}; known: {known}")
         if self.preprocess.square_mode not in ("pad", "squash"):
             raise ValueError(f"unknown square_mode: {self.preprocess.square_mode!r}")
-        if self.train.mode not in ("reg", "cls"):
+        if self.train.mode not in ("reg", "cls", "ordinal"):
             raise ValueError(f"unknown train mode: {self.train.mode!r}")
         if self.cv.stratify_on not in ("diagnosis", "diagnosis+resolution"):
             raise ValueError(f"unknown cv.stratify_on: {self.cv.stratify_on!r}")

@@ -490,6 +490,15 @@ added. That last one opened the first gap below. What remains:
   raw scores differ slightly — up to 0.12 on six held-out images, with every
   predicted grade agreeing. Small, real, and not worth hiding.
 
+## Experimental ordinal severity model
+
+An optional, **research-only** cumulative-link head is available for controlled
+experiments against the existing EfficientNet-B0 scalar MSE baseline. Its
+four trainable, ordered cutpoints and cumulative binary loss are documented
+in [the ordinal experiment protocol](docs/ordinal-research.md). This does not
+modify published accuracy, external-validation results, or deployed models;
+**no new performance gain has been measured**.
+
 ## Layout
 
 ```
