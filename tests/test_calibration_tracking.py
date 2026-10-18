@@ -193,3 +193,53 @@ def test_recalibrating_on_a_site_with_the_same_shift_helps_the_next_one(cal):
     assert out["ece_refitted"] < out["ece_aptos_calibrator"]
     assert out["sensitivity_refitted_cut"] > out["sensitivity_aptos_cut"]
     assert out["cut_refitted"] < out["cut_aptos"]
+
+
+# ----------------------------------------------------- invalid-input regression
+
+
+@pytest.mark.torch
+@pytest.mark.parametrize("labels,probabilities,error", [
+    ([], [], "same nonempty length"),
+    ([0, 1], [0.2], "same nonempty length"),
+    ([[0], [1]], [0.2, 0.7], "1-D arrays"),
+    ([0, 2], [0.2, 0.7], "binary"),
+    ([0, 1], [0.2, -0.1], "between 0 and 1"),
+    ([0, 1], [0.2, 1.01], "between 0 and 1"),
+    ([0, 1], [float("nan"), 0.5], "finite"),
+    ([0, 1], [0.2, float("inf")], "finite"),
+])
+def test_calibration_metrics_reject_invalid_probabilities(cal, labels, probabilities, error):
+    for function in (
+        cal.expected_calibration_error, cal.decision_curve, cal.calibration_in_the_large,
+    ):
+        with pytest.raises(ValueError, match=error):
+            function(labels, probabilities)
+
+
+@pytest.mark.torch
+@pytest.mark.parametrize("bins", [0, -1, 1.5, True])
+def test_ece_rejects_invalid_bin_counts(cal, bins):
+    with pytest.raises(ValueError, match="positive integer"):
+        cal.expected_calibration_error([0, 1], [0.0, 1.0], bins=bins)
+
+
+@pytest.mark.torch
+@pytest.mark.parametrize("thresholds", [
+    [], [0], [1], [-0.1], [1.1], [float("nan")], [float("inf")], [[0.5]],
+])
+def test_decision_curve_rejects_invalid_thresholds(cal, thresholds):
+    with pytest.raises(ValueError, match="decision thresholds"):
+        cal.decision_curve([0, 1], [0.1, 0.9], thresholds=thresholds)
+
+
+@pytest.mark.torch
+def test_probabilities_at_exact_zero_and_one_are_not_dropped(cal):
+    y = [0, 1, 1, 0]
+    p = [0, 1, 0, 1]
+    ece, bins = cal.expected_calibration_error(y, p, bins=2)
+    assert bins["n"].sum() == len(y)
+    assert ece == pytest.approx(0.5)
+    assert cal.calibration_in_the_large(y, p) == pytest.approx(0.0)
+    curve = cal.decision_curve(y, p, thresholds=[0.5])
+    assert len(curve) == 1

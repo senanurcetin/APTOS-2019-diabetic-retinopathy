@@ -152,6 +152,26 @@ def apply_operating_point(y_referable, score, cut: float) -> dict:
 
 # ------------------------------------------------------------------ calibration
 
+def _validated_binary_probabilities(y, prob) -> tuple[np.ndarray, np.ndarray]:
+    """Fail closed instead of silently omitting invalid reliability-diagram data."""
+    try:
+        labels = np.asarray(y, dtype=float)
+        probabilities = np.asarray(prob, dtype=float)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("labels and probabilities must be numeric") from exc
+    if labels.ndim != 1 or probabilities.ndim != 1:
+        raise ValueError("labels and probabilities must be 1-D arrays")
+    if labels.size == 0 or labels.size != probabilities.size:
+        raise ValueError("labels and probabilities must have the same nonempty length")
+    if not np.all(np.isfinite(labels)) or not np.all(np.isfinite(probabilities)):
+        raise ValueError("labels and probabilities must be finite")
+    if not np.all(np.isin(labels, (0, 1))):
+        raise ValueError("calibration labels must be binary (0 or 1)")
+    if np.any((probabilities < 0) | (probabilities > 1)):
+        raise ValueError("calibrated probabilities must be between 0 and 1")
+    return labels.astype(int), probabilities
+
+
 def fit_calibrator(y_referable, score) -> LogisticRegression:
     """Platt scaling: turn the regression output into a referral probability.
 
@@ -177,8 +197,9 @@ def expected_calibration_error(y, prob, bins: int = 10) -> tuple[float, pd.DataF
     a model can be over-confident at the top and under-confident at the bottom
     and still average out.
     """
-    y = np.asarray(y).astype(int)
-    prob = np.asarray(prob, dtype=float)
+    y, prob = _validated_binary_probabilities(y, prob)
+    if isinstance(bins, bool) or not isinstance(bins, (int, np.integer)) or bins < 1:
+        raise ValueError("bins must be a positive integer")
     edges = np.linspace(0, 1, bins + 1)
     rows, error = [], 0.0
 
@@ -203,11 +224,18 @@ def decision_curve(y, prob, thresholds=None) -> pd.DataFrame:
     model beats the two trivial policies, across the range of preferences a
     clinician might hold, rather than at one arbitrary cut.
     """
-    y = np.asarray(y).astype(int)
-    prob = np.asarray(prob, dtype=float)
+    y, prob = _validated_binary_probabilities(y, prob)
     n = len(y)
     prevalence = y.mean()
-    thresholds = np.arange(0.05, 0.75, 0.05) if thresholds is None else np.asarray(thresholds)
+    try:
+        thresholds = (np.arange(0.05, 0.75, 0.05) if thresholds is None
+                      else np.asarray(thresholds, dtype=float))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("thresholds must be numeric") from exc
+    if (thresholds.ndim != 1 or thresholds.size == 0
+            or not np.all(np.isfinite(thresholds))
+            or np.any((thresholds <= 0) | (thresholds >= 1))):
+        raise ValueError("decision thresholds must be finite, nonempty and strictly between 0 and 1")
 
     rows = []
     for pt in thresholds:
@@ -234,7 +262,8 @@ def calibration_in_the_large(y, prob) -> float:
     Positive means under-confident - more referable cases than the model
     expects - which is the direction IDRiD showed.
     """
-    return float(np.asarray(y, dtype=float).mean() - np.asarray(prob, dtype=float).mean())
+    y, prob = _validated_binary_probabilities(y, prob)
+    return float(y.mean() - prob.mean())
 
 
 def site_transfer(fit: pd.DataFrame, test: pd.DataFrame, aptos_calibrator,
