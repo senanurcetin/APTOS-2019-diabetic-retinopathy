@@ -94,3 +94,15 @@ def test_legacy_regression_remains_the_default():
     assert Config.load(train={"mode": "ordinal"}).train.mode == "ordinal"
     with pytest.raises(ValueError, match="unknown train mode"):
         Config.load(train={"mode": "wrong"})
+
+
+def test_timm_backbone_is_wrapped_with_four_logits():
+    from aptos.training.loop import build_model
+
+    cfg = Config.load(train={"mode": "ordinal", "model": "resnet18"})
+    model = build_model(cfg, "cpu", pretrained=False)
+    assert isinstance(model, CumulativeOrdinalHead)
+    with torch.no_grad():
+        output = model(torch.randn(2, 3, 64, 64))
+    assert output.shape == (2, 4)
+    assert torch.all(output[:, :-1] > output[:, 1:])
