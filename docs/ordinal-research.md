@@ -16,8 +16,8 @@ Prepare Kaggle APTOS images using the existing pipeline. Do not move held-out
 test cases into model selection. Then run paired MSE and ordinal experiments:
 
 ```sh
-# CPU/GPU smoke test, never saved to historical results:
-python -m aptos.training.cv --config configs/cv.yaml --mode ordinal --limit 10 --no-track
+# CPU/GPU smoke test (no checkpoint or MLflow run; local diagnostic files may be written):
+python -m aptos.training.cv --config configs/cv.yaml --mode ordinal --limit 25 --folds 5 --epochs 1 --no-track
 # Five-fold, identical splits/seed:
 python -m aptos.training.cv --config configs/cv.yaml --mode reg --seed 42
 python -m aptos.training.cv --config configs/cv.yaml --mode ordinal --seed 42
