@@ -133,8 +133,13 @@ def pick_operating_point(y_referable, score, min_sensitivity: float = 0.90) -> d
     cuts that clear the bar, this takes the one with the best specificity.
     """
     y, score = _validated_binary_scores(y_referable, score, both_classes=True)
-    if (isinstance(min_sensitivity, bool) or not np.isscalar(min_sensitivity)
-            or not np.isfinite(min_sensitivity) or not 0 < min_sensitivity <= 1):
+    if isinstance(min_sensitivity, bool) or not np.isscalar(min_sensitivity):
+        raise ValueError("min_sensitivity must lie in (0, 1]")
+    try:
+        min_sensitivity = float(min_sensitivity)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("min_sensitivity must lie in (0, 1]") from exc
+    if not np.isfinite(min_sensitivity) or not 0 < min_sensitivity <= 1:
         raise ValueError("min_sensitivity must lie in (0, 1]")
     fpr, tpr, cuts = roc_curve(y, score)
 
