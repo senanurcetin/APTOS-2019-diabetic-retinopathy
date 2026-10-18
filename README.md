@@ -1,5 +1,7 @@
 # APTOS-2019 Diabetic Retinopathy Grading
 
+> **NEXUS Open Research:** Public, non-productized reproducible research. This repository is not a clinical screening product. No customer-facing or commercial workflow is planned. The existing demonstration is strictly educational. [Offline evidence audit, Kaggle protocol and optional read-only BigQuery SQL](docs/open-research-workflow.md).
+
 **Technical reviewer brief:** [Methods, evidence and responsible-use boundaries](docs/hiring-summary.md).
 
 [![tests](https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy/actions/workflows/tests.yml/badge.svg)](https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy/actions/workflows/tests.yml) [![licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
@@ -46,14 +48,17 @@ This does not invalidate the results, but any reported score should be read
 against that floor. `scripts/confound_analysis.py` measures it — and the fourth
 finding below tests whether the model actually depends on it.
 
-### The label ceiling is around 84%
+### Label disagreement limits how confidently accuracy can be interpreted
 
 The dataset contains the same image more than once. Of 148 same-image pairs,
-**43 (29.1%) carry conflicting labels**. That puts inter-rater agreement at
-70.9% and a single label's accuracy at roughly **84%**.
+**43 (29.1%) carry conflicting labels**. Within this selected set of pairs,
+the labels agree on 70.9% of pairwise comparisons; an approximate **84%**
+single-label accuracy figure is only a heuristic under additional assumptions,
+**not a proven dataset-wide ceiling or measured inter-rater reliability**.
 
-The ensemble's test accuracy is 0.8033 — near the ceiling. Part of the remaining
-error belongs to the labels, not the model.
+The ensemble's test accuracy is 0.8033. Its residual errors may reflect both
+model mistakes and label variability; aggregate duplicate-pair disagreement
+cannot separate those causes.
 
 ### Two preprocessing ideas, both null
 
@@ -76,7 +81,7 @@ at all — it is ensembling the five folds, worth **+0.019 QWK** on the baseline
 about four times the biggest gap between any two variants (0.0044). The gain is
 smaller for the other variants: +0.016 for squash, +0.007 for clahe.
 
-### The model reads the retina, not the camera
+### The simple camera-shortcut hypothesis did not transfer to IDRiD
 
 Given the shortcut above, the obvious question is whether the score survives
 without it. Within APTOS it cannot be removed — excluding the confounded
@@ -145,7 +150,8 @@ gain from the camera alone would show up there too.
 | APTOS test, accuracy | 0.803 | 0.686 | 0.776 |
 
 The adjudicated labels fix it; the same images with APTOS-style labels do
-not. **The failure was the training labels, not the camera.** Two limits,
+not. **The experiment supports a role for the grading labels rather than image-domain
+adaptation alone; it does not rule out all acquisition effects.** Two limits,
 both reported: the whole Moderate grade shifted up rather than the subtle cases
 specifically (the fifth prediction failed), and the fine-tuned model over-grades
 APTOS, so the deployed model is unchanged.

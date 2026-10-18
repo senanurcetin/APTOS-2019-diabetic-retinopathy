@@ -42,6 +42,12 @@ jobs:
       # collector. That is a real property worth keeping: it means the
       # preprocessing module can be checked anywhere Python and OpenCV exist,
       # including the Colab notebook that imports it straight from GitHub.
+      - name: Validate committed research evidence (offline)
+        run: python -m aptos.reporting.research_evidence --reports-dir reports --format json > /dev/null
+
+      - name: Generate read-only BigQuery research SQL (no credentials)
+        run: python -m aptos.reporting.bigquery_research --project research-project1 > /dev/null
+
       - name: Run the dependency-free runner too
         run: python tests/test_preprocessing.py
 
