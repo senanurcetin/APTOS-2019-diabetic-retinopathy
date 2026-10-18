@@ -1,0 +1,41 @@
+/* NEXUS Identity 2.0 — APTOS Research surface. Source assets: Google Drive / Logo / NEXUS_Identity_2_0. */
+:root{
+  --bg:#0b0f19; --bg-2:#0b1423; --panel:#101b2c; --panel-2:#162239;
+  --line:#24354f; --line-2:#385378;
+  --text:#e9f1fa; --muted:#a7b6cb; --faint:#8497b4;
+  --teal:#00e0ff; --teal-dim:rgba(0,224,255,.105);
+  --retina:#4ea8ff; --retina-2:#6e55c6; --disc:#b9c5ce; --violet:#8f9bff;
+  --radius:18px;
+}
+body{background:radial-gradient(ellipse 820px 480px at 85% 0,rgba(78,168,255,.06),transparent 70%),var(--bg)}
+a{color:#70dafa}
+.glow{
+  background:radial-gradient(750px 520px at 89% 0,rgba(110,85,198,.16),transparent 66%),
+             radial-gradient(720px 510px at -10% 35%,rgba(0,224,255,.09),transparent 65%);
+}
+.grid-bg{opacity:.27}
+nav{background:rgba(11,15,25,.84);border-bottom:1px solid #2b3e5b}
+nav .wrap{height:72px}
+.nexus-brand{gap:15px;flex-shrink:0;letter-spacing:0}
+.nexus-brand img{display:block;width:125px;height:40px;object-fit:contain}
+.brand-product{border-left:1px solid #40516b;padding-left:14px;line-height:1.15;color:#a7b6cb;font:500 11px/1.35 var(--mono);letter-spacing:.075em}
+.brand-product strong{display:block;color:#edf4ff;letter-spacing:.11em;font-weight:600}
+.hero{padding-top:80px}
+.eyebrow{border-color:rgba(0,224,255,.27);background:rgba(0,224,255,.07)}
+h1 .accent{background:linear-gradient(100deg,#00e0ff 0%,#4ea8ff 39%,#8f9bff 73%,#b59bff 100%);background-clip:text;-webkit-background-clip:text}
+.btn.primary{background:linear-gradient(110deg,#00e0ff,#4ea8ff 62%,#8f9bff);color:#071420;box-shadow:0 9px 28px -10px rgba(78,168,255,.62)}
+.btn.primary:hover{filter:brightness(1.08)}
+.card,.stats{box-shadow:0 12px 40px rgba(0,0,0,.15)}
+.stat b,.finding .num{letter-spacing:-.035em}
+.drop:hover,.drop.over{border-color:#4ea8ff;background:rgba(78,168,255,.07)}
+:where(a,button,input,summary,[role="button"]):focus-visible{outline:2px solid #00e0ff;outline-offset:3px}
+.kicker{color:#8f9bff}
+.clinical-alert{display:flex;align-items:flex-start;gap:16px;border:1px solid rgba(248,113,113,.40);background:linear-gradient(120deg,rgba(248,113,113,.09),rgba(110,85,198,.07));padding:20px 24px;border-radius:14px;margin:0 0 25px}
+.clinical-alert-symbol{flex:none;display:grid;place-items:center;width:31px;height:31px;border-radius:50%;background:rgba(248,113,113,.16);color:#ff9c9c;font:bold 18px var(--display)}
+.clinical-alert strong{color:#ffd4d4;font:600 14px var(--display)}
+.clinical-alert p{color:#cbd5e5;font-size:13px;line-height:1.65;margin:4px 0 0}
+.clinical-alert p b{color:#fff}
+.clinical-alert a{margin-left:auto;white-space:nowrap;font:500 12px var(--mono);align-self:center}
+@media(max-width:900px){.clinical-alert{flex-wrap:wrap}.clinical-alert a{margin-left:47px}.hero{padding-top:46px}}
+@media(max-width:640px){nav .wrap{gap:8px;height:65px}.navlinks{gap:10px;font-size:12px}.nexus-brand{gap:7px}.nexus-brand img{width:83px;height:32px}.brand-product{padding-left:7px;font-size:8px}.clinical-alert{padding:16px;gap:10px}.clinical-alert a{margin-left:40px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important}}

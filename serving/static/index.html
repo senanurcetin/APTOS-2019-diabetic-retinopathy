@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>APTOS Retinopathy Grader</title>
+<title>NEXUS Research | APTOS Retinopathy</title>
 <meta name="description" content="Diabetic retinopathy grading and referral from a fundus photograph: a five-fold EfficientNet-B0 ensemble, externally validated on IDRiD, served with its limitations attached.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23e8893a'/%3E%3Ccircle cx='21' cy='13' r='4' fill='%23ffd9a8'/%3E%3C/svg%3E">
+<link rel="icon" type="image/svg+xml" href="/static/nexus-x.svg">
 <style>
 :root{
   color-scheme: dark;
@@ -265,13 +265,14 @@ footer nav{position:static; background:none; border:0; backdrop-filter:none; dis
 .reveal.in{opacity:1; transform:none}
 @media (prefers-reduced-motion:reduce){.reveal{opacity:1; transform:none}}
 </style>
+<link rel="stylesheet" href="/static/nexus-theme.css">
 </head>
 <body>
 <div class="glow"></div><div class="grid-bg"></div>
 
 <header>
 <nav><div class="wrap">
-  <a class="brand" href="#top"><span class="brand-dot"></span>APTOS Grader</a>
+  <a class="brand nexus-brand" href="#top" aria-label="NEXUS Research — APTOS Retinopathy"><img src="/static/nexus-logo.svg" alt="NEXUS" width="125" height="38"><span class="brand-product">APTOS <strong>RETINOPATHY</strong></span></a>
   <div class="navlinks">
     <a href="#analyze">Analyze</a>
     <a href="#validation">Validation</a>
@@ -288,7 +289,7 @@ footer nav{position:static; background:none; border:0; backdrop-filter:none; dis
 
   <div class="hero">
     <div>
-      <span class="eyebrow"><span class="pulse"></span>Research demo · not a medical device</span>
+      <span class="eyebrow"><span class="pulse"></span>NEXUS Research · benchmark model · not a medical device</span>
       <h1>Diabetic retinopathy referral from a <span class="accent">single fundus photograph.</span></h1>
       <p class="lede">A five-fold EfficientNet-B0 ensemble trained on APTOS-2019 and tested, untouched, on a second
         clinic in India and a French screening set graded by a specialist panel. It returns a severity grade and a referral decision, and it shows you
@@ -343,13 +344,20 @@ footer nav{position:static; background:none; border:0; backdrop-filter:none; dis
     </div>
   </div>
 
+  <aside class="clinical-alert" role="note" aria-label="External validation warning">
+    <div class="clinical-alert-symbol" aria-hidden="true">!</div>
+    <div><strong>External validation warning · Messidor-2</strong>
+      <p>The unchanged model identified only <b>150 of 457 referable eyes (32.8% sensitivity)</b> in the specialist-graded Messidor-2 cohort. False negatives were common. <b>Never use this demo to make clinical or referral decisions.</b></p>
+    </div>
+    <a href="#validation">Examine evidence →</a>
+  </aside>
   <div class="stats reveal" id="stats"></div>
 
   <!-- ANALYZE -->
   <section id="analyze">
     <div class="sec-head">
       <div><div class="kicker">01 · Analyze</div><h2>Grade a fundus photograph</h2></div>
-      <p>Drop a colour fundus image. It is preprocessed exactly as the training data was, scored by all five folds, and discarded. Nothing is stored.</p>
+      <p>Drop a colour fundus image. It is preprocessed exactly as the training data was, scored by all five folds, and not persisted by this application. Do not upload identifiable patient images.</p>
     </div>
 
     <div class="analyzer">
@@ -420,8 +428,7 @@ footer nav{position:static; background:none; border:0; backdrop-filter:none; dis
             </div>
           </div>
 
-          <p class="fine">Trust the <strong>referral decision</strong> more than the exact grade: on an external dataset the referral held up, while
-            the five-way grade compressed at the severe end. Against Messidor-2's specialist-panel labels, Moderate disease without exudates was often missed. No heatmap is shown, deliberately; see <a href="#limits">limitations</a>.</p>
+          <p class="fine"><strong>Research output only.</strong> Referral sensitivity changed from 88.5% on IDRiD to 32.8% on Messidor-2. The grade and referral flag are not clinically validated. No heatmap is shown, deliberately; see <a href="#limits">limitations</a>.</p>
 
           <details class="raw"><summary>Raw JSON response</summary><pre id="json"></pre></details>
         </div>
@@ -585,7 +592,8 @@ document.querySelectorAll(".reveal").forEach(n => io.observe(n));
 let current = null, previewUrl = null;
 
 function pick(file) {
-  if (!file || !file.type.startsWith("image/")) { setStatus("That file is not an image.", true); return; }
+  if (!file || !["image/jpeg", "image/png"].includes(file.type)) { setStatus("Choose a JPG or PNG fundus image.", true); return; }
+  if (file.size > 10 * 1024 * 1024) { setStatus("Maximum image size is 10 MB.", true); return; }
   current = file;
   if (previewUrl) URL.revokeObjectURL(previewUrl);
   previewUrl = URL.createObjectURL(file);
@@ -598,6 +606,7 @@ function pick(file) {
 
 function clearAll() {
   current = null; $("file").value = "";
+  if (previewUrl) { URL.revokeObjectURL(previewUrl); previewUrl = null; }
   $("thumb").hidden = true; $("hint").hidden = false; $("fname").textContent = ""; $("fsize").textContent = "";
   $("go").disabled = true; $("clear").disabled = true;
   $("out").hidden = true; $("empty").hidden = false; setStatus("");
