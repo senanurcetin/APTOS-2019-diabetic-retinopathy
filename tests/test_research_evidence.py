@@ -6,7 +6,11 @@ from pathlib import Path
 import pytest
 
 from aptos.reporting.research_evidence import (
-    audit_external, audit_sweeps, build_evidence, file_sha256, render_markdown,
+    audit_external,
+    audit_sweeps,
+    build_evidence,
+    file_sha256,
+    render_markdown,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
