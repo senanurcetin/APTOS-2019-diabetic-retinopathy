@@ -15,7 +15,7 @@ def test_wilson_sanity_and_limits():
     low, high = wilson_interval(0, 100)
     assert low == 0 and 0 < high < 0.05
     low, high = wilson_interval(100, 100)
-    assert high == 1 and 0.95 < low < 1
+    assert high == pytest.approx(1.0) and 0.95 < low < 1
     low, high = wilson_interval(50, 100)
     assert 0.4 < low < 0.5 < high < 0.6
 
