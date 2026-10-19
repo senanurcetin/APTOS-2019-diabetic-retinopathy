@@ -294,3 +294,12 @@ predictions exist. They are descriptive, not automatically a paired
 confidence interval for each rare grade, a clinical safety claim or
 newly measured performance. No external model execution was conducted
 while implementing this feature.
+
+
+## Kaggle private GPU launch
+
+To stage Kaggle APTOS data, package **one model and one seed per private GPU
+kernel**, and upload without storing any API credential in version control,
+follow [the launch runbook](kaggle-gpu-launch.md). The original six-job matrix
+notebook is now a one-job, opt-in execution template; comparing outcomes still
+requires both complete sweeps and external authorized cohorts.
