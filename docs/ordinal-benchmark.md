@@ -271,3 +271,26 @@ filename. The original published \`reports/external_validation*.md\`
 files are preserved. To deliberately choose another path, pass \`--out\`.
 This is reporting-integrity work only; no models were retrained and no
 real external evaluation metrics were generated.
+
+
+## Grade-specific missed-referral decomposition
+
+Paired MSE-versus-ordinal results now include the
+\`grade_referral_breakdown\` under each model and a
+\`paired_referral_discordance\` record. The latter groups true grade 2, 3,
+4 and all referable grades, and reports **both models missed**,
+**only MSE missed**, **only ordinal missed**, and **neither missed**.
+Every row's four categories must sum to its observed sample count.
+
+Grade 2 is the referral boundary, so its missed-referral count and
+conditional referral sensitivity are reported separately instead of
+being hidden inside an aggregate QWK or overall sensitivity.
+True grades 0 and 1 receive false-referral fractions, while grades
+2–4 receive referral sensitivity; absent-grade rates are JSON null.
+All outputs are **aggregate-only**, and image/patient IDs are excluded.
+
+These numbers are calculated only after authentic aligned per-eye
+predictions exist. They are descriptive, not automatically a paired
+confidence interval for each rare grade, a clinical safety claim or
+newly measured performance. No external model execution was conducted
+while implementing this feature.

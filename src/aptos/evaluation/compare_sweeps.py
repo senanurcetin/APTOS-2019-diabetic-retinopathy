@@ -16,6 +16,10 @@ import pandas as pd
 
 from aptos.evaluation.grade_uncertainty import paired_grade_bootstrap
 from aptos.evaluation.paired_uncertainty import paired_bootstrap
+from aptos.evaluation.referral_slices import (
+    grade_referral_breakdown,
+    paired_referral_discordance,
+)
 from aptos.modeling.thresholds import (
     apply_thresholds,
     grade_metrics,
@@ -149,7 +153,7 @@ def compare_frames(
     metric_a = {k: (float(v) if np.isfinite(v) else None) for k, v in metric_a.items()}
     metric_b = {k: (float(v) if np.isfinite(v) else None) for k, v in metric_b.items()}
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "research_only": True,
         "n_eyes": len(joined),
         "n_referable": int(np.sum(actual >= 2)),
@@ -157,10 +161,12 @@ def compare_frames(
         "baseline": {
             "model": "reg", "metrics": metric_a,
             "referable": _nullable_metrics(referable_confusion(actual, a_pred)),
+            "grade_referral_breakdown": grade_referral_breakdown(actual, a_pred),
         },
         "candidate": {
             "model": "ordinal", "metrics": metric_b,
             "referable": _nullable_metrics(referable_confusion(actual, b_pred)),
+            "grade_referral_breakdown": grade_referral_breakdown(actual, b_pred),
         },
         "ordinal_minus_baseline": {
             "qwk": (metric_b["qwk"] - metric_a["qwk"]
@@ -171,12 +177,16 @@ def compare_frames(
         },
         "paired_referral_uncertainty": paired,
         "paired_grading_uncertainty": paired_grades,
+        "paired_referral_discordance": paired_referral_discordance(
+            actual, a_pred, b_pred
+        ),
         "limitations": [
             "Descriptive fixed-score comparison, not an independent model selection procedure.",
             "Paired QWK and macro F1 percentile intervals are descriptive, not prospective performance guarantees.",
             "Eye-level bootstrap assumes independent eyes unless true patient IDs are supplied.",
             "A holdout cohort must not be reused to select training hyperparameters.",
             "External model generalization cannot be claimed without running external inference.",
+            "Grade-slice counts are descriptive; rare-grade rates have high sampling uncertainty.",
         ],
     }
 

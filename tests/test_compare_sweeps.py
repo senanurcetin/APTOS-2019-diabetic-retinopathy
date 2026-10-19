@@ -318,3 +318,25 @@ def test_compare_frames_exposes_paired_grading_intervals(sample):
     assert grades["metrics"]["macro_f1"]["difference"] == pytest.approx(
         result["ordinal_minus_baseline"]["macro_f1"]
     )
+
+
+@pytest.mark.pure
+def test_paired_report_decomposes_grade2_missed_referrals(sample):
+    import json
+
+    baseline, candidate = sample
+    report = compare_frames(
+        baseline, candidate,
+        [0.5, 1.5, 2.5, 3.5], [0.5, 1.5, 2.5, 3.5],
+        n_resamples=150,
+    )
+    baseline_g2 = report["baseline"]["grade_referral_breakdown"]["2"]
+    ordinal_g2 = report["candidate"]["grade_referral_breakdown"]["2"]
+    discordance = report["paired_referral_discordance"]["grade_2"]
+    assert baseline_g2["n"] == ordinal_g2["n"] == discordance["n"] == 3
+    assert baseline_g2["missed_referable"] == 3
+    assert ordinal_g2["missed_referable"] == 0
+    assert discordance["baseline_only_missed"] == 3
+    assert discordance["candidate_only_missed"] == 0
+    assert report["schema_version"] == 3
+    json.dumps(report, allow_nan=False)
