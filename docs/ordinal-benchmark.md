@@ -240,3 +240,17 @@ therefore records `precision: null`, not `0` or nonstandard `NaN` tokens;
 sensitivity and specificity are still reported when their denominators
 exist. This preserves negative model results without causing strict JSON
 serialization to fail.
+
+
+## Strict external grading-table validation
+
+Both IDRiD and Messidor-2 readers now reject incomplete image/grade pairs,
+fractional severity grades (previously truncated by integer casting),
+out-of-range values, unsafe IDs and duplicates. Messidor-2 also rejects
+distinct source filenames with the same derived JPEG stem. It preserves the
+original filename for input loading.
+
+Entirely blank CSV padding rows remain ignorable and ungradable Messidor-2
+rows remain excluded. Gradable images with missing diagnoses may no longer
+be silently dropped, protecting denominators and downstream statistics.
+No external retinal cohort was rescored or performance change claimed.

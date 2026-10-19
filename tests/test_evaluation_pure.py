@@ -489,3 +489,37 @@ def test_missing_original_image_fails_closed_before_deleting_cache(tmp_path, mon
         external.build_cache(cfg, dataset_key="synthetic")
     assert len(state["processed"]) == 2
     assert (directory / "eye-b.jpg").exists()
+
+
+def test_idrid_fractional_grade_is_not_truncated(tmp_path):
+    cfg = _cfg(tmp_path)
+    path = cfg.paths.external / external.IDRID_LABELS
+    path.parent.mkdir(parents=True)
+    path.write_text("id_code,diagnosis\nIDRiD_001,2.7\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="unexpected IDRiD grades"):
+        external.load_idrid_labels(cfg)
+
+
+def test_idrid_missing_image_grade_is_not_silently_dropped(tmp_path):
+    cfg = _cfg(tmp_path)
+    path = cfg.paths.external / external.IDRID_LABELS
+    path.parent.mkdir(parents=True)
+    path.write_text("id_code,diagnosis\nIDRiD_001,\n\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="incomplete"):
+        external.load_idrid_labels(cfg)
+
+
+def test_messidor_duplicate_stems_are_rejected(tmp_path):
+    cfg = _cfg(tmp_path)
+    _messidor_csv(cfg, "image_id,adjudicated_dr_grade,adjudicated_gradable\n"
+                       "img.png,1,1\nimg.JPG,3,1\n")
+    with pytest.raises(ValueError, match="filename-stem collision"):
+        external.load_messidor2_labels(cfg)
+
+
+def test_messidor_fractional_grade_is_not_truncated(tmp_path):
+    cfg = _cfg(tmp_path)
+    _messidor_csv(cfg, "image_id,adjudicated_dr_grade,adjudicated_gradable\n"
+                       "img.png,1.8,1\n")
+    with pytest.raises(ValueError, match="unexpected Messidor-2 grades"):
+        external.load_messidor2_labels(cfg)

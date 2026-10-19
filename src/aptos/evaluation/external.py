@@ -37,6 +37,7 @@ import pandas as pd
 
 from aptos.config import Config
 from aptos.data import manifest as manifest_mod
+from aptos.evaluation.external_label_integrity import validate_external_labels
 from aptos.modeling.thresholds import (
     apply_thresholds,
     clinically_costly_errors,
@@ -65,13 +66,9 @@ def load_idrid_labels(cfg: Config) -> pd.DataFrame:
             f"-p data/external --unzip"
         )
     df = pd.read_csv(path, usecols=["id_code", "diagnosis"])
-    df = df.dropna(subset=["id_code", "diagnosis"])
-    df["diagnosis"] = df["diagnosis"].astype(int)
-
-    bad = set(df["diagnosis"]) - set(range(5))
-    if bad:
-        raise ValueError(f"unexpected IDRiD grades: {sorted(bad)}")
-    return df.reset_index(drop=True)
+    # Fully blank CSV padding is ignorable; image-specific missing or
+    # fractional diagnoses are not silently dropped or truncated.
+    return validate_external_labels(df, source="IDRiD")
 
 
 MESSIDOR2_DIR = "messidor2"
@@ -100,15 +97,9 @@ def load_messidor2_labels(cfg: Config) -> pd.DataFrame:
     df = df.rename(columns={"image_id": "id_code", "adjudicated_dr_grade": "diagnosis"})
     if "adjudicated_gradable" in df:
         df = df[df["adjudicated_gradable"] == 1]
-    df = df.dropna(subset=["id_code", "diagnosis"]).copy()
-    df["source_name"] = df["id_code"].astype(str)
-    df["id_code"] = df["source_name"].map(lambda name: pathlib.Path(name).stem)
-    df["diagnosis"] = df["diagnosis"].astype(int)
-
-    bad = set(df["diagnosis"]) - set(range(5))
-    if bad:
-        raise ValueError(f"unexpected Messidor-2 grades: {sorted(bad)}")
-    return df[["id_code", "diagnosis", "source_name"]].reset_index(drop=True)
+    # Validate before integer conversion and filename-stem derivation:
+    # distinct sources must not collide in the derived JPEG cache.
+    return validate_external_labels(df, source="Messidor-2", filenames=True)
 
 
 @dataclasses.dataclass(frozen=True)
