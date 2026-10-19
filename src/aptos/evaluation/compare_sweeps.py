@@ -176,9 +176,13 @@ def _load_frame(sweep: Path, cohort: str, directory: Path, variant: str) -> tupl
         from aptos.evaluation.confound import load_sweep_predictions
 
         config = Config.load("configs/cv.yaml")
+        original = _read_json(sweep / "config.json")
         config.variant = variant
-        config.train.exclude_leaked = _read_json(sweep / "config.json")["train.exclude_leaked"]
-        frame = load_sweep_predictions(config, sweep)
+        config.train.exclude_leaked = original["train.exclude_leaked"]
+        config.cv.folds = original["cv.folds"]
+        config.cv.stratify_on = original["cv.stratify_on"]
+        config.cv.pool_splits = tuple(original["cv.pool_splits"])
+        frame = load_sweep_predictions(config, sweep, strict_identity=True)
         return frame, None
 
     prefix = {"idrid": "idrid", "messidor2": "messidor2"}[cohort]

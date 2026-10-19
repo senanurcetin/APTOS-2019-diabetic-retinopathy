@@ -139,3 +139,18 @@ unverified and will be recomputed the first time a compatible trained model
 and authorized IDRiD/Messidor-2 images are available. This does not overwrite
 committed published aggregate reports until an analyst explicitly runs the
 report command. No GPU computation was executed when authoring this change.
+
+
+
+## Held-out APTOS eye identity (fold integrity v3)
+
+Every newly trained full/smoke fold now persists the ordered `test_ids`
+next to `test_true` and `test_raw`. Resume verifies those IDs one by one.
+The paired MSE-versus-ordinal benchmark requires **both v2 provenance and
+explicitly aligned image IDs in every APTOS fold**; earlier positional-only
+NPZ results cannot be used for strict paired inference.
+
+This matters because a same-grade image permutation can preserve every
+ground-truth value while invalidating the paired model comparison. Legacy
+aggregate reports remain untouched; regenerate full experimental sweeps
+under the new code before comparing their per-image predictions.

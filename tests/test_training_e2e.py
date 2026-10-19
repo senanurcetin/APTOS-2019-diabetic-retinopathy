@@ -121,6 +121,8 @@ def test_cv_resumes_only_the_missing_fold_and_rebuilds_the_same_ensemble(workspa
     assert all(cv_mod.fold_is_complete(directory, f) for f in (1, 2))
     assert first["folds"] == 2
     fold2_before = np.load(directory / "fold2.npz")["test_raw"]
+    with np.load(directory / "fold2.npz", allow_pickle=False) as arrays:
+        assert len(arrays["test_ids"]) == PER_GRADE["test"] * 5
 
     # Complete sweep: a restart trains nothing and rebuilds from the arrays.
     trained.clear()
@@ -139,6 +141,23 @@ def test_cv_resumes_only_the_missing_fold_and_rebuilds_the_same_ensemble(workspa
     np.testing.assert_allclose(np.load(directory / "fold2.npz")["test_raw"], fold2_before,
                                rtol=1e-4, atol=1e-5)
     assert resumed["ensemble"]["qwk"] == pytest.approx(first["ensemble"]["qwk"])
+
+    # Strict per-eye comparison must pass for actual saved fold artifacts.
+    from aptos.evaluation.confound import load_sweep_predictions
+
+    aligned = load_sweep_predictions(cfg, directory, strict_identity=True)
+    assert len(aligned) == PER_GRADE["test"] * 5
+
+    # Two eyes have the same diagnosis: swapping their IDs cannot be detected
+    # by the old positional label-only check, but must now be rejected.
+    artifact = directory / "fold2.npz"
+    with np.load(artifact, allow_pickle=False) as archive:
+        payload = {key: archive[key].copy() for key in archive.files}
+    assert payload["test_true"][0] == payload["test_true"][1]
+    payload["test_ids"][[0, 1]] = payload["test_ids"][[1, 0]]
+    np.savez_compressed(artifact, **payload)
+    with pytest.raises(RuntimeError, match="image IDs"):
+        load_sweep_predictions(cfg, directory, strict_identity=True)
 
 
 def test_resolution_stratified_folds_keep_both_strata_in_every_fold(workspace):
