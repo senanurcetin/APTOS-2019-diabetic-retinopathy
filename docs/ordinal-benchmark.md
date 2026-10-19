@@ -154,3 +154,21 @@ This matters because a same-grade image permutation can preserve every
 ground-truth value while invalidating the paired model comparison. Legacy
 aggregate reports remain untouched; regenerate full experimental sweeps
 under the new code before comparing their per-image predictions.
+
+
+
+## Paired external comparison must verify saved score provenance
+
+The independent `compare_sweeps` tool now verifies **the same SHA-256 input
+signature as external inference**, rather than directly trusting an existing
+score CSV. Both external datasets require current labels, the exact derived
+image cache, full CV fold checkpoints, compatible training/preprocessing
+settings and a matching signed CSV sidecar. Changed retinal input pixels,
+checkpoint weights or labels invalidate the comparison until the external
+score command is rerun.
+
+The benchmark stays **read-only**: unlike the inference command, it never
+rebuilds images or reruns expensive model inference automatically. Old scores
+with no matching provenance sidecar cannot support a new paired analysis.
+Use the configured `APTOS_ROOT/data/external` directory (the default);
+`--external-dir` must resolve to that same directory.
