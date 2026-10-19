@@ -88,3 +88,21 @@ See `docs/paired-uncertainty.md` for the inferential limitations.
 sensitivity/specificity tradeoffs, calibration and any subgroup degradation,
 even if the ordinal model scores worse. These experiments are open-source
 research, not clinical validation or productization.
+
+
+## CV provenance v2 and smoke isolation
+
+New sweep IDs capture scientific training/augmentation/threshold/CV/preprocessing
+configuration plus a SHA-256 fingerprint of effective labels and resolution
+strata. Changes in learning settings or data labels will not silently resume
+old folds. Earlier published run IDs remain in committed reports, but
+**new sweeps do not reuse old local fold checkpoints**; this is intentional.
+
+Full resumes require aligned test predictions, split metadata, and nonempty
+checkpoint files. Incomplete results fail closed; clean only the affected
+fold's partial files or explicitly run `--no-resume` to retrain.
+`--limit` writes diagnostics only under `models/cv_smoke/` and never
+contributes results to full-model `models/cv/`.
+
+This fingerprint verifies labels and manifest settings, **not retinal pixel
+bytes**. Data/version provenance remains a separate prerequisite.

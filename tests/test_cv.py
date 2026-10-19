@@ -218,3 +218,64 @@ def test_summary_is_json_serialisable(tmp_path):
     summary = summarise(cfg, "x", [_fold_result(1, 0.9)], [true + 0.1], [true])
     (tmp_path / "s.json").write_text(json.dumps(summary, default=float))
     assert json.loads((tmp_path / "s.json").read_text())["run_id"] == "x"
+
+
+
+# ----------------------------- CV run identity and resume integrity
+
+def test_scientific_run_id_changes_with_omitted_hyperparameters():
+    import dataclasses
+
+    cfg = Config.load("configs/cv.yaml")
+    base = run_id_for(cfg, MANIFEST)
+    variants = [
+        dataclasses.replace(cfg, train=dataclasses.replace(cfg.train, weight_decay=0.1)),
+        dataclasses.replace(cfg, train=dataclasses.replace(cfg.train, patience=2)),
+        dataclasses.replace(cfg, augment=dataclasses.replace(cfg.augment, rotation_degrees=5)),
+        dataclasses.replace(cfg, thresholds=dataclasses.replace(cfg.thresholds, rounds=2)),
+        dataclasses.replace(cfg, cv=dataclasses.replace(cfg.cv, pool_splits=("train",))),
+    ]
+    assert all(run_id_for(v, MANIFEST) != base for v in variants)
+    assert run_id_for(cfg, MANIFEST, label_digest="a") != run_id_for(
+        cfg, MANIFEST, label_digest="b",
+    )
+
+
+def test_run_identity_ignores_tracking_credentials():
+    import dataclasses
+
+    cfg = Config.load("configs/cv.yaml")
+    changed = dataclasses.replace(
+        cfg, tracking=dataclasses.replace(cfg.tracking, bigquery_project="new-project"),
+    )
+    assert run_id_for(cfg, MANIFEST) == run_id_for(changed, MANIFEST)
+
+
+def test_labels_fingerprint_is_order_insensitive_but_detects_changes():
+    from aptos.training.cv import labels_sha256
+
+    original = _pool(30)
+    fingerprint = labels_sha256(original)
+    assert labels_sha256(original.sample(frac=1, random_state=42)) == fingerprint
+    modified = original.copy()
+    modified.loc[0, "diagnosis"] = (int(modified.loc[0, "diagnosis"]) + 1) % 5
+    assert labels_sha256(modified) != fingerprint
+
+
+def test_resume_checks_checkpoint_and_prediction_alignment(tmp_path):
+    from aptos.training.cv import verify_resumed_fold
+
+    labels = pd.DataFrame({"diagnosis": [0, 2, 4]})
+    result = {"fold": 1, "train_n": 2, "valid_n": 1,
+              "thresholds": [0.5, 1.5, 2.5, 3.5]}
+    save_fold(tmp_path, 1, result, {"w": torch.zeros(1)},
+              np.array([0., 2., 4.]), np.array([0, 2, 4]), save_weights=False)
+    assert not fold_is_complete(tmp_path, 1, require_checkpoint=True)
+    with pytest.raises(RuntimeError, match="incomplete"):
+        verify_resumed_fold(tmp_path, 1, labels.iloc[:2], labels.iloc[2:], labels)
+    (tmp_path / "fold1.pt").write_bytes(b"present")
+    assert verify_resumed_fold(tmp_path, 1, labels.iloc[:2], labels.iloc[2:], labels)[0]["fold"] == 1
+    np.savez(tmp_path / "fold1.npz", test_raw=np.array([0., 2., 4.]),
+             test_true=np.array([0, 2, 3]))
+    with pytest.raises(RuntimeError, match="do not match"):
+        verify_resumed_fold(tmp_path, 1, labels.iloc[:2], labels.iloc[2:], labels)
