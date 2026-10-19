@@ -342,7 +342,7 @@ def complete_sweep_checkpoints(sweep: pathlib.Path) -> list[pathlib.Path]:
     available = set(sweep.glob("fold*.pt"))
     if available != set(expected):
         raise ValueError("CV ensemble has missing, extra or misnumbered checkpoints")
-    for i, path in enumerate(expected, start=1):
+    for i in range(1, count + 1):
         for name in (f"fold{i}.pt", f"fold{i}.npz", f"fold{i}.json"):
             candidate = sweep / name
             if not candidate.is_file() or candidate.stat().st_size == 0:
