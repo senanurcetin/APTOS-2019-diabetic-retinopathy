@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import concurrent.futures as futures
 import dataclasses
+import hashlib
 import json
 import pathlib
 from collections.abc import Callable
@@ -337,22 +338,93 @@ def predict(cfg: Config, cache: pathlib.Path, labels: pd.DataFrame,
     return np.mean(fold_raws, axis=0)
 
 
+def _sha256(path: pathlib.Path) -> str:
+    """Fingerprint bytes; never trust filenames or mtimes as model provenance."""
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def score_input_signature(cfg: Config, sweep: pathlib.Path,
+                          cache: pathlib.Path, labels: pd.DataFrame) -> dict:
+    """Content-address external predictions by model, labels and derived pixels."""
+    checkpoints = sorted(sweep.glob("fold*.pt"))
+    if not checkpoints:
+        raise FileNotFoundError(f"no fold checkpoints under {sweep}")
+    if labels.empty or labels["id_code"].isna().any():
+        raise ValueError("no valid external images for scoring")
+    ids = labels["id_code"].astype(str)
+    if ids.duplicated().any():
+        raise ValueError("external score labels contain duplicate image IDs")
+    digest = hashlib.sha256()
+    for identifier in sorted(ids):
+        path = cache / f"{identifier}.jpg"
+        if not path.is_file():
+            raise FileNotFoundError(f"missing processed external image: {identifier}")
+        digest.update(identifier.encode("utf-8"))
+        digest.update(_sha256(path).encode("ascii"))
+    records = labels[["id_code", "diagnosis"]].copy()
+    records["id_code"] = records["id_code"].astype(str)
+    records = records.sort_values("id_code", kind="stable")
+    label_hash = hashlib.sha256(
+        records.to_json(orient="records").encode("utf-8")
+    ).hexdigest()
+    settings = cfg.manifest_fields()
+    return {
+        "signature_version": 1,
+        "model_checkpoints": {f.name: _sha256(f) for f in checkpoints},
+        "sweep_config": (_sha256(sweep / "config.json")
+                         if (sweep / "config.json").is_file() else None),
+        "input_image_sha256": digest.hexdigest(),
+        "labels_sha256": label_hash,
+        "preprocess": settings,
+        "n_scored": len(labels),
+    }
+
+
+def read_verified_score_cache(output: pathlib.Path, signature: dict,
+                              labels: pd.DataFrame) -> pd.DataFrame | None:
+    """Reuse scores only when bytes, content and current labels are identical."""
+    meta = output.with_suffix(".meta.json")
+    if not output.is_file() or not meta.is_file():
+        return None
+    try:
+        record = json.loads(meta.read_text(encoding="utf-8"))
+        if record.get("input_signature") != signature:
+            return None
+        if record.get("score_csv_sha256") != _sha256(output):
+            return None
+        frame = pd.read_csv(output, dtype={"id_code": "string"})
+        if list(frame.columns) != ["id_code", "diagnosis", "raw"]:
+            return None
+        if not frame["id_code"].astype(str).equals(
+            labels["id_code"].astype(str).reset_index(drop=True)
+        ):
+            return None
+        actual = pd.to_numeric(frame["diagnosis"], errors="raise").to_numpy()
+        if not np.array_equal(actual, labels["diagnosis"].to_numpy()):
+            return None
+        raw = pd.to_numeric(frame["raw"], errors="raise").to_numpy(dtype=float)
+        if not np.isfinite(raw).all():
+            return None
+        return frame
+    except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
+        return None
+
+
 def score(cfg: Config, sweep: pathlib.Path, dataset_key: str = "idrid", *,
           device: str | None = None, force: bool = False) -> pd.DataFrame:
-    """Per-image raw ensemble scores for one external set, computed once.
+    """Score or reuse a content-verified, immutable-model external score cache.
 
-    Saved next to the cache as `<prefix>_<variant>_<sweep>_scores.csv`, so the
-    external report and the calibration experiments read the same numbers
-    instead of each re-running five models.
+    Prior CSV-only caching silently reused scores when checkpoints, external
+    labels, or processed retinal images changed. Existing CSVs without
+    provenance sidecars are treated as unverified and must be recomputed.
     """
     validate_sweep_contract(cfg, sweep)
     ds = dataset(dataset_key)
     out = cfg.paths.external / f"{ds.prefix}_{cfg.variant}_{sweep.name}_scores.csv"
-    if out.exists() and not force:
-        return pd.read_csv(out)
-
-    from aptos.training.loop import pick_device
-
     labels = ds.load_labels(cfg)
     cache = build_cache(cfg, dataset_key=dataset_key)
     kept = {p.stem for p in cache.glob("*.jpg")}
@@ -360,13 +432,36 @@ def score(cfg: Config, sweep: pathlib.Path, dataset_key: str = "idrid", *,
     if dropped:
         print(f"  {dropped} image(s) failed the quality gate and are not scored")
     labels = labels[labels["id_code"].isin(kept)].reset_index(drop=True)
+    signature = score_input_signature(cfg, sweep, cache, labels)
+
+    if not force:
+        existing = read_verified_score_cache(out, signature, labels)
+        if existing is not None:
+            return existing
+
+    from aptos.training.loop import pick_device
 
     states, _ = load_ensemble(sweep)
     print(f"scoring {len(labels)} {ds.name} images with {len(states)} folds")
     raw = predict(cfg, cache, labels, states, device or pick_device())
-    frame = pd.DataFrame({"id_code": labels["id_code"], "diagnosis": labels["diagnosis"],
-                          "raw": raw})
-    frame.to_csv(out, index=False)
+    if len(raw) != len(labels) or not np.isfinite(raw).all():
+        raise ValueError("external scores must have one finite value per image")
+    frame = pd.DataFrame({
+        "id_code": labels["id_code"],
+        "diagnosis": labels["diagnosis"],
+        "raw": raw,
+    })
+    # Publish CSV, then its provenance, only after both are computed.
+    tmp = out.with_name(out.stem + ".tmp.csv")
+    frame.to_csv(tmp, index=False)
+    tmp.replace(out)
+    meta = out.with_suffix(".meta.json")
+    meta_tmp = meta.with_name(meta.stem + ".tmp.json")
+    meta_tmp.write_text(json.dumps({
+        "input_signature": signature,
+        "score_csv_sha256": _sha256(out),
+    }, indent=2, sort_keys=True), encoding="utf-8")
+    meta_tmp.replace(meta)
     return frame
 
 

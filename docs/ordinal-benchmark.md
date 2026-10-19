@@ -122,3 +122,20 @@ not deleted. A full rebuild can take time, but reusing old pixels with a new
 manifest could invalidate the comparison. Changing source pixel bytes while
 retaining the same IDs/settings is not yet content-detected; record and audit
 upstream dataset versions/hashes independently.
+
+
+
+## Content-addressed external prediction CSVs
+
+`aptos.evaluation.external.score` now stores a `.meta.json` sidecar
+alongside its raw score CSV. The signature includes **checkpoint byte hashes**,
+saved sweep config, current external labels, the processed image byte hashes,
+preprocessing settings and the score CSV's own digest. A missing or stale
+sidecar invalidates the score cache and triggers fresh inference; a CSV
+cannot silently describe a different model or retinal input.
+
+**Migration:** historical score CSVs without a matching sidecar are
+unverified and will be recomputed the first time a compatible trained model
+and authorized IDRiD/Messidor-2 images are available. This does not overwrite
+committed published aggregate reports until an analyst explicitly runs the
+report command. No GPU computation was executed when authoring this change.

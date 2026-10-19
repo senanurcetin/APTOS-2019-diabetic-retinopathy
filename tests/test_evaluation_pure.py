@@ -403,3 +403,55 @@ def test_external_cache_rejects_duplicate_or_unsafe_image_ids(tmp_path, monkeypa
         state["ids"] = identifiers
         with pytest.raises(ValueError, match="path-safe"):
             external.build_cache(cfg, dataset_key="synthetic")
+
+
+
+# -------------------------------------------- verified external score CSV cache
+
+
+def test_external_score_signature_detects_changed_weights_labels_and_pixels(tmp_path):
+    from aptos.evaluation.external import score_input_signature
+
+    cfg = _cfg(tmp_path)
+    sweep = tmp_path / "sweep"
+    sweep.mkdir()
+    cache = tmp_path / "derived"
+    cache.mkdir()
+    (sweep / "fold1.pt").write_bytes(b"checkpoint-1")
+    (sweep / "config.json").write_text('{"train.mode":"ordinal"}')
+    (cache / "eye-a.jpg").write_bytes(b"pixels-a")
+    (cache / "eye-b.jpg").write_bytes(b"pixels-b")
+    labels = pd.DataFrame({"id_code": ["eye-a", "eye-b"], "diagnosis": [0, 2]})
+    original = score_input_signature(cfg, sweep, cache, labels)
+    assert original == score_input_signature(cfg, sweep, cache, labels)
+    (sweep / "fold1.pt").write_bytes(b"checkpoint-2")
+    assert original != score_input_signature(cfg, sweep, cache, labels)
+    (sweep / "fold1.pt").write_bytes(b"checkpoint-1")
+    (cache / "eye-a.jpg").write_bytes(b"changed-pixels")
+    assert original != score_input_signature(cfg, sweep, cache, labels)
+    (cache / "eye-a.jpg").write_bytes(b"pixels-a")
+    updated = labels.copy()
+    updated.loc[0, "diagnosis"] = 3
+    assert original != score_input_signature(cfg, sweep, cache, updated)
+
+
+def test_cached_external_csv_requires_complete_provenance(tmp_path):
+    from aptos.evaluation.external import _sha256, read_verified_score_cache
+
+    labels = pd.DataFrame({"id_code": ["001", "002"], "diagnosis": [0, 2]})
+    signature = {"signature_version": 1, "source": "reproducible"}
+    output = tmp_path / "scores.csv"
+    frame = labels.copy()
+    frame["raw"] = [0.5, 2.6]
+    frame.to_csv(output, index=False)
+    assert read_verified_score_cache(output, signature, labels) is None
+    meta = output.with_suffix(".meta.json")
+    meta.write_text(__import__("json").dumps({
+        "input_signature": signature, "score_csv_sha256": _sha256(output),
+    }))
+    read = read_verified_score_cache(output, signature, labels)
+    assert read is not None and read["id_code"].tolist() == ["001", "002"]
+    frame.loc[0, "raw"] = 0.9
+    frame.to_csv(output, index=False)
+    assert read_verified_score_cache(output, signature, labels) is None
+    assert read_verified_score_cache(output, {"signature_version": 2}, labels) is None
