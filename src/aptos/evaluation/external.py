@@ -306,6 +306,7 @@ def validate_sweep_contract(cfg: Config, sweep: pathlib.Path) -> None:
         "preprocess.clahe": cfg.preprocess.clahe,
         "preprocess.size": cfg.preprocess.size,
         "preprocess.clip_limit": cfg.preprocess.clip_limit,
+        "preprocess.jpeg_quality": cfg.preprocess.jpeg_quality,
     }
     for field, value in fields.items():
         if field not in data or data[field] != value:
@@ -619,6 +620,9 @@ def main(argv=None) -> int:
     cfg.train.size = params.get("train.size", Config.load("configs/cv.yaml").train.size)
     cfg.train.model = params.get("train.model", cfg.train.model)
     cfg.train.mode = params.get("train.mode", "reg")
+    for key in ("size", "clahe", "clip_limit", "square_mode", "jpeg_quality"):
+        setattr(cfg.preprocess, key, params.get(f"preprocess.{key}",
+                                               getattr(cfg.preprocess, key)))
     if args.mode is not None and args.mode != cfg.train.mode:
         raise ValueError(f"requested mode {args.mode} disagrees with stored {cfg.train.mode}")
     validate_sweep_contract(cfg, sweep)
