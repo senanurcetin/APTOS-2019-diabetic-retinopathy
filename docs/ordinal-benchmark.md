@@ -254,3 +254,20 @@ Entirely blank CSV padding rows remain ignorable and ungradable Messidor-2
 rows remain excluded. Gradable images with missing diagnoses may no longer
 be silently dropped, protecting denominators and downstream statistics.
 No external retinal cohort was rescored or performance change claimed.
+
+
+## Undefined external-cohort metrics and immutable reference reports
+
+An independent research subset may contain no grade-0 eyes, no referable eyes,
+or only one severity grade. Undefined sensitivity, specificity, precision,
+per-grade recall or QWK must be encoded as JSON **null**, with **N/A** in
+Markdown; absence must never be reported as a rate of zero. Healthy-eye
+percentages explicitly display N/A when the cohort has no healthy eyes.
+External JSON uses strict serialization, rejecting any unhandled NaN tokens.
+
+New external evaluation runs default to paths under \`reports/research/\` with
+the dataset, model variant, sweep name and regression/ordinal mode in the
+filename. The original published \`reports/external_validation*.md\`
+files are preserved. To deliberately choose another path, pass \`--out\`.
+This is reporting-integrity work only; no models were retrained and no
+real external evaluation metrics were generated.

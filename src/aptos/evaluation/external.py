@@ -37,6 +37,7 @@ import pandas as pd
 
 from aptos.config import Config
 from aptos.data import manifest as manifest_mod
+from aptos.evaluation.external_report import metric_string, summarize_external_grades
 from aptos.evaluation.external_label_integrity import validate_external_labels
 from aptos.modeling.thresholds import (
     apply_thresholds,
@@ -593,21 +594,9 @@ def evaluate(cfg: Config, sweep: pathlib.Path, *, dataset_key: str = "idrid",
         "training_mode": cfg.train.mode,
         "thresholds": [float(t) for t in thresholds],
         "refitted": False,
-        **grade_metrics(true, pred),
-        **{f"ref_{k}": v for k, v in referable_confusion(true, pred).items()},
-        **clinically_costly_errors(true, pred),
-        "per_class_recall": {str(k): v for k, v in per_class_recall(true, pred).items()},
-        "predicted_distribution": {str(g): int((pred == g).sum()) for g in range(5)},
-        "true_distribution": {str(g): int((true == g).sum()) for g in range(5)},
+        **summarize_external_grades(true, pred),
     }
 
-    # The discriminating measurement, called in advance: specificity on the
-    # healthy eyes. A model leaning on acquisition cues should over-call disease
-    # here, because in APTOS this geometry always meant disease.
-    healthy = true == 0
-    report["healthy_n"] = int(healthy.sum())
-    report["healthy_called_healthy"] = float((pred[healthy] == 0).mean())
-    report["healthy_called_referable"] = float((pred[healthy] >= 2).mean())
     return report
 
 
@@ -626,15 +615,28 @@ def format_report(report: dict, aptos_reference: dict | None = None) -> str:
             ("referable sensitivity", "ref_sensitivity"),
             ("referable specificity", "ref_specificity")]
     for label, key in rows:
-        line = f"| {label} | {report[key]:.4f} |"
+        line = f"| {label} | {metric_string(report.get(key))} |"
         if aptos_reference:
-            line += f" {aptos_reference.get(key, float('nan')):.4f} |"
+            line += f" {metric_string(aptos_reference.get(key))} |"
         lines.append(line)
+    healthy_count = report["healthy_n"]
+    if healthy_count:
+        healthy_text = (
+            f"Healthy eyes (grade 0): {healthy_count}. "
+            f"{metric_string(report['healthy_called_healthy'], percent=True)} "
+            f"were called healthy; "
+            f"{metric_string(report['healthy_called_referable'], percent=True)} "
+            "were called referable."
+        )
+    else:
+        healthy_text = (
+            "Healthy eyes (grade 0): 0. "
+            "Healthy-eye agreement and referral percentages: N/A "
+            "(no healthy eyes in this cohort)."
+        )
     lines += [
         "",
-        f"Healthy eyes (grade 0): {report['healthy_n']}. "
-        f"{report['healthy_called_healthy']:.1%} were called healthy; "
-        f"{report['healthy_called_referable']:.1%} were called referable.",
+        healthy_text,
         "",
         f"Severe cases missed: {report['severe_missed']}/{report['severe_total']}.",
         "",
@@ -672,16 +674,18 @@ def main(argv=None) -> int:
     validate_sweep_contract(cfg, sweep)
 
     if args.out is None:
-        if cfg.train.mode == "ordinal":
-            args.out = f"reports/research/ordinal_{sweep.name}_{args.dataset}.md"
-        else:
-            args.out = ("reports/external_validation.md" if args.dataset == "idrid"
-                        else f"reports/external_validation_{args.dataset}.md")
+        # Historical published report paths must never be overwritten by an
+        # unrelated new research sweep. The user can explicitly pass --out.
+        args.out = (
+            f"reports/research/{args.dataset}_{variant}_{sweep.name}_{cfg.train.mode}.md"
+        )
     report = evaluate(cfg, sweep, dataset_key=args.dataset)
     out = cfg.paths.root / args.out
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(format_report(report), encoding="utf-8")
-    (out.with_suffix(".json")).write_text(json.dumps(report, indent=2), encoding="utf-8")
+    (out.with_suffix(".json")).write_text(
+        json.dumps(report, indent=2, allow_nan=False), encoding="utf-8"
+    )
     print("\n" + format_report(report))
     print(f"written to {out}")
     return 0

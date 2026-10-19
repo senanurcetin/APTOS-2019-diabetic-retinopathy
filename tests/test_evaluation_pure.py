@@ -523,3 +523,14 @@ def test_messidor_fractional_grade_is_not_truncated(tmp_path):
                        "img.png,1.8,1\n")
     with pytest.raises(ValueError, match="unexpected Messidor-2 grades"):
         external.load_messidor2_labels(cfg)
+
+
+def test_external_report_formats_undefined_metrics_as_na():
+    from aptos.evaluation.external_report import summarize_external_grades
+
+    summary = summarize_external_grades([2, 3, 4], [2, 3, 4])
+    report = {"dataset": "Synthetic", "n": 3, "variant": "baseline",
+              "sweep": "toy", "thresholds": [0.5, 1.5, 2.5, 3.5], **summary}
+    markdown = external.format_report(report)
+    assert "| referable specificity | N/A |" in markdown
+    assert "no healthy eyes in this cohort" in markdown
