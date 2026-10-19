@@ -206,3 +206,27 @@ only tensor state and primitive metadata, not arbitrary Python deserialization.
 Legacy folders without a completed CV summary cannot be silently treated as
 complete ensembles; reconstruct documented provenance or rerun authorized
 research training. This does not change historical committed benchmark numbers.
+
+
+## Paired grading-metric uncertainty (QWK and macro F1)
+
+The MSE-versus-ordinal comparison also reports descriptive **95% paired
+percentile-bootstrap intervals for QWK and fixed-five-grade macro F1
+differences**, in `paired_grading_uncertainty`. The intervals use the same
+image alignment and explicitly declared eye/patient resampling unit as
+referral-metric uncertainty. With authentic patient linkage, both eyes of
+a patient are sampled as a unit; without it, eye-level intervals assume
+independence and may understate uncertainty. Neither option synthesizes
+missing patient IDs.
+
+QWK is undefined on certain resamples with degenerate grade variation;
+those QWK draws are excluded and their count is recorded separately.
+If fewer than 80% yield defined QWK, its CI is returned as JSON null rather
+than claiming false precision. Macro F1 uses a **fixed 0–4 grade label
+space** across all bootstrap draws, including draws that omit rare classes.
+
+These are descriptive uncertainty estimates for the *already observed*
+test cohorts. They do not account for stochastic training variability,
+dataset selection, multiple comparisons, site shift or repeated tuning on
+the same held-out test set. They provide **no clinical safety guarantee**.
+No new model or retinal dataset was trained/scored when implementing this.

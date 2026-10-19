@@ -14,6 +14,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from aptos.evaluation.grade_uncertainty import paired_grade_bootstrap
 from aptos.evaluation.paired_uncertainty import paired_bootstrap
 from aptos.modeling.thresholds import (
     apply_thresholds,
@@ -128,6 +129,10 @@ def compare_frames(
         actual, a_pred, b_pred, unit=unit, patient_ids=patients,
         n_resamples=n_resamples, seed=seed,
     )
+    paired_grades = paired_grade_bootstrap(
+        actual, a_pred, b_pred, unit=unit, patient_ids=patients,
+        n_resamples=n_resamples, seed=seed,
+    )
     # Some cohorts lack rare classes; absent-grade recall is undefined, not
     # zero. JSON null preserves that distinction without writing NaN tokens.
     metric_a = grade_metrics(actual, a_pred)
@@ -135,7 +140,7 @@ def compare_frames(
     metric_a = {k: (float(v) if np.isfinite(v) else None) for k, v in metric_a.items()}
     metric_b = {k: (float(v) if np.isfinite(v) else None) for k, v in metric_b.items()}
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "research_only": True,
         "n_eyes": len(joined),
         "n_referable": int(np.sum(actual >= 2)),
@@ -156,9 +161,10 @@ def compare_frames(
                          and metric_a["macro_f1"] is not None else None),
         },
         "paired_referral_uncertainty": paired,
+        "paired_grading_uncertainty": paired_grades,
         "limitations": [
             "Descriptive fixed-score comparison, not an independent model selection procedure.",
-            "No statistical interval is claimed for QWK or macro F1 differences.",
+            "Paired QWK and macro F1 percentile intervals are descriptive, not prospective performance guarantees.",
             "Eye-level bootstrap assumes independent eyes unless true patient IDs are supplied.",
             "A holdout cohort must not be reused to select training hyperparameters.",
             "External model generalization cannot be claimed without running external inference.",
