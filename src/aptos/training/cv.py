@@ -220,7 +220,6 @@ def fold_is_complete(directory: pathlib.Path, fold: int, *,
 
 def verify_resumed_fold(directory: pathlib.Path, fold: int, tr_df, va_df, holdout) -> tuple:
     """Reject partial checkpoints, stale splits, or corrupted saved predictions."""
-    paths = fold_paths(directory, fold)
     if not fold_is_complete(directory, fold, require_checkpoint=True):
         raise RuntimeError(
             f"fold {fold} has incomplete resume artifacts; delete its partial files "
