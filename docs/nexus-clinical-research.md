@@ -54,3 +54,28 @@ request metadata. Do not upload identifiable patient data.
 
 Run the existing `pytest` suite and validate the live application before merging
 this change. A completed PR is *not* a deployment.
+
+## Research notebook design completion (Identity 2.0)
+
+The static demo's official logo, X/favicon and theme were already present.
+Its wordmark and icon are byte-identical to the approved Drive vectors.
+The two research notebooks now also carry the **same official SVG wordmark**
+embedded in the first Markdown cell as a Jupyter `image/svg+xml` attachment.
+This makes offline viewing possible and ensures that separately packaged
+Kaggle kernels retain the official mark without network requests.
+
+`notebooks/research_evidence.ipynb` uses the same midnight, cyan, blue,
+lavender and violet family for plot surfaces and data marks.
+The source numeric data and chart labels remain unchanged. The GPU
+experiment notebook now has a consistent opening panel, one-seed protocol,
+clear dry-run and research-only status, and links to the runbook.
+Branding cannot turn historical evidence into a new experiment result.
+
+**Source verification:** SVG Git blob object IDs are
+`7913f5155f6620ed771a602db409cf428a347c94` (wordmark) and
+`5872cf6339bc31f4c11f2699779a9f3e582f9d64` (X),
+checked against Google Drive originals. Source folder:
+https://drive.google.com/drive/folders/1rU3QCrdwCdHB0tYVLIq0W6aPqpj3iOsY.
+The live hosted application and Kaggle renderer have **not** been
+visually inspected in this design change; the tests validate source
+markup and notebook portability, not browser screenshots.
