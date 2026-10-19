@@ -174,7 +174,7 @@ def test_cv_smoke_outputs_never_pollute_full_fold_resume(workspace, monkeypatch)
         truth = holdout["diagnosis"].to_numpy()
         return {
             "fold": fold, "train_n": len(train), "valid_n": len(valid),
-            "valid_qwk": 0.7, "test_qwk": 0.7,
+            "best_epoch": 1, "valid_qwk": 0.7, "test_qwk": 0.7,
             "test_accuracy": 0.7, "test_macro_f1": 0.7,
             "thresholds": [0.5, 1.5, 2.5, 3.5],
         }, {"weight": torch.zeros(1)}, truth.astype(float), truth
