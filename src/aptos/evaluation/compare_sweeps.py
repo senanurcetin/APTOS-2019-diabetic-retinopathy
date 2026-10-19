@@ -64,6 +64,15 @@ def validated_thresholds(summary: dict) -> np.ndarray:
     return cuts
 
 
+def _nullable_metrics(metrics: dict) -> dict:
+    """Serialize mathematically undefined rates as JSON null, never as zero."""
+    return {
+        key: (None if isinstance(value, (float, np.floating))
+              and not np.isfinite(value) else value)
+        for key, value in metrics.items()
+    }
+
+
 def _clean_eye_frame(frame: pd.DataFrame, name: str) -> pd.DataFrame:
     required = {"id_code", "diagnosis", "raw"}
     if not required.issubset(frame.columns):
@@ -147,11 +156,11 @@ def compare_frames(
         "method": "fixed validation thresholds; same-eye paired comparison",
         "baseline": {
             "model": "reg", "metrics": metric_a,
-            "referable": referable_confusion(actual, a_pred),
+            "referable": _nullable_metrics(referable_confusion(actual, a_pred)),
         },
         "candidate": {
             "model": "ordinal", "metrics": metric_b,
-            "referable": referable_confusion(actual, b_pred),
+            "referable": _nullable_metrics(referable_confusion(actual, b_pred)),
         },
         "ordinal_minus_baseline": {
             "qwk": (metric_b["qwk"] - metric_a["qwk"]

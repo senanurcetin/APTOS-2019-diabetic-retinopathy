@@ -230,3 +230,13 @@ test cohorts. They do not account for stochastic training variability,
 dataset selection, multiple comparisons, site shift or repeated tuning on
 the same held-out test set. They provide **no clinical safety guarantee**.
 No new model or retinal dataset was trained/scored when implementing this.
+
+
+## Undefined referral precision in strict JSON
+
+When a frozen model predicts **zero referable eyes**, referral precision has
+a zero denominator and is mathematically undefined. Paired benchmark JSON
+therefore records `precision: null`, not `0` or nonstandard `NaN` tokens;
+sensitivity and specificity are still reported when their denominators
+exist. This preserves negative model results without causing strict JSON
+serialization to fail.

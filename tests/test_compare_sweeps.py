@@ -279,3 +279,42 @@ def test_external_comparison_rejects_unsigned_historical_csv(tmp_path):
     )
     with pytest.raises(ValueError, match="missing or stale"):
         verified_external_comparison_frame(sweep, folder, cfg, labels, "idrid")
+
+
+@pytest.mark.pure
+def test_no_predicted_referrals_is_json_serializable_without_fake_precision(sample):
+    import json
+
+    baseline, candidate = sample
+    baseline = baseline.copy()
+    candidate = candidate.copy()
+    baseline["raw"] = -100.0
+    candidate["raw"] = -100.0
+    result = compare_frames(
+        baseline, candidate, [0.5, 1.5, 2.5, 3.5],
+        [0.5, 1.5, 2.5, 3.5], n_resamples=120,
+    )
+    assert result["baseline"]["referable"]["tp"] == 0
+    assert result["baseline"]["referable"]["precision"] is None
+    assert result["candidate"]["referable"]["precision"] is None
+    assert result["baseline"]["referable"]["sensitivity"] == 0.0
+    assert result["baseline"]["referable"]["specificity"] == 1.0
+    json.dumps(result, allow_nan=False)
+
+
+@pytest.mark.pure
+def test_compare_frames_exposes_paired_grading_intervals(sample):
+    baseline, candidate = sample
+    result = compare_frames(
+        baseline, candidate, [0.5, 1.5, 2.5, 3.5],
+        [0.5, 1.5, 2.5, 3.5], n_resamples=150, seed=7,
+    )
+    grades = result["paired_grading_uncertainty"]
+    assert grades["analysis_unit"] == "eye"
+    assert grades["n_eyes"] == len(baseline)
+    assert grades["metrics"]["qwk"]["difference"] == pytest.approx(
+        result["ordinal_minus_baseline"]["qwk"]
+    )
+    assert grades["metrics"]["macro_f1"]["difference"] == pytest.approx(
+        result["ordinal_minus_baseline"]["macro_f1"]
+    )
