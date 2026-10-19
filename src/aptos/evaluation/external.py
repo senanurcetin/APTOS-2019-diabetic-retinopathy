@@ -142,6 +142,57 @@ def dataset(key: str) -> ExternalSet:
                          f"known: {sorted(DATASETS)}") from None
 
 
+SOURCE_PROVENANCE = "_source_provenance.json"
+
+
+def external_source_signature(cfg: Config, ds: ExternalSet, labels: pd.DataFrame) -> dict:
+    """Fingerprint actual raw fundus bytes, JPEG encoding and preprocessing code.
+
+    Reading source bytes is intentional. Size, mtime and filename alone are not
+    sufficient to verify the images from a mutable Kaggle mirror.
+    """
+    if labels.empty or "id_code" not in labels:
+        raise ValueError("source fingerprint requires nonempty image IDs")
+    hashes = {}
+    for _, row in labels.iterrows():
+        ident = str(row["id_code"])
+        if not ident or ident in hashes:
+            raise ValueError("source image IDs must be nonempty and unique")
+        original = ds.source(cfg, row)
+        if not original.is_file():
+            raise FileNotFoundError(f"source retinal image missing: {original}")
+        hashes[ident] = _sha256(original)
+    return {
+        "signature_version": 1,
+        "dataset": ds.prefix,
+        "source_sha256": dict(sorted(hashes.items())),
+        "preprocessing_code_sha256": _sha256(pathlib.Path(preprocess.__code__.co_filename)),
+        "preprocess": cfg.manifest_fields(),
+        "jpeg_quality": cfg.preprocess.jpeg_quality,
+    }
+
+
+def source_provenance_path(cache: pathlib.Path) -> pathlib.Path:
+    return cache / SOURCE_PROVENANCE
+
+
+def verify_external_source_provenance(
+    cfg: Config, ds: ExternalSet, labels: pd.DataFrame, cache: pathlib.Path,
+) -> None:
+    """Refuse old derived JPEGs when raw retinal source bytes changed."""
+    signature = external_source_signature(cfg, ds, labels)
+    try:
+        stored = json.loads(source_provenance_path(cache).read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError) as exc:
+        raise manifest_mod.ManifestMismatch(
+            "external source provenance missing or corrupt; rebuild cache"
+        ) from exc
+    if stored != signature:
+        raise manifest_mod.ManifestMismatch(
+            "external source provenance changed; regenerate derived images"
+        )
+
+
 def build_cache(cfg: Config, *, dataset_key: str = "idrid", force: bool = False) -> pathlib.Path:
     """Regenerate derived external JPEGs whenever provenance or IDs disagree.
 
@@ -163,20 +214,27 @@ def build_cache(cfg: Config, *, dataset_key: str = "idrid", force: bool = False)
     rows = {row["id_code"]: row for _, row in labels.iterrows()}
     target = cfg.paths.external / f"{ds.prefix}_{cfg.variant}"
     settings = cfg.manifest_fields()
+    signature = external_source_signature(cfg, ds, labels)
 
     if target.exists() and not force:
         try:
             manifest_mod.check(target, settings, count_images=True)
+            saved_signature = json.loads(
+                source_provenance_path(target).read_text(encoding="utf-8")
+            )
+            if saved_signature != signature:
+                raise manifest_mod.ManifestMismatch("external source provenance changed")
             cached_ids = {path.stem for path in target.glob("*.jpg")}
             if cached_ids == set(ids):
                 return target
-        except (FileNotFoundError, manifest_mod.ManifestMismatch):
+        except (FileNotFoundError, manifest_mod.ManifestMismatch, json.JSONDecodeError):
             pass
 
     target.mkdir(parents=True, exist_ok=True)
     # Invalidate BEFORE touching files. An interrupted rebuild cannot be
     # mistaken for a complete, verified cache on a later run.
     manifest_mod.path_for(target).unlink(missing_ok=True)
+    source_provenance_path(target).unlink(missing_ok=True)
     for image_path in target.glob("*.jpg"):
         image_path.unlink()
     for temporary in target.glob(".*.tmp.jpg"):
@@ -216,6 +274,12 @@ def build_cache(cfg: Config, *, dataset_key: str = "idrid", force: bool = False)
     manifest_mod.write(target, settings, len(labels) - len(failures))
     # Verify what is on disk rather than only trusting the manifest we wrote.
     manifest_mod.check(target, settings, count_images=True)
+    source_path = source_provenance_path(target)
+    temporary = source_path.with_suffix(".tmp")
+    temporary.write_text(
+        json.dumps(signature, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    temporary.replace(source_path)
     return target
 
 

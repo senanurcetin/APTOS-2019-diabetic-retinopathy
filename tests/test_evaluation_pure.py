@@ -359,6 +359,9 @@ def _toy_external_cache(tmp_path, monkeypatch):
         return np.full((12, 12, 3), size % 255, dtype=np.uint8), {}
 
     monkeypatch.setattr(external, "preprocess", fake_preprocess)
+    cfg.paths.external.mkdir(parents=True, exist_ok=True)
+    for name in state["ids"]:
+        (cfg.paths.external / f"{name}.png").write_bytes(f"original-{name}".encode())
     return cfg, state, external
 
 
@@ -381,6 +384,7 @@ def test_external_cache_rebuilds_when_same_size_label_table_ids_change(tmp_path,
     cfg, state, external = _toy_external_cache(tmp_path, monkeypatch)
     directory = external.build_cache(cfg, dataset_key="synthetic")
     state["ids"] = ["eye-a", "eye-c"]
+    (cfg.paths.external / "eye-c.png").write_bytes(b"original-eye-c")
     external.build_cache(cfg, dataset_key="synthetic")
     assert {p.stem for p in directory.glob("*.jpg")} == {"eye-a", "eye-c"}
     assert len(state["processed"]) == 4
@@ -455,3 +459,33 @@ def test_cached_external_csv_requires_complete_provenance(tmp_path):
     frame.to_csv(output, index=False)
     assert read_verified_score_cache(output, signature, labels) is None
     assert read_verified_score_cache(output, {"signature_version": 2}, labels) is None
+
+
+def test_source_bytes_change_invalidates_external_cache(tmp_path, monkeypatch):
+    cfg, state, external = _toy_external_cache(tmp_path, monkeypatch)
+    directory = external.build_cache(cfg, dataset_key="synthetic")
+    assert len(state["processed"]) == 2
+    (cfg.paths.external / "eye-a.png").write_bytes(b"replaced-retinal-pixels")
+    external.build_cache(cfg, dataset_key="synthetic")
+    assert len(state["processed"]) == 4
+    assert external.source_provenance_path(directory).is_file()
+    external.build_cache(cfg, dataset_key="synthetic")
+    assert len(state["processed"]) == 4
+
+
+def test_jpeg_encoding_changes_invalidate_external_cache(tmp_path, monkeypatch):
+    cfg, state, external = _toy_external_cache(tmp_path, monkeypatch)
+    external.build_cache(cfg, dataset_key="synthetic")
+    cfg.preprocess.jpeg_quality = 84
+    external.build_cache(cfg, dataset_key="synthetic")
+    assert len(state["processed"]) == 4
+
+
+def test_missing_original_image_fails_closed_before_deleting_cache(tmp_path, monkeypatch):
+    cfg, state, external = _toy_external_cache(tmp_path, monkeypatch)
+    directory = external.build_cache(cfg, dataset_key="synthetic")
+    (cfg.paths.external / "eye-b.png").unlink()
+    with pytest.raises(FileNotFoundError, match="source retinal image missing"):
+        external.build_cache(cfg, dataset_key="synthetic")
+    assert len(state["processed"]) == 2
+    assert (directory / "eye-b.jpg").exists()
