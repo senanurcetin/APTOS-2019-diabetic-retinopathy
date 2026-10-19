@@ -170,6 +170,49 @@ def _read_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def verified_external_comparison_frame(
+    sweep: Path, directory: Path, cfg, labels: pd.DataFrame, prefix: str,
+) -> tuple[pd.DataFrame, Path]:
+    """Accept cached cross-site predictions only if their provenance is live.
+
+    The inference pipeline signs the checkpoint bytes, input JPEG bytes,
+    current labels, preprocessing settings and CSV bytes. The comparison
+    pipeline must verify the *same* signature instead of just reading an
+    existing filename. Never run model inference as a side effect here.
+    """
+    from aptos.data import manifest as manifest_mod
+    from aptos.evaluation.external import (
+        read_verified_score_cache,
+        score_input_signature,
+        validate_sweep_contract,
+    )
+
+    validate_sweep_contract(cfg, sweep)
+    checkpoints = sorted(path.name for path in sweep.glob("fold*.pt"))
+    expected = sorted(f"fold{fold}.pt" for fold in range(1, cfg.cv.folds + 1))
+    if checkpoints != expected:
+        raise ValueError("paired external comparison requires every CV checkpoint")
+    cache = directory / f"{prefix}_{cfg.variant}"
+    manifest_mod.check(cache, cfg.manifest_fields(), count_images=True)
+    existing_ids = {path.stem for path in cache.glob("*.jpg")}
+    if not {"id_code", "diagnosis"}.issubset(labels.columns):
+        raise ValueError("external cohort is missing image IDs or ground-truth grades")
+    filtered = labels[labels["id_code"].isin(existing_ids)].reset_index(drop=True)
+    if filtered.empty:
+        raise ValueError("external cohort has no accepted images")
+    if filtered["id_code"].duplicated().any():
+        raise ValueError("external cohort has duplicate image IDs")
+    signature = score_input_signature(cfg, sweep, cache, filtered)
+    output = directory / f"{prefix}_{cfg.variant}_{sweep.name}_scores.csv"
+    frame = read_verified_score_cache(output, signature, filtered)
+    if frame is None:
+        raise ValueError(
+            f"{output} is missing or stale: regenerate external scores with "
+            "aptos.evaluation.external before a paired comparison"
+        )
+    return frame, output
+
+
 def _load_frame(sweep: Path, cohort: str, directory: Path, variant: str) -> tuple[pd.DataFrame, Path | None]:
     if cohort == "aptos":
         from aptos.config import Config
@@ -185,11 +228,28 @@ def _load_frame(sweep: Path, cohort: str, directory: Path, variant: str) -> tupl
         frame = load_sweep_predictions(config, sweep, strict_identity=True)
         return frame, None
 
-    prefix = {"idrid": "idrid", "messidor2": "messidor2"}[cohort]
-    path = directory / f"{prefix}_{variant}_{sweep.name}_scores.csv"
-    if not path.is_file():
-        raise FileNotFoundError(f"{path} not found. First run aptos.evaluation.external for this sweep.")
-    return pd.read_csv(path, dtype={"id_code": "string"}), path
+    from aptos.config import Config
+    from aptos.evaluation.external import dataset
+
+    original = _read_json(sweep / "config.json")
+    cfg = Config.load("configs/cv.yaml")
+    cfg.variant = variant
+    for name in ("mode", "model", "size"):
+        setattr(cfg.train, name, original[f"train.{name}"])
+    cfg.cv.folds = original["cv.folds"]
+    for name in ("size", "clahe", "clip_limit", "square_mode"):
+        setattr(cfg.preprocess, name, original[f"preprocess.{name}"])
+
+    # The source loader resolves its labels under the configured research root.
+    # A second arbitrary directory could reference different images/labels.
+    if directory.resolve() != cfg.paths.external.resolve():
+        raise ValueError(
+            "--external-dir must match the configured research data/external "
+            "directory; use APTOS_ROOT to change the research root"
+        )
+    spec = dataset(cohort)
+    labels = spec.load_labels(cfg)
+    return verified_external_comparison_frame(sweep, directory, cfg, labels, spec.prefix)
 
 
 def _patient_map(path: Path) -> dict[str, str]:

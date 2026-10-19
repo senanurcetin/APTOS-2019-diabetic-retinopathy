@@ -155,3 +155,98 @@ def test_kaggle_experiment_notebook_is_valid_and_off_by_default():
     for cell in code_cells:
         assert cell["execution_count"] is None and cell["outputs"] == []
         ast.parse("".join(cell["source"]))
+
+
+
+@pytest.mark.pure
+def test_external_comparison_cache_checks_checkpoints_pixels_labels_and_csv(tmp_path):
+    import json
+
+    from aptos.config import Config, Paths
+    from aptos.data import manifest as manifest_mod
+    from aptos.evaluation.compare_sweeps import verified_external_comparison_frame
+    from aptos.evaluation.external import _sha256, score_input_signature
+
+    cfg = Config.load("configs/cv.yaml")
+    cfg.paths = Paths(root=tmp_path)
+    cfg.cv.folds = 2
+    folder = cfg.paths.external
+    folder.mkdir(parents=True)
+    cache = folder / "idrid_baseline"
+    cache.mkdir()
+    labels = pd.DataFrame({
+        "id_code": ["eye-a", "eye-b"],
+        "diagnosis": [0, 2],
+    })
+    for name in labels["id_code"]:
+        (cache / f"{name}.jpg").write_bytes(f"processed-{name}".encode())
+    manifest_mod.write(cache, cfg.manifest_fields(), n_images=2)
+    sweep = tmp_path / "models" / "cv" / "baseline-test"
+    sweep.mkdir(parents=True)
+    (sweep / "config.json").write_text(json.dumps(cfg.to_dict()))
+    for fold in (1, 2):
+        (sweep / f"fold{fold}.pt").write_bytes(f"weights-{fold}".encode())
+
+    output = folder / f"idrid_baseline_{sweep.name}_scores.csv"
+    scores = labels.copy()
+    scores["raw"] = [0.1, 2.1]
+    scores.to_csv(output, index=False)
+    meta = output.with_suffix(".meta.json")
+
+    def sign():
+        meta.write_text(json.dumps({
+            "input_signature": score_input_signature(cfg, sweep, cache, labels),
+            "score_csv_sha256": _sha256(output),
+        }))
+
+    sign()
+    matched, path = verified_external_comparison_frame(sweep, folder, cfg, labels, "idrid")
+    assert path == output and matched["raw"].tolist() == pytest.approx([0.1, 2.1])
+
+    for changed_file in (output, cache / "eye-a.jpg", sweep / "fold1.pt"):
+        before = changed_file.read_bytes()
+        changed_file.write_bytes(before + b"-tampered")
+        with pytest.raises(ValueError, match="missing or stale"):
+            verified_external_comparison_frame(sweep, folder, cfg, labels, "idrid")
+        changed_file.write_bytes(before)
+
+    tampered_labels = labels.copy()
+    tampered_labels.loc[0, "diagnosis"] = 4
+    with pytest.raises(ValueError, match="missing or stale"):
+        verified_external_comparison_frame(
+            sweep, folder, cfg, tampered_labels, "idrid",
+        )
+
+    (sweep / "fold2.pt").unlink()
+    with pytest.raises(ValueError, match="every CV checkpoint"):
+        verified_external_comparison_frame(sweep, folder, cfg, labels, "idrid")
+
+
+@pytest.mark.pure
+def test_external_comparison_rejects_unsigned_historical_csv(tmp_path):
+    import json
+
+    from aptos.config import Config, Paths
+    from aptos.data import manifest as manifest_mod
+    from aptos.evaluation.compare_sweeps import verified_external_comparison_frame
+
+    cfg = Config.load("configs/cv.yaml")
+    cfg.paths = Paths(root=tmp_path)
+    cfg.cv.folds = 1
+    folder = cfg.paths.external
+    folder.mkdir(parents=True)
+    cache = folder / "idrid_baseline"
+    cache.mkdir()
+    (cache / "retina.jpg").write_bytes(b"synthetic-cache")
+    manifest_mod.write(cache, cfg.manifest_fields(), n_images=1)
+    sweep = tmp_path / "baseline-test"
+    sweep.mkdir()
+    (sweep / "config.json").write_text(json.dumps(cfg.to_dict()))
+    (sweep / "fold1.pt").write_bytes(b"synthetic-weights")
+    labels = pd.DataFrame({"id_code": ["retina"], "diagnosis": [2]})
+    output = folder / "idrid_baseline_baseline-test_scores.csv"
+    pd.DataFrame({"id_code": ["retina"], "diagnosis": [2], "raw": [2.2]}).to_csv(
+        output, index=False,
+    )
+    with pytest.raises(ValueError, match="missing or stale"):
+        verified_external_comparison_frame(sweep, folder, cfg, labels, "idrid")
