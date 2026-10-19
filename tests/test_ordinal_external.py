@@ -103,3 +103,73 @@ def test_external_predict_preserves_regression_scalar(monkeypatch, tmp_path):
                               paths=Paths(root=tmp_path))
     raw = predict(cfg, cache, labels, [{"value": torch.tensor([1.25])}], "cpu")
     assert raw.tolist() == pytest.approx([1.25])
+
+
+@pytest.mark.pure
+def test_external_inference_rejects_partial_cv_sweep(tmp_path):
+    from aptos.evaluation.external import complete_sweep_checkpoints
+
+    cfg = Config.load("configs/cv.yaml", cv={"folds": 2})
+    (tmp_path / "config.json").write_text(json.dumps(cfg.to_dict()))
+    with pytest.raises(ValueError, match="summary.json is missing"):
+        complete_sweep_checkpoints(tmp_path)
+
+    (tmp_path / "summary.json").write_text(json.dumps({
+        "folds": 2, "ensemble": {"thresholds": [0.5, 1.5, 2.5, 3.5]},
+    }))
+    for i in (1, 2):
+        (tmp_path / f"fold{i}.pt").write_bytes(b"weights")
+        (tmp_path / f"fold{i}.json").write_text('{"fold":1}')
+        (tmp_path / f"fold{i}.npz").write_bytes(b"predictions")
+    assert len(complete_sweep_checkpoints(tmp_path)) == 2
+    (tmp_path / "fold2.npz").unlink()
+    with pytest.raises(ValueError, match="incomplete fold artifacts"):
+        complete_sweep_checkpoints(tmp_path)
+    (tmp_path / "fold2.npz").write_bytes(b"predictions")
+    (tmp_path / "fold3.pt").write_bytes(b"partial-fold")
+    with pytest.raises(ValueError, match="missing, extra"):
+        complete_sweep_checkpoints(tmp_path)
+
+
+@pytest.mark.pure
+def test_external_inference_rejects_mismatched_cv_summary(tmp_path):
+    from aptos.evaluation.external import complete_sweep_checkpoints
+
+    cfg = Config.load("configs/cv.yaml", cv={"folds": 5})
+    (tmp_path / "config.json").write_text(json.dumps(cfg.to_dict()))
+    (tmp_path / "summary.json").write_text(json.dumps({"folds": 2}))
+    with pytest.raises(ValueError, match="fold count differs"):
+        complete_sweep_checkpoints(tmp_path)
+
+
+@pytest.mark.torch
+def test_ensemble_rejects_tampered_saved_thresholds_and_fold_numbers(tmp_path):
+    torch = pytest.importorskip("torch")
+    from aptos.evaluation.external import load_ensemble
+
+    cfg = Config.load("configs/cv.yaml", cv={"folds": 2})
+    (tmp_path / "config.json").write_text(json.dumps(cfg.to_dict()))
+    (tmp_path / "summary.json").write_text(json.dumps({
+        "folds": 2, "ensemble": {"thresholds": [0.5, 1.5, 2.5, 3.5]},
+    }))
+    state = {"weight": torch.tensor([1.])}
+    for fold in (1, 2):
+        torch.save({"fold": fold, "state_dict": state,
+                    "thresholds": [0.5, 1.5, 2.5, 3.5]},
+                   tmp_path / f"fold{fold}.pt")
+        (tmp_path / f"fold{fold}.npz").write_bytes(b"predictions")
+        (tmp_path / f"fold{fold}.json").write_text(json.dumps({"fold": fold}))
+    loaded, cuts = load_ensemble(tmp_path)
+    assert len(loaded) == 2
+    assert cuts.tolist() == pytest.approx([0.5, 1.5, 2.5, 3.5])
+
+    torch.save({"fold": 99, "state_dict": state,
+                "thresholds": [0.5, 1.5, 2.5, 3.5]},
+               tmp_path / "fold2.pt")
+    with pytest.raises(ValueError, match="fold identity"):
+        load_ensemble(tmp_path)
+    torch.save({"fold": 2, "state_dict": state,
+                "thresholds": [0.5, 1.5, 2.5, 3.8]},
+               tmp_path / "fold2.pt")
+    with pytest.raises(ValueError, match="disagree with saved APTOS summary"):
+        load_ensemble(tmp_path)
