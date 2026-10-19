@@ -82,6 +82,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--push", action="store_true",
                         help="explicitly upload via the local Kaggle CLI; disabled by default")
     args = parser.parse_args(argv)
+    # The Kaggle CLI does not support --no-run for kernels push: uploading
+    # a notebook launches it. Refuse an upload unless training was explicitly
+    # opted into, instead of incorrectly passing a nonexistent flag.
+    if args.push and not args.run:
+        parser.error("--push launches a Kaggle run and therefore requires --run")
     bundle = make_bundle(args.repo_root, owner=args.owner, mode=args.mode,
                          seed=args.seed, execute=args.run)
     print(f"local private kernel bundle: {bundle}")
@@ -90,8 +95,6 @@ def main(argv: list[str] | None = None) -> int:
             raise FileNotFoundError("Install the official Kaggle CLI first: pip install kaggle")
         command = ["kaggle", "kernels", "push", "-p", str(bundle),
                    "--accelerator", "NvidiaTeslaT4"]
-        if not args.run:
-            command.append("--no-run")
         # Never add tokens to argv, notebook metadata or process output.
         subprocess.run(command, check=True)
         print(f"Kaggle upload requested for {args.mode} seed {args.seed}; check its run status")

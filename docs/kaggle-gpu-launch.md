@@ -74,3 +74,16 @@ measured outcomes can only be confirmed after real Kaggle execution. The
 preflight checks label/image IDs and original input layout but does not hash
 all source retinal pixel bytes. Preserve dataset versions for the actual run.
 This notebook is not a clinical diagnostic tool.
+
+## Verified CLI upload semantics
+
+The official Kaggle CLI `kernels push` **starts a kernel run**; the local
+CLI 1.8.4 does not accept a `--no-run` flag. The bundle builder therefore
+rejects `--push` unless `--run` is also supplied. Generating a bundle
+without `--push` remains a completely offline dry run.
+
+The user's connected SentinelX Windows host now has an isolated Kaggle CLI
+installation under `C:\\ProgramData\\SentinelX\\workspace\\aptos-kaggle-cli`.
+This only verifies that the command-line program launches. It does **not**
+configure authentication or establish Kaggle GPU availability. API secrets
+must be configured locally, never committed or echoed into logs.

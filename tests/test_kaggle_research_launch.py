@@ -2,6 +2,7 @@
 import csv
 import importlib.util
 import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -110,3 +111,17 @@ def test_rejects_invalid_owners_or_modes(tmp_path):
     with pytest.raises(ValueError, match="mode"):
         bundle.make_bundle(REPO, owner="owner", mode="cls", seed=42,
                            output_root=tmp_path)
+
+
+@pytest.mark.pure
+def test_cli_push_without_run_is_rejected_before_creating_a_bundle(monkeypatch, capsys):
+    bundle = load_script("package_kaggle_experiment")
+    monkeypatch.setattr(
+        sys, "argv",
+        ["package_kaggle_experiment.py", "--owner", "senanuretin",
+         "--mode", "reg", "--push"],
+    )
+    with pytest.raises(SystemExit) as exc:
+        bundle.main()
+    assert exc.value.code == 2
+    assert "--push launches a Kaggle run" in capsys.readouterr().err
