@@ -436,7 +436,7 @@ def test_external_score_signature_detects_changed_weights_labels_and_pixels(tmp_
 
 
 def test_cached_external_csv_requires_complete_provenance(tmp_path):
-    from aptos.evaluation.external import read_verified_score_cache, _sha256
+    from aptos.evaluation.external import _sha256, read_verified_score_cache
 
     labels = pd.DataFrame({"id_code": ["001", "002"], "diagnosis": [0, 2]})
     signature = {"signature_version": 1, "source": "reproducible"}
