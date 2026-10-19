@@ -57,30 +57,37 @@ from aptos.training.loop import (
 )
 
 
-def run_id_for(cfg: Config, manifest: dict) -> str:
-    """A stable identifier for one sweep.
+def scientific_config(cfg: Config) -> dict:
+    """Scientific settings only; tracking credentials are never part of the ID."""
+    prefixes = ("train.", "cv.", "preprocess.", "augment.", "thresholds.")
+    return {k: v for k, v in cfg.to_dict().items()
+            if k == "variant" or k.startswith(prefixes)}
 
-    Derived from everything that defines the experiment, so re-invoking the same
-    sweep lands in the same directory and finds its own completed folds. Change
-    any of these and you get a different sweep, which is correct - the results
-    would not be comparable.
-    """
+
+def labels_sha256(frame: pd.DataFrame) -> str:
+    """Fingerprint effective labels and any resolution stratum (not image pixels)."""
+    fields = ["id_code", "diagnosis", "split"]
+    if not set(fields).issubset(frame.columns):
+        raise ValueError("label fingerprint requires id_code, diagnosis and split")
+    if "resolution_bucket" in frame.columns:
+        fields.append("resolution_bucket")
+    selected = frame[fields].sort_values("id_code", kind="stable")
+    if selected["id_code"].isna().any() or selected["id_code"].duplicated().any():
+        raise ValueError("label fingerprint requires unique non-null image IDs")
+    return hashlib.sha256(selected.to_json(orient="records").encode("utf-8")).hexdigest()
+
+
+def run_id_for(cfg: Config, manifest: dict, *, label_digest: str | None = None) -> str:
+    """V2 identity: all CV scientific parameters, manifest and actual label pool."""
     payload = {
-        "variant": cfg.variant,
-        "folds": cfg.cv.folds,
-        "stratify_on": cfg.cv.stratify_on,
-        "seed": cfg.train.seed,
-        "model": cfg.train.model,
-        "mode": cfg.train.mode,
-        "size": cfg.train.size,
-        "batch": cfg.train.batch,
-        "epochs": cfg.train.epochs,
-        "lr": cfg.train.lr,
-        "exclude_leaked": cfg.train.exclude_leaked,
+        "identity_version": 2,
+        "scientific_config": scientific_config(cfg),
         "cache": {k: manifest.get(k) for k in manifest_mod.SETTING_FIELDS},
+        "labels_sha256": label_digest,
     }
-    blob = json.dumps(payload, sort_keys=True, default=str).encode()
-    return hashlib.sha256(blob).hexdigest()[:10]
+    return hashlib.sha256(json.dumps(
+        payload, sort_keys=True, default=str,
+    ).encode("utf-8")).hexdigest()[:12]
 
 
 def sweep_dir(cfg: Config, run_id: str) -> pathlib.Path:
@@ -203,15 +210,33 @@ def fold_paths(directory: pathlib.Path, fold: int) -> dict[str, pathlib.Path]:
     }
 
 
-def fold_is_complete(directory: pathlib.Path, fold: int) -> bool:
-    """A fold counts as done only when its metrics AND its predictions exist.
-
-    The predictions matter as much as the weights: without `test_raw` the
-    ensemble cannot be rebuilt, which is exactly how the earlier design turned
-    a partial failure into a total one.
-    """
+def fold_is_complete(directory: pathlib.Path, fold: int, *,
+                     require_checkpoint: bool = False) -> bool:
+    """A full fold is resumable only with checkpoint, metrics and scores."""
     paths = fold_paths(directory, fold)
-    return paths["metrics"].exists() and paths["preds"].exists()
+    kinds = ("metrics", "preds", "checkpoint") if require_checkpoint else ("metrics", "preds")
+    return all(paths[k].is_file() and paths[k].stat().st_size > 0 for k in kinds)
+
+
+def verify_resumed_fold(directory: pathlib.Path, fold: int, tr_df, va_df, holdout) -> tuple:
+    """Reject partial checkpoints, stale splits, or corrupted saved predictions."""
+    paths = fold_paths(directory, fold)
+    if not fold_is_complete(directory, fold, require_checkpoint=True):
+        raise RuntimeError(
+            f"fold {fold} has incomplete resume artifacts; delete its partial files "
+            "or use --no-resume"
+        )
+    result, raw, truth = load_fold(directory, fold)
+    expected = holdout["diagnosis"].to_numpy(dtype=int)
+    if (result.get("fold") != fold or result.get("train_n") != len(tr_df)
+            or result.get("valid_n") != len(va_df)):
+        raise RuntimeError(f"fold {fold} metadata does not match this split")
+    if (raw.ndim != 1 or truth.ndim != 1 or raw.shape != expected.shape
+            or not np.array_equal(truth, expected) or not np.isfinite(raw).all()):
+        raise RuntimeError(f"fold {fold} predictions do not match held-out labels")
+    if len(result.get("thresholds", [])) != 4:
+        raise RuntimeError(f"fold {fold} missing fitted thresholds")
+    return result, raw, truth
 
 
 def save_fold(directory: pathlib.Path, fold: int, result: dict, state, te_raw, te_true,
@@ -254,21 +279,46 @@ def run_cv(cfg: Config, *, resume: bool = True, track: bool = True,
         df = labels_mod.add_resolution_bucket(df, cfg)
 
     pool, holdout = labels_mod.pool_and_holdout(df, cfg)
-    if limit:
+    label_digest = labels_sha256(df)
+    if limit is not None:
+        if not isinstance(limit, int) or isinstance(limit, bool) or limit < 1:
+            raise ValueError("--limit must be a positive integer")
         pool = pool.groupby("diagnosis", group_keys=False).head(max(2, limit // 5))
         holdout = holdout.head(limit)
+        resume, track = False, False
         print(f"--limit: pool cut to {len(pool)}, test to {len(holdout)} (SMOKE TEST)")
 
     print(f"pool: {len(pool)} images, {cfg.cv.folds} folds, "
           f"stratified on {cfg.cv.stratify_on}")
     print(f"test: {len(holdout)} held out entirely")
 
-    run_id = run_id_for(cfg, mf)
-    directory = sweep_dir(cfg, run_id)
+    run_id = run_id_for(cfg, mf, label_digest=label_digest)
+    directory = (sweep_dir(cfg, run_id) if limit is None else
+                 cfg.paths.models / "cv_smoke" / f"{cfg.variant}-{run_id}-limit{limit}")
     directory.mkdir(parents=True, exist_ok=True)
-    (directory / "config.json").write_text(
-        json.dumps(cfg.to_dict(), indent=2, default=str), encoding="utf-8"
-    )
+    config_path = directory / "config.json"
+    config = json.loads(json.dumps(cfg.to_dict(), default=str))
+    if config_path.exists():
+        old = json.loads(config_path.read_text(encoding="utf-8"))
+        keys = set(scientific_config(cfg))
+        if {k: old.get(k) for k in keys} != {k: config.get(k) for k in keys}:
+            raise RuntimeError("existing sweep configuration disagrees with this experiment")
+    else:
+        config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
+    provenance_path = directory / "provenance.json"
+    provenance = {
+        "identity_version": 2, "run_id": run_id,
+        "run_kind": "full" if limit is None else "smoke",
+        "labels_sha256": label_digest,
+        "cache_settings": {k: mf.get(k) for k in manifest_mod.SETTING_FIELDS},
+    }
+    if provenance_path.exists():
+        if json.loads(provenance_path.read_text(encoding="utf-8")) != provenance:
+            raise RuntimeError("existing sweep provenance mismatch")
+    else:
+        provenance_path.write_text(
+            json.dumps(provenance, indent=2, sort_keys=True), encoding="utf-8"
+        )
     print(f"sweep: {directory.name}\n")
 
     set_seed(cfg.train.seed)
@@ -276,8 +326,11 @@ def run_cv(cfg: Config, *, resume: bool = True, track: bool = True,
 
     results, raws, trues = [], [], []
     for fold, (tr_idx, va_idx) in enumerate(splits, start=1):
-        if resume and fold_is_complete(directory, fold):
-            result, te_raw, te_true = load_fold(directory, fold)
+        tr_df, va_df = pool.iloc[tr_idx], pool.iloc[va_idx]
+        if resume and any(p.exists() for p in fold_paths(directory, fold).values()):
+            result, te_raw, te_true = verify_resumed_fold(
+                directory, fold, tr_df, va_df, holdout,
+            )
             print(f"--- fold {fold}/{cfg.cv.folds}  already done "
                   f"(valid QWK={result['valid_qwk']:.4f}, "
                   f"test QWK={result['test_qwk']:.4f}) - skipping")
@@ -286,7 +339,6 @@ def run_cv(cfg: Config, *, resume: bool = True, track: bool = True,
             trues.append(te_true)
             continue
 
-        tr_df, va_df = pool.iloc[tr_idx], pool.iloc[va_idx]
         print(f"--- fold {fold}/{cfg.cv.folds}  train={len(tr_df)}  valid={len(va_df)}",
               flush=True)
 
@@ -439,7 +491,7 @@ def main(argv=None) -> int:
     parser.add_argument("--no-resume", action="store_true",
                         help="retrain every fold even if results exist")
     parser.add_argument("--no-track", action="store_true", help="skip MLflow logging")
-    parser.add_argument("--limit", type=int, default=0,
+    parser.add_argument("--limit", type=int, default=None,
                         help="smoke test on a handful of images; never tracked, "
                              "never saves weights")
     args = parser.parse_args(argv)
@@ -464,7 +516,7 @@ def main(argv=None) -> int:
     cfg.preprocess = dataclasses.replace(variant_cfg.preprocess)
 
     run_cv(cfg, resume=not args.no_resume, track=not args.no_track,
-           limit=args.limit or None)
+           limit=args.limit)
     return 0
 
 

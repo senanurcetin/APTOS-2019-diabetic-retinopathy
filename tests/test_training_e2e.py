@@ -162,3 +162,31 @@ def test_resolution_stratified_folds_keep_both_strata_in_every_fold(workspace):
     folds = cv_mod.build_folds(cfg, pool)
     for _, valid_idx in folds:
         assert set(pool.iloc[valid_idx]["resolution_bucket"]) == {f"{w}x{h}", "other"}
+
+
+
+def test_cv_smoke_outputs_never_pollute_full_fold_resume(workspace, monkeypatch):
+    cfg = workspace
+    calls = []
+
+    def fast_fold(cfg, fold, train, valid, holdout, device):
+        calls.append(fold)
+        truth = holdout["diagnosis"].to_numpy()
+        return {
+            "fold": fold, "train_n": len(train), "valid_n": len(valid),
+            "valid_qwk": 0.7, "test_qwk": 0.7,
+            "test_accuracy": 0.7, "test_macro_f1": 0.7,
+            "thresholds": [0.5, 1.5, 2.5, 3.5],
+        }, {"weight": torch.zeros(1)}, truth.astype(float), truth
+
+    monkeypatch.setattr(cv_mod, "train_one_fold", fast_fold)
+    result = cv_mod.run_cv(cfg, limit=25, track=False)
+    expected = cv_mod.sweep_dir(cfg, result["run_id"])
+    assert not expected.exists()
+    smoke = cfg.paths.models / "cv_smoke" / f"{cfg.variant}-{result['run_id']}-limit25"
+    assert (smoke / "summary.json").exists() and not list(smoke.glob("fold*.pt"))
+    assert calls == [1, 2]
+    calls.clear()
+    cv_mod.run_cv(cfg, limit=25, track=False)
+    assert calls == [1, 2], "smoke runs must always retrain instead of resuming"
+    assert not expected.exists()
