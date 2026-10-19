@@ -233,15 +233,33 @@ def verify_resumed_fold(directory: pathlib.Path, fold: int, tr_df, va_df, holdou
     if (raw.ndim != 1 or truth.ndim != 1 or raw.shape != expected.shape
             or not np.array_equal(truth, expected) or not np.isfinite(raw).all()):
         raise RuntimeError(f"fold {fold} predictions do not match held-out labels")
+    if "id_code" not in holdout:
+        raise ValueError("held-out cohort needs image IDs for safe fold reuse")
+    with np.load(fold_paths(directory, fold)["preds"], allow_pickle=False) as arrays:
+        if "test_ids" not in arrays:
+            raise RuntimeError(f"fold {fold} lacks saved held-out image IDs; retrain this fold")
+        saved_ids = arrays["test_ids"].astype(str)
+    current_ids = holdout["id_code"].astype(str).to_numpy()
+    if (saved_ids.ndim != 1 or saved_ids.shape != current_ids.shape
+            or len(set(saved_ids)) != len(saved_ids)
+            or not np.array_equal(saved_ids, current_ids)):
+        raise RuntimeError(f"fold {fold} image IDs do not match held-out cohort")
     if len(result.get("thresholds", [])) != 4:
         raise RuntimeError(f"fold {fold} missing fitted thresholds")
     return result, raw, truth
 
 
 def save_fold(directory: pathlib.Path, fold: int, result: dict, state, te_raw, te_true,
-              *, save_weights: bool = True) -> None:
+              *, save_weights: bool = True, te_ids=None) -> None:
     paths = fold_paths(directory, fold)
-    np.savez_compressed(paths["preds"], test_raw=te_raw, test_true=te_true)
+    arrays = {"test_raw": te_raw, "test_true": te_true}
+    if te_ids is not None:
+        ids = np.asarray([str(value) for value in te_ids], dtype=str)
+        if (ids.ndim != 1 or len(ids) != len(te_true)
+                or not all(ids) or len(set(ids)) != len(ids)):
+            raise ValueError("held-out fold image IDs must be nonempty, unique and aligned")
+        arrays["test_ids"] = ids
+    np.savez_compressed(paths["preds"], **arrays)
     paths["metrics"].write_text(json.dumps(result, indent=2, default=float), encoding="utf-8")
     if save_weights:
         torch.save({"state_dict": state, "thresholds": result["thresholds"],
@@ -348,7 +366,7 @@ def run_cv(cfg: Config, *, resume: bool = True, track: bool = True,
             cfg, fold, tr_df, va_df, holdout, device
         )
         save_fold(directory, fold, result, state, te_raw, te_true,
-                  save_weights=limit is None)
+                  save_weights=limit is None, te_ids=holdout["id_code"].tolist())
         print(f"  fold {fold} done: valid QWK={result['valid_qwk']:.4f}  "
               f"test QWK={result['test_qwk']:.4f}\n", flush=True)
 

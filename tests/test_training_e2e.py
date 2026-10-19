@@ -121,6 +121,8 @@ def test_cv_resumes_only_the_missing_fold_and_rebuilds_the_same_ensemble(workspa
     assert all(cv_mod.fold_is_complete(directory, f) for f in (1, 2))
     assert first["folds"] == 2
     fold2_before = np.load(directory / "fold2.npz")["test_raw"]
+    with np.load(directory / "fold2.npz", allow_pickle=False) as arrays:
+        assert len(arrays["test_ids"]) == PER_GRADE["test"] * 5
 
     # Complete sweep: a restart trains nothing and rebuilds from the arrays.
     trained.clear()

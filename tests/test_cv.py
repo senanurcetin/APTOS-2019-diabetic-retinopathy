@@ -100,13 +100,16 @@ def test_saved_fold_round_trips(tmp_path):
     raw = np.array([0.2, 1.8, 3.4])
     true = np.array([0, 2, 3])
 
-    save_fold(tmp_path, 2, result, {"w": torch.zeros(1)}, raw, true)
+    ids = ["a", "b", "c"]
+    save_fold(tmp_path, 2, result, {"w": torch.zeros(1)}, raw, true, te_ids=ids)
     back, raw2, true2 = load_fold(tmp_path, 2)
 
     assert back["valid_qwk"] == pytest.approx(0.91)
     assert np.allclose(raw2, raw)
     assert np.array_equal(true2, true)
     assert fold_paths(tmp_path, 2)["checkpoint"].exists()
+    with np.load(fold_paths(tmp_path, 2)["preds"], allow_pickle=False) as saved:
+        assert saved["test_ids"].tolist() == ids
 
 
 def test_smoke_runs_do_not_leave_weights_behind(tmp_path):
@@ -265,17 +268,52 @@ def test_labels_fingerprint_is_order_insensitive_but_detects_changes():
 def test_resume_checks_checkpoint_and_prediction_alignment(tmp_path):
     from aptos.training.cv import verify_resumed_fold
 
-    labels = pd.DataFrame({"diagnosis": [0, 2, 4]})
+    labels = pd.DataFrame({"id_code": ["eye-a", "eye-b", "eye-c"],
+                           "diagnosis": [0, 2, 4]})
     result = {"fold": 1, "train_n": 2, "valid_n": 1,
               "thresholds": [0.5, 1.5, 2.5, 3.5]}
     save_fold(tmp_path, 1, result, {"w": torch.zeros(1)},
-              np.array([0., 2., 4.]), np.array([0, 2, 4]), save_weights=False)
+              np.array([0., 2., 4.]), np.array([0, 2, 4]),
+              save_weights=False, te_ids=labels["id_code"].tolist())
     assert not fold_is_complete(tmp_path, 1, require_checkpoint=True)
     with pytest.raises(RuntimeError, match="incomplete"):
         verify_resumed_fold(tmp_path, 1, labels.iloc[:2], labels.iloc[2:], labels)
     (tmp_path / "fold1.pt").write_bytes(b"present")
     assert verify_resumed_fold(tmp_path, 1, labels.iloc[:2], labels.iloc[2:], labels)[0]["fold"] == 1
     np.savez(tmp_path / "fold1.npz", test_raw=np.array([0., 2., 4.]),
-             test_true=np.array([0, 2, 3]))
+             test_true=np.array([0, 2, 3]), test_ids=labels["id_code"].to_numpy())
     with pytest.raises(RuntimeError, match="do not match"):
         verify_resumed_fold(tmp_path, 1, labels.iloc[:2], labels.iloc[2:], labels)
+
+
+
+def test_resume_rejects_same_grade_wrong_image_identity(tmp_path):
+    from aptos.training.cv import verify_resumed_fold
+
+    holdout = pd.DataFrame({
+        "id_code": ["eye-a", "eye-b", "eye-c", "eye-d"],
+        "diagnosis": [0, 0, 2, 2],
+    })
+    result = {"fold": 1, "train_n": 2, "valid_n": 2,
+              "thresholds": [0.5, 1.5, 2.5, 3.5]}
+    save_fold(
+        tmp_path, 1, result, {"w": torch.zeros(1)},
+        np.array([0.1, 0.2, 2.1, 2.2]), holdout["diagnosis"].to_numpy(),
+        te_ids=["eye-b", "eye-a", "eye-c", "eye-d"],
+    )
+    with pytest.raises(RuntimeError, match="image IDs"):
+        verify_resumed_fold(
+            tmp_path, 1, holdout.iloc[:2], holdout.iloc[2:], holdout,
+        )
+
+
+def test_resume_rejects_legacy_fold_missing_ids(tmp_path):
+    from aptos.training.cv import verify_resumed_fold
+
+    holdout = pd.DataFrame({"id_code": ["a", "b"], "diagnosis": [0, 2]})
+    result = {"fold": 1, "train_n": 1, "valid_n": 1,
+              "thresholds": [0.5, 1.5, 2.5, 3.5]}
+    save_fold(tmp_path, 1, result, {"w": torch.zeros(1)},
+              np.array([0.1, 2.2]), np.array([0, 2]))
+    with pytest.raises(RuntimeError, match="lacks saved held-out image IDs"):
+        verify_resumed_fold(tmp_path, 1, holdout.iloc[:1], holdout.iloc[1:], holdout)

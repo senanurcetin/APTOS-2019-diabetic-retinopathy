@@ -30,7 +30,8 @@ from aptos.modeling.thresholds import (
 )
 
 
-def load_sweep_predictions(cfg: Config, sweep: str | pathlib.Path) -> pd.DataFrame:
+def load_sweep_predictions(cfg: Config, sweep: str | pathlib.Path,
+                           *, strict_identity: bool = False) -> pd.DataFrame:
     """Join a completed sweep's held-out predictions back onto image identity.
 
     The fold arrays are written in the order the test DataLoader iterated, which
@@ -42,17 +43,55 @@ def load_sweep_predictions(cfg: Config, sweep: str | pathlib.Path) -> pd.DataFra
     df = labels_mod.load_labels(cfg)
     if cfg.train.exclude_leaked:
         df, _ = labels_mod.exclude_leaked(df, cfg)
+    if cfg.cv.stratify_on == "diagnosis+resolution":
+        df = labels_mod.add_resolution_bucket(df, cfg)
     _, holdout = labels_mod.pool_and_holdout(df, cfg)
+
+    if strict_identity:
+        from aptos.training.cv import labels_sha256
+
+        provenance_file = sweep / "provenance.json"
+        if not provenance_file.is_file():
+            raise ValueError("paired APTOS comparison requires a v2 sweep provenance record")
+        provenance = json.loads(provenance_file.read_text(encoding="utf-8"))
+        if (provenance.get("identity_version") != 2
+                or provenance.get("run_kind") != "full"
+                or provenance.get("labels_sha256") != labels_sha256(df)):
+            raise ValueError("APTOS sweep provenance does not match effective labels")
+        summary_file = sweep / "summary.json"
+        if not summary_file.is_file():
+            raise ValueError("APTOS sweep is incomplete: missing summary.json")
+        summary = json.loads(summary_file.read_text(encoding="utf-8"))
+        if summary.get("folds") != cfg.cv.folds:
+            raise ValueError("APTOS sweep has incomplete or mismatched fold count")
 
     fold_files = sorted(sweep.glob("fold*.npz"), key=lambda p: int(p.stem[4:]))
     if not fold_files:
         raise FileNotFoundError(f"no fold predictions under {sweep}")
+    if strict_identity:
+        expected = [f"fold{i}.npz" for i in range(1, cfg.cv.folds + 1)]
+        if [path.name for path in fold_files] != expected:
+            raise ValueError("APTOS sweep must contain every expected fold exactly once")
 
     raws, thresholds = [], []
     truth = None
     for path in fold_files:
-        arrays = np.load(path)
-        raw, true = arrays["test_raw"], arrays["test_true"]
+        with np.load(path, allow_pickle=False) as arrays:
+            raw, true = arrays["test_raw"], arrays["test_true"]
+            test_ids = arrays["test_ids"] if "test_ids" in arrays else None
+        if strict_identity and test_ids is None:
+            raise ValueError(f"{path.name} lacks per-image IDs; cannot safely compare APTOS models")
+        if test_ids is not None:
+            identifiers = np.asarray(test_ids).astype(str)
+            expected_ids = holdout["id_code"].astype(str).to_numpy()
+            if (identifiers.ndim != 1 or identifiers.shape != expected_ids.shape
+                    or len(set(identifiers)) != len(identifiers)
+                    or not np.array_equal(identifiers, expected_ids)):
+                raise RuntimeError(f"{path.name}: held-out image IDs or order disagree")
+        if raw.ndim != 1 or true.ndim != 1 or raw.shape != true.shape:
+            raise RuntimeError(f"{path.name}: raw scores and labels must be aligned vectors")
+        if not np.isfinite(raw).all():
+            raise RuntimeError(f"{path.name}: raw predictions contain non-finite scores")
         if truth is None:
             truth = true
         elif not np.array_equal(truth, true):
