@@ -142,33 +142,51 @@ def dataset(key: str) -> ExternalSet:
 
 
 def build_cache(cfg: Config, *, dataset_key: str = "idrid", force: bool = False) -> pathlib.Path:
-    """Put an external set through the identical preprocessing pipeline.
+    """Regenerate derived external JPEGs whenever provenance or IDs disagree.
 
-    The whole comparison rests on only the images changing, so this uses the
-    same `preprocess()` and the same settings recorded in the APTOS cache's
-    manifest - not a reimplementation that happens to look similar.
+    A mismatched manifest previously triggered a rebuild but skipped existing
+    JPEGs, then certified stale pixels with the *new* settings. That made
+    cross-site model comparisons scientifically invalid.
     """
     ds = dataset(dataset_key)
     labels = ds.load_labels(cfg)
+    if labels.empty or not {"id_code", "diagnosis"}.issubset(labels.columns):
+        raise ValueError("external labels need id_code, diagnosis and at least one row")
+    if labels["id_code"].isna().any():
+        raise ValueError("external image IDs must not be null")
+    ids = labels["id_code"].astype(str).tolist()
+    if (len(ids) != len(set(ids)) or any(
+            not identifier or identifier in (".", "..")
+            or "/" in identifier or "\\" in identifier for identifier in ids)):
+        raise ValueError("external image IDs must be unique and path-safe")
     rows = {row["id_code"]: row for _, row in labels.iterrows()}
     target = cfg.paths.external / f"{ds.prefix}_{cfg.variant}"
-
     settings = cfg.manifest_fields()
+
     if target.exists() and not force:
         try:
             manifest_mod.check(target, settings, count_images=True)
-            return target
+            cached_ids = {path.stem for path in target.glob("*.jpg")}
+            if cached_ids == set(ids):
+                return target
         except (FileNotFoundError, manifest_mod.ManifestMismatch):
-            pass  # rebuild below
+            pass
 
     target.mkdir(parents=True, exist_ok=True)
+    # Invalidate BEFORE touching files. An interrupted rebuild cannot be
+    # mistaken for a complete, verified cache on a later run.
+    manifest_mod.path_for(target).unlink(missing_ok=True)
+    for image_path in target.glob("*.jpg"):
+        image_path.unlink()
+    for temporary in target.glob(".*.tmp.jpg"):
+        temporary.unlink()
+
     print(f"preprocessing {len(labels)} {ds.name} images -> {target.name} "
           f"({manifest_mod.describe({**settings, 'n_images': len(labels)})})")
 
     def one(id_code: str) -> tuple[str, bool]:
-        out_path = target / f"{id_code}.jpg"
-        if out_path.exists() and not force:
-            return id_code, True
+        output = target / f"{id_code}.jpg"
+        temp = target / f".{id_code}.tmp.jpg"
         image, _info = preprocess(
             ds.source(cfg, rows[id_code]),
             size=settings["size"],
@@ -179,19 +197,24 @@ def build_cache(cfg: Config, *, dataset_key: str = "idrid", force: bool = False)
         )
         if image is None:
             return id_code, False
-        cv2.imwrite(str(out_path), image,
-                    [cv2.IMWRITE_JPEG_QUALITY, cfg.preprocess.jpeg_quality])
+        if not cv2.imwrite(
+            str(temp), image, [cv2.IMWRITE_JPEG_QUALITY, cfg.preprocess.jpeg_quality]
+        ):
+            raise OSError(f"could not write processed external image {id_code}")
+        temp.replace(output)
         return id_code, True
 
     failures = []
     with futures.ThreadPoolExecutor(max_workers=cfg.preprocess.workers) as pool:
-        for id_code, ok in pool.map(one, labels["id_code"]):
+        for id_code, ok in pool.map(one, ids):
             if not ok:
                 failures.append(id_code)
 
     if failures:
         print(f"  {len(failures)} image(s) failed the quality gate: {failures[:5]}")
     manifest_mod.write(target, settings, len(labels) - len(failures))
+    # Verify what is on disk rather than only trusting the manifest we wrote.
+    manifest_mod.check(target, settings, count_images=True)
     return target
 
 

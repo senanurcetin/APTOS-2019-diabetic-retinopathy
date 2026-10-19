@@ -106,3 +106,19 @@ contributes results to full-model `models/cv/`.
 
 This fingerprint verifies labels and manifest settings, **not retinal pixel
 bytes**. Data/version provenance remains a separate prerequisite.
+
+
+
+## External preprocessing-cache integrity
+
+The IDRiD/Messidor-2 processed-image cache now verifies both preprocessing
+settings and the exact expected image ID set before it can be reused. If
+either differs, generated JPEGs are invalidated and regenerated **before**
+a new manifest is written. Failed-quality-gate images cannot silently retain
+previous processed files, and interrupted rebuilds leave no valid manifest.
+
+The cache directory contains **derived files only**; source fundus images are
+not deleted. A full rebuild can take time, but reusing old pixels with a new
+manifest could invalidate the comparison. Changing source pixel bytes while
+retaining the same IDs/settings is not yet content-detected; record and audit
+upstream dataset versions/hashes independently.

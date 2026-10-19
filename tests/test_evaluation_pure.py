@@ -327,3 +327,79 @@ def test_finetune_summary_measures_the_moderate_boundary_and_reports_it():
 
     text = format_report({"none": {"Messidor-2 test half": out}})
     assert "| Moderate graded below 2 | 0.333 |" in text
+
+
+
+# ---------------------------------------- external-image cache provenance
+
+
+def _toy_external_cache(tmp_path, monkeypatch):
+    from aptos.evaluation import external
+
+    cfg = _cfg(tmp_path)
+    cfg.preprocess.workers = 1
+    state = {"ids": ["eye-a", "eye-b"], "processed": [], "rejected": set()}
+
+    def toy_labels(cfg):
+        return pd.DataFrame({
+            "id_code": state["ids"],
+            "diagnosis": [0] * len(state["ids"]),
+        })
+
+    toy = external.ExternalSet(
+        name="Synthetic", prefix="synthetic", load_labels=toy_labels,
+        source=lambda cfg, row: cfg.paths.external / f"{row['id_code']}.png",
+    )
+    monkeypatch.setitem(external.DATASETS, "synthetic", toy)
+
+    def fake_preprocess(path, *, size, **kwargs):
+        state["processed"].append((path.stem, size))
+        if path.stem in state["rejected"]:
+            return None, {}
+        return np.full((12, 12, 3), size % 255, dtype=np.uint8), {}
+
+    monkeypatch.setattr(external, "preprocess", fake_preprocess)
+    return cfg, state, external
+
+
+def test_external_cache_rebuilds_pixels_when_manifest_settings_change(tmp_path, monkeypatch):
+    from aptos.data import manifest as manifest_mod
+
+    cfg, state, external = _toy_external_cache(tmp_path, monkeypatch)
+    directory = external.build_cache(cfg, dataset_key="synthetic")
+    assert len(list(directory.glob("*.jpg"))) == 2
+    assert len(state["processed"]) == 2
+    external.build_cache(cfg, dataset_key="synthetic")
+    assert len(state["processed"]) == 2, "valid cache must be reused"
+    cfg.preprocess.size += 16
+    external.build_cache(cfg, dataset_key="synthetic")
+    assert len(state["processed"]) == 4, "both JPEGs must be regenerated"
+    assert manifest_mod.check(directory, cfg.manifest_fields())["n_images"] == 2
+
+
+def test_external_cache_rebuilds_when_same_size_label_table_ids_change(tmp_path, monkeypatch):
+    cfg, state, external = _toy_external_cache(tmp_path, monkeypatch)
+    directory = external.build_cache(cfg, dataset_key="synthetic")
+    state["ids"] = ["eye-a", "eye-c"]
+    external.build_cache(cfg, dataset_key="synthetic")
+    assert {p.stem for p in directory.glob("*.jpg")} == {"eye-a", "eye-c"}
+    assert len(state["processed"]) == 4
+
+
+def test_external_cache_does_not_keep_stale_file_after_rejected_rebuild(tmp_path, monkeypatch):
+    from aptos.data import manifest as manifest_mod
+
+    cfg, state, external = _toy_external_cache(tmp_path, monkeypatch)
+    directory = external.build_cache(cfg, dataset_key="synthetic")
+    state["rejected"] = {"eye-b"}
+    external.build_cache(cfg, dataset_key="synthetic", force=True)
+    assert {p.stem for p in directory.glob("*.jpg")} == {"eye-a"}
+    assert manifest_mod.check(directory, cfg.manifest_fields())["n_images"] == 1
+
+
+def test_external_cache_rejects_duplicate_or_unsafe_image_ids(tmp_path, monkeypatch):
+    cfg, state, external = _toy_external_cache(tmp_path, monkeypatch)
+    for identifiers in (["eye-a", "eye-a"], ["../escape", "eye-b"]):
+        state["ids"] = identifiers
+        with pytest.raises(ValueError, match="path-safe"):
+            external.build_cache(cfg, dataset_key="synthetic")
