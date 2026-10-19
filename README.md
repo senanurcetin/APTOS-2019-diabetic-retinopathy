@@ -1,3 +1,7 @@
+<p align="left"><img src="serving/static/nexus-logo.svg" alt="NEXUS Identity 2.0 — official research identity" width="270"></p>
+
+**NEXUS / OPEN RESEARCH** · Reproducibility · Scientific integrity · No clinical deployment
+
 # APTOS-2019 Diabetic Retinopathy Grading
 
 > **NEXUS Open Research:** Public, non-productized reproducible research. This repository is not a clinical screening product. No customer-facing or commercial workflow is planned. The existing demonstration is strictly educational. [Offline evidence audit, Kaggle protocol and optional read-only BigQuery SQL](docs/open-research-workflow.md).

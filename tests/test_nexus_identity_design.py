@@ -56,3 +56,5 @@ def test_research_demo_loads_the_official_assets():
     assert 'src="/static/nexus-logo.svg"' in page
     assert 'href="/static/nexus-x.svg"' in page
     assert 'href="/static/nexus-theme.css"' in page
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert 'src="serving/static/nexus-logo.svg"' in readme
