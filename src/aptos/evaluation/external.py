@@ -316,24 +316,73 @@ def validate_sweep_contract(cfg: Config, sweep: pathlib.Path) -> None:
         raise ValueError("external research comparison supports reg and ordinal modes only")
 
 
-def load_ensemble(sweep: pathlib.Path) -> tuple[list[dict], np.ndarray]:
-    """Per-fold weights and the APTOS-fitted threshold set.
+def complete_sweep_checkpoints(sweep: pathlib.Path) -> list[pathlib.Path]:
+    """A partial or unrecorded CV sweep is not an external-validation ensemble.
 
-    Thresholds are the mean of the folds', exactly as the cross-validation
-    ensemble computed them. They are carried over untouched.
+    Require complete saved fold metadata and a full-run summary. Filename
+    counting alone is insufficient: a failed training run can leave some
+    checkpoints but never publish the completed CV summary.
     """
-    checkpoints = sorted(sweep.glob("fold*.pt"), key=lambda p: int(p.stem[4:]))
-    if not checkpoints:
-        raise FileNotFoundError(f"no fold checkpoints under {sweep}")
+    summary_path = sweep / "summary.json"
+    if not summary_path.is_file():
+        raise ValueError("CV sweep is incomplete: summary.json is missing")
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    count = summary.get("folds")
+    config_path = sweep / "config.json"
+    if config_path.is_file():
+        settings = json.loads(config_path.read_text(encoding="utf-8"))
+        configured = settings.get("cv.folds")
+        if configured != count:
+            raise ValueError("CV sweep summary fold count differs from training config")
+        if settings.get("train.mode") not in ("reg", "ordinal"):
+            raise ValueError("CV sweep has unknown training mode")
+    if isinstance(count, bool) or not isinstance(count, int) or count < 2:
+        raise ValueError("full external CV requires at least two recorded folds")
+    expected = [sweep / f"fold{i}.pt" for i in range(1, count + 1)]
+    available = set(sweep.glob("fold*.pt"))
+    if available != set(expected):
+        raise ValueError("CV ensemble has missing, extra or misnumbered checkpoints")
+    for i, path in enumerate(expected, start=1):
+        for name in (f"fold{i}.pt", f"fold{i}.npz", f"fold{i}.json"):
+            candidate = sweep / name
+            if not candidate.is_file() or candidate.stat().st_size == 0:
+                raise ValueError(f"CV ensemble has incomplete fold artifacts: {name}")
+    return expected
 
+
+def load_ensemble(sweep: pathlib.Path) -> tuple[list[dict], np.ndarray]:
+    """Load a complete sweep with frozen APTOS thresholds, without pickle code."""
+    checkpoints = complete_sweep_checkpoints(sweep)
     import torch
 
     states, thresholds = [], []
-    for path in checkpoints:
-        blob = torch.load(path, map_location="cpu", weights_only=False)
+    for fold, path in enumerate(checkpoints, start=1):
+        # State dictionaries and primitive metadata are all this project
+        # saves; arbitrary Python objects must not be deserialized.
+        blob = torch.load(path, map_location="cpu", weights_only=True)
+        if not isinstance(blob, dict) or blob.get("fold") != fold:
+            raise ValueError(f"{path.name} has a mismatched fold identity")
+        if not isinstance(blob.get("state_dict"), dict) or not blob["state_dict"]:
+            raise ValueError(f"{path.name} has no model parameters")
+        try:
+            cuts = np.asarray(blob["thresholds"], dtype=float)
+        except (TypeError, ValueError, KeyError) as exc:
+            raise ValueError(f"{path.name} missing saved validation thresholds") from exc
+        if (cuts.shape != (4,) or not np.isfinite(cuts).all()
+                or np.any(np.diff(cuts) <= 0)):
+            raise ValueError(f"{path.name} has invalid validation thresholds")
         states.append(blob["state_dict"])
-        thresholds.append(blob["thresholds"])
-    return states, np.mean(thresholds, axis=0)
+        thresholds.append(cuts)
+    mean_cuts = np.mean(thresholds, axis=0)
+    summary = json.loads((sweep / "summary.json").read_text(encoding="utf-8"))
+    try:
+        expected = np.asarray(summary["ensemble"]["thresholds"], dtype=float)
+    except (KeyError, ValueError, TypeError) as exc:
+        raise ValueError("CV summary lacks ensemble thresholds") from exc
+    if (expected.shape != (4,) or not np.isfinite(expected).all()
+            or not np.allclose(mean_cuts, expected, atol=1e-7, rtol=0)):
+        raise ValueError("CV ensemble thresholds disagree with saved APTOS summary")
+    return states, mean_cuts
 
 
 class FlatDataset:
@@ -488,6 +537,9 @@ def score(cfg: Config, sweep: pathlib.Path, dataset_key: str = "idrid", *,
     provenance sidecars are treated as unverified and must be recomputed.
     """
     validate_sweep_contract(cfg, sweep)
+    # Do not reuse even previously signed CSVs when the originating CV run
+    # lacks complete fold artifacts and an end-of-sweep summary.
+    complete_sweep_checkpoints(sweep)
     ds = dataset(dataset_key)
     out = cfg.paths.external / f"{ds.prefix}_{cfg.variant}_{sweep.name}_scores.csv"
     labels = ds.load_labels(cfg)
@@ -620,6 +672,7 @@ def main(argv=None) -> int:
     cfg.train.size = params.get("train.size", Config.load("configs/cv.yaml").train.size)
     cfg.train.model = params.get("train.model", cfg.train.model)
     cfg.train.mode = params.get("train.mode", "reg")
+    cfg.cv.folds = params.get("cv.folds", cfg.cv.folds)
     for key in ("size", "clahe", "clip_limit", "square_mode", "jpeg_quality"):
         setattr(cfg.preprocess, key, params.get(f"preprocess.{key}",
                                                getattr(cfg.preprocess, key)))

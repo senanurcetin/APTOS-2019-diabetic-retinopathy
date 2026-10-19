@@ -189,3 +189,20 @@ The separate record is intentional: published APTOS processed-image
 manifests retain their historical schema and are not retroactively changed.
 Old external derived caches without this record must be rebuilt with the
 authorized original datasets before further comparisons.
+
+
+
+## External ensemble completeness and checkpoint integrity
+
+External inference now refuses an **incomplete CV run**, including missing
+summary.json, missing/misnumbered fold weights, or incomplete fold metadata
+and prediction artifacts. The recorded fold count must agree with the
+training config; two or more completed folds are required. Loading checks
+each checkpoint's fold identity and four ordered validation thresholds
+against the APTOS ensemble thresholds in the saved summary.
+
+PyTorch checkpoint loading uses `weights_only=True`: a CV checkpoint needs
+only tensor state and primitive metadata, not arbitrary Python deserialization.
+Legacy folders without a completed CV summary cannot be silently treated as
+complete ensembles; reconstruct documented provenance or rerun authorized
+research training. This does not change historical committed benchmark numbers.
