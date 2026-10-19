@@ -165,7 +165,13 @@ def test_external_comparison_cache_checks_checkpoints_pixels_labels_and_csv(tmp_
     from aptos.config import Config, Paths
     from aptos.data import manifest as manifest_mod
     from aptos.evaluation.compare_sweeps import verified_external_comparison_frame
-    from aptos.evaluation.external import _sha256, score_input_signature
+    from aptos.evaluation.external import (
+        _sha256,
+        dataset,
+        external_source_signature,
+        score_input_signature,
+        source_provenance_path,
+    )
 
     cfg = Config.load("configs/cv.yaml")
     cfg.paths = Paths(root=tmp_path)
@@ -181,6 +187,13 @@ def test_external_comparison_cache_checks_checkpoints_pixels_labels_and_csv(tmp_
     for name in labels["id_code"]:
         (cache / f"{name}.jpg").write_bytes(f"processed-{name}".encode())
     manifest_mod.write(cache, cfg.manifest_fields(), n_images=2)
+    original_images = folder / "Imagenes" / "Imagenes"
+    original_images.mkdir(parents=True)
+    for name in labels["id_code"]:
+        (original_images / f"{name}.jpg").write_bytes(f"raw-{name}".encode())
+    source_provenance_path(cache).write_text(
+        json.dumps(external_source_signature(cfg, dataset("idrid"), labels))
+    )
     sweep = tmp_path / "models" / "cv" / "baseline-test"
     sweep.mkdir(parents=True)
     (sweep / "config.json").write_text(json.dumps(cfg.to_dict()))
@@ -217,6 +230,11 @@ def test_external_comparison_cache_checks_checkpoints_pixels_labels_and_csv(tmp_
             sweep, folder, cfg, tampered_labels, "idrid",
         )
 
+    (original_images / "eye-b.jpg").write_bytes(b"new-upstream-retina")
+    with pytest.raises(manifest_mod.ManifestMismatch, match="source provenance"):
+        verified_external_comparison_frame(sweep, folder, cfg, labels, "idrid")
+    (original_images / "eye-b.jpg").write_bytes(b"raw-eye-b")
+
     (sweep / "fold2.pt").unlink()
     with pytest.raises(ValueError, match="every CV checkpoint"):
         verified_external_comparison_frame(sweep, folder, cfg, labels, "idrid")
@@ -229,6 +247,11 @@ def test_external_comparison_rejects_unsigned_historical_csv(tmp_path):
     from aptos.config import Config, Paths
     from aptos.data import manifest as manifest_mod
     from aptos.evaluation.compare_sweeps import verified_external_comparison_frame
+    from aptos.evaluation.external import (
+        dataset,
+        external_source_signature,
+        source_provenance_path,
+    )
 
     cfg = Config.load("configs/cv.yaml")
     cfg.paths = Paths(root=tmp_path)
@@ -239,11 +262,17 @@ def test_external_comparison_rejects_unsigned_historical_csv(tmp_path):
     cache.mkdir()
     (cache / "retina.jpg").write_bytes(b"synthetic-cache")
     manifest_mod.write(cache, cfg.manifest_fields(), n_images=1)
+    originals = folder / "Imagenes" / "Imagenes"
+    originals.mkdir(parents=True)
+    (originals / "retina.jpg").write_bytes(b"real-raw-image")
+    labels = pd.DataFrame({"id_code": ["retina"], "diagnosis": [2]})
+    source_provenance_path(cache).write_text(
+        json.dumps(external_source_signature(cfg, dataset("idrid"), labels))
+    )
     sweep = tmp_path / "baseline-test"
     sweep.mkdir()
     (sweep / "config.json").write_text(json.dumps(cfg.to_dict()))
     (sweep / "fold1.pt").write_bytes(b"synthetic-weights")
-    labels = pd.DataFrame({"id_code": ["retina"], "diagnosis": [2]})
     output = folder / "idrid_baseline_baseline-test_scores.csv"
     pd.DataFrame({"id_code": ["retina"], "diagnosis": [2], "raw": [2.2]}).to_csv(
         output, index=False,

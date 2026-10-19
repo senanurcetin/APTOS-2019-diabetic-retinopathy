@@ -172,3 +172,20 @@ rebuilds images or reruns expensive model inference automatically. Old scores
 with no matching provenance sidecar cannot support a new paired analysis.
 Use the configured `APTOS_ROOT/data/external` directory (the default);
 `--external-dir` must resolve to that same directory.
+
+
+
+## Original external retinal image provenance
+
+Derived IDRiD/Messidor-2 JPEGs additionally carry an
+`_source_provenance.json` record with SHA-256 hashes of **original source
+image bytes**, preprocessing implementation, JPEG encoding quality and
+configuration. Reusing the cache verifies these values. Replacing a raw
+fundus photograph without renaming it now forces a derived-image rebuild.
+Source files are never deleted. The verification reads all original image
+bytes, so expect extra I/O for large external cohorts.
+
+The separate record is intentional: published APTOS processed-image
+manifests retain their historical schema and are not retroactively changed.
+Old external derived caches without this record must be rebuilt with the
+authorized original datasets before further comparisons.

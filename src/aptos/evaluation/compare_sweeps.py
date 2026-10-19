@@ -185,6 +185,7 @@ def verified_external_comparison_frame(
         read_verified_score_cache,
         score_input_signature,
         validate_sweep_contract,
+        verify_external_source_provenance,
     )
 
     validate_sweep_contract(cfg, sweep)
@@ -194,6 +195,10 @@ def verified_external_comparison_frame(
         raise ValueError("paired external comparison requires every CV checkpoint")
     cache = directory / f"{prefix}_{cfg.variant}"
     manifest_mod.check(cache, cfg.manifest_fields(), count_images=True)
+    from aptos.evaluation.external import dataset
+
+    # Do not trust processed JPEGs if the original retinal source has changed.
+    verify_external_source_provenance(cfg, dataset(prefix), labels, cache)
     existing_ids = {path.stem for path in cache.glob("*.jpg")}
     if not {"id_code", "diagnosis"}.issubset(labels.columns):
         raise ValueError("external cohort is missing image IDs or ground-truth grades")
@@ -237,7 +242,7 @@ def _load_frame(sweep: Path, cohort: str, directory: Path, variant: str) -> tupl
     for name in ("mode", "model", "size"):
         setattr(cfg.train, name, original[f"train.{name}"])
     cfg.cv.folds = original["cv.folds"]
-    for name in ("size", "clahe", "clip_limit", "square_mode"):
+    for name in ("size", "clahe", "clip_limit", "square_mode", "jpeg_quality"):
         setattr(cfg.preprocess, name, original[f"preprocess.{name}"])
 
     # The source loader resolves its labels under the configured research root.
