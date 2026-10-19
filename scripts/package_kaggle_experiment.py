@@ -52,7 +52,7 @@ def make_bundle(
     slug = f"aptos-research-{mode}-seed{seed}"
     metadata = {
         "id": f"{owner}/{slug}",
-        "title": f"APTOS research {mode} seed {seed}",
+        "title": f"APTOS research {mode} seed{seed}",
         "code_file": code_file,
         "language": "python",
         "kernel_type": "notebook",
