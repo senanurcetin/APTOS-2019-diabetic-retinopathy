@@ -125,3 +125,47 @@ def test_cli_push_without_run_is_rejected_before_creating_a_bundle(monkeypatch, 
         bundle.main()
     assert exc.value.code == 2
     assert "--push launches a Kaggle run" in capsys.readouterr().err
+
+@pytest.mark.pure
+def test_kaggle_notebook_resolves_nested_attached_dataset(tmp_path):
+    import ast
+
+    notebook = json.loads((REPO / "notebooks" / "ordinal_experiment_matrix.ipynb").read_text())
+    setup = ast.parse("".join(notebook["cells"][1]["source"]))
+    finder = next(
+        node for node in setup.body
+        if isinstance(node, ast.FunctionDef) and node.name == "discover_aptos_input"
+    )
+    namespace = {"Path": Path}
+    exec(compile(ast.Module(body=[finder], type_ignores=[]), "<mount-helper>", "exec"), namespace)
+    discover = namespace["discover_aptos_input"]
+
+    nested = tmp_path / "datasets" / "mariaherrerot" / "aptos2019"
+    nested.mkdir(parents=True)
+    for filename in ("train_1.csv", "valid.csv", "test.csv"):
+        (nested / filename).write_text("id_code,diagnosis\\n", encoding="utf-8")
+    assert discover(tmp_path) == nested
+
+    (nested / "valid.csv").unlink()
+    with pytest.raises(FileNotFoundError, match="Attach mariaherrerot/aptos2019"):
+        discover(tmp_path)
+
+
+@pytest.mark.pure
+def test_kaggle_notebook_rejects_duplicate_dataset_mounts(tmp_path):
+    import ast
+
+    notebook = json.loads((REPO / "notebooks" / "ordinal_experiment_matrix.ipynb").read_text())
+    setup = ast.parse("".join(notebook["cells"][1]["source"]))
+    finder = next(
+        node for node in setup.body
+        if isinstance(node, ast.FunctionDef) and node.name == "discover_aptos_input"
+    )
+    namespace = {"Path": Path}
+    exec(compile(ast.Module(body=[finder], type_ignores=[]), "<mount-helper>", "exec"), namespace)
+    for folder in (tmp_path / "first", tmp_path / "second"):
+        folder.mkdir()
+        for filename in ("train_1.csv", "valid.csv", "test.csv"):
+            (folder / filename).write_text("id_code,diagnosis\\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="Multiple ambiguous"):
+        namespace["discover_aptos_input"](tmp_path)

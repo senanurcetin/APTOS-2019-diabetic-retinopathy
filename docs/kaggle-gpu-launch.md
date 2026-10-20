@@ -87,3 +87,25 @@ installation under `C:\\ProgramData\\SentinelX\\workspace\\aptos-kaggle-cli`.
 This only verifies that the command-line program launches. It does **not**
 configure authentication or establish Kaggle GPU availability. API secrets
 must be configured locally, never committed or echoed into logs.
+
+## Kaggle input mount path mismatch (October 2026)
+
+The first Kaggle MSE/seed42 attempt terminated after approximately 27 seconds
+with `FileNotFoundError` because the old notebook assumed
+`/kaggle/input/aptos2019` exists. A T4 GPU allocation alone does not
+establish that the dataset was attached.
+
+The corrected notebook now searches under `/kaggle/input` for one
+dataset directory containing all three **specific** historical
+`train_1.csv`, `valid.csv` and `test.csv` label files, then runs the
+existing strict preflight over this resolved mount path. No fallback uses
+unrelated images or fabricates missing data. If nothing is found, the
+notebook reports the visible mount directory names and instructs the operator
+to use Kaggle's **Add Input → mariaherrerot/aptos2019**. If multiple matching
+mounts exist, it aborts to prevent ambiguous research provenance.
+
+This correction is not evidence of successful model training; a new kernel
+version must run and report five complete folds before any QWK metric is
+claimed. A Kaggle API credential previously shared in chat may be revoked or
+expired; configure a fresh private token on the authorized computer and
+do not paste it in chat.
