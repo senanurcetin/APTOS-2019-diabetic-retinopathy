@@ -88,6 +88,10 @@ def test_kaggle_bundle_is_private_and_never_embeds_token(tmp_path):
     assert metadata["dataset_sources"] == ["mariaherrerot/aptos2019"]
     assert "RUN_EXPERIMENTS = True" in body
     assert 'MODE = "ordinal"' in body and "SEED = 43" in body
+    import subprocess
+    pinned = subprocess.check_output(["git", "-C", str(REPO), "rev-parse", "HEAD"], text=True).strip()
+    assert f'SOURCE_COMMIT = "{pinned}"' in body
+    assert "git\", \"clone\" , \"--depth" not in body
     assert "KGAT_" not in body and "KAGGLE_API_TOKEN" not in body
     assert all(c["outputs"] == [] and c["execution_count"] is None
                for c in nb["cells"] if c["cell_type"] == "code")

@@ -22,6 +22,11 @@ def make_bundle(
         raise ValueError("owner must be an explicit Kaggle account slug")
     if mode not in ("reg", "ordinal") or isinstance(seed, bool) or seed < 0:
         raise ValueError("mode must be reg/ordinal and seed must be nonnegative")
+    source_commit = subprocess.check_output(
+        ["git", "-C", str(repo), "rev-parse", "HEAD"], text=True
+    ).strip()
+    if not re.fullmatch(r"[0-9a-f]{40}", source_commit):
+        raise ValueError("refusing unpinned Git research source")
     original = repo / "notebooks" / "ordinal_experiment_matrix.ipynb"
     notebook = json.loads(original.read_text(encoding="utf-8"))
     assert notebook.get("nbformat") == 4
@@ -40,10 +45,14 @@ def make_bundle(
         if "SEED = 42" in text:
             text = text.replace("SEED = 42", f"SEED = {seed}")
             changes += 1
+        if "SOURCE_COMMIT = None" in text:
+            text = text.replace("SOURCE_COMMIT = None",
+                                f'SOURCE_COMMIT = "{source_commit}"')
+            changes += 1
         cell["source"] = text.splitlines(keepends=True)
         cell["outputs"], cell["execution_count"] = [], None
-    if changes != 3:
-        raise ValueError("notebook missing run/mode/seed research controls")
+    if changes != 4:
+        raise ValueError("notebook missing run/mode/seed/commit controls")
 
     target = (output_root or repo / "outputs" / "kaggle_research") / f"{mode}-seed{seed}"
     target.mkdir(parents=True, exist_ok=True)
