@@ -32,6 +32,34 @@ through the three experiments.
 
 ---
 
+## Research explorer and evidence status
+
+**[Open the research guide](docs/PORTFOLIO.md)** · [Kaggle publication source](notebooks/kaggle_publication) · [Reproducible notebooks](notebooks/README.md)
+
+The NEXUS research explorer compares both external cohorts, two distinct operating
+points, per-grade recall and recorded model experiments. Run it without data,
+weights or a cloud account:
+
+```bash
+pip install -e ".[dev]"
+python -m aptos.reporting.portfolio --check
+python -m http.server 8080 --directory serving/static
+# http://localhost:8080/research.html
+```
+
+| Frozen baseline evidence | IDRiD | Messidor-2 |
+|---|---:|---:|
+| External images | 455 | 1,744 |
+| Sensitivity, original grade >= 2 | 88.5% | 32.8% |
+| Missed referable eyes, original grades | 35 / 304 | 307 / 457 |
+| Sensitivity, separate APTOS-selected operating point | 81.6% | 26.0% |
+
+**External validity is limited.** The metadata shortcut, repeated test-set
+comparisons and external failure matter more than the best score. Historical
+reports are audited; this update does not claim new training or clinical validity.
+The best recorded ensemble (0.9098) differs from the externally evaluated baseline
+(0.9091). [Methods, model boundaries and zero-cost delivery](docs/PORTFOLIO.md).
+
 ## Five findings
 
 ### A model can score well without looking at the retina
@@ -406,13 +434,13 @@ image that was scored. Fold spread is read against a measured reference - its
 percentile among the 366 APTOS test images - rather than a cut-off picked by
 eye. Every number on the page is injected from `MODEL_CARD`, and a test fails if
 the page names a metric the card does not carry. The page states
-that this is not a medical device, and lists the confound, the label ceiling and
+that this is not a medical device, and lists the confound, the observed label discordance and
 the calibration drift, because a demo that omits them would contradict the
 analysis it exists to demonstrate.
 
-The referable flag is the headline rather than the grade: external validation
-showed the binary decision transfers (ROC AUC 0.984) while the five-way grade
-compresses under distribution shift.
+The referral flag is an experimental output. Ranking transferred to IDRiD
+(ROC AUC 0.984) but degraded on Messidor-2 (0.819); sensitivity at the original
+grade boundary fell to 32.8%. Neither the flag nor the grade is a clinical decision.
 
 ### Deployment
 

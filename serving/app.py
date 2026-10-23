@@ -2,7 +2,7 @@
 
 Deliberately narrow. It loads the fold ensemble, runs the same preprocessing the
 training cache was built with, and returns a grade plus the referral decision -
-which is the part that survived external validation.
+whose external performance varies substantially across the two cohorts.
 
 Three things this service will not do, for reasons the project measured:
 
@@ -81,8 +81,7 @@ MODEL_CARD = {
         "A metadata-only classifier reaches QWK 0.652 on this dataset without "
         "reading the retina, so acquisition correlates with disease prevalence "
         "in the training data.",
-        "Labels carry roughly 29% disagreement between duplicate pairs, putting "
-        "a single label's accuracy near 84%. The model cannot exceed its labels.",
+        "Labels carry roughly 29% disagreement between duplicate pairs, a selected-pairs estimate that does not establish a formal population accuracy ceiling.",
         "Moderate disease without hard exudates is under-graded. Against "
         "Messidor-2's adjudicated labels, 83% of Moderate eyes were graded below "
         "2 and referral ROC AUC fell to 0.819. Read the referral flag as "

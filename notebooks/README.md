@@ -36,3 +36,11 @@ Graphic styling does not constitute training, a valid model result, a
 deployment, a medical device, or productization. The associated official
 source and color specifications are recorded in
 [the identity design audit](../docs/nexus-clinical-research.md).
+
+## Published Kaggle narrative
+
+[kaggle_publication](kaggle_publication) preserves the existing public notebook ID,
+NEXUS SVG attachment, CPU-only metadata and corrected interpretation of the
+external experiments. `kernels push` executes a new version; inspect its status
+before treating a revision as successfully executed. Historical result tables
+come from the v1.0.0 release; the metadata classifier is rerun on attached images.

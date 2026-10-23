@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NEXUS Research | APTOS Retinopathy</title>
-<meta name="description" content="Diabetic retinopathy grading and referral from a fundus photograph: a five-fold EfficientNet-B0 ensemble, externally validated on IDRiD, served with its limitations attached.">
+<meta name="description" content="Diabetic retinopathy grading and referral from a fundus photograph: a research ensemble with sharply different outcomes on IDRiD and Messidor-2. Not clinically validated.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
@@ -273,7 +273,7 @@ footer nav{position:static; background:none; border:0; backdrop-filter:none; dis
 <header>
 <nav><div class="wrap">
   <a class="brand nexus-brand" href="#top" aria-label="NEXUS Research — APTOS Retinopathy"><img src="/static/nexus-logo.svg" alt="NEXUS" width="125" height="38"><span class="brand-product">APTOS <strong>RETINOPATHY</strong></span></a>
-  <div class="navlinks">
+  <div class="navlinks"><a href="/static/research.html">Research explorer</a>
     <a href="#analyze">Analyze</a>
     <a href="#validation">Validation</a>
     <a class="opt" href="#pipeline">Pipeline</a>
@@ -452,8 +452,8 @@ footer nav{position:static; background:none; border:0; backdrop-filter:none; dis
           <p>reached by a classifier that sees only file metadata (resolution, brightness, file size) and never the retina. Camera correlates with disease in APTOS.</p></div>
         <div class="finding"><span class="tag t">Pre-registered test</span><div class="num">Specificity ↑</div>
           <p>A shortcut-dependent model should have over-called disease on IDRiD, where the shortcut is unavailable. The prediction was written down first. It failed: specificity rose.</p></div>
-        <div class="finding"><span class="tag r">Label ceiling</span><div class="num">≈ 84%</div>
-          <p>Duplicate images carry conflicting grades 29% of the time. No model can be more right than its labels.</p></div>
+        <div class="finding"><span class="tag r">Label discordance</span><div class="num">29%</div>
+          <p>Duplicate images carry conflicting grades 29% of the time. Selected duplicate pairs do not establish a formal accuracy ceiling.</p></div>
         <div class="finding"><span class="tag r">Second external set</span><div class="num">AUC 0.819</div>
           <p>On Messidor-2 the prediction written first (AUC ≥ 0.93) failed. Moderate eyes without exudates are scored like Mild: the model learned where APTOS's single graders draw that line.</p></div>
       </div>

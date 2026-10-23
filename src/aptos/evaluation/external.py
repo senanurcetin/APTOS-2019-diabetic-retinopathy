@@ -37,14 +37,10 @@ import pandas as pd
 
 from aptos.config import Config
 from aptos.data import manifest as manifest_mod
-from aptos.evaluation.external_report import metric_string, summarize_external_grades
 from aptos.evaluation.external_label_integrity import validate_external_labels
+from aptos.evaluation.external_report import metric_string, summarize_external_grades
 from aptos.modeling.thresholds import (
     apply_thresholds,
-    clinically_costly_errors,
-    grade_metrics,
-    per_class_recall,
-    referable_confusion,
 )
 from aptos.preprocessing import preprocess
 

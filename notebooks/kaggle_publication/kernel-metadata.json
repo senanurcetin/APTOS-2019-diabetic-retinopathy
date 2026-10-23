@@ -1,0 +1,25 @@
+{
+  "id": "senanuretin/aptos-three-predictions-i-wrote-before-the-data",
+  "id_no": 136010686,
+  "title": "APTOS: Three Predictions I Wrote Before the Data",
+  "code_file": "aptos-three-predictions-i-wrote-before-the-data.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": false,
+  "enable_gpu": false,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "keywords": [
+    "healthcare",
+    "medicine"
+  ],
+  "dataset_sources": [
+    "mariaherrerot/aptos2019"
+  ],
+  "kernel_sources": [],
+  "competition_sources": [
+    "aptos2019-blindness-detection"
+  ],
+  "model_sources": [],
+  "machine_shape": "None"
+}

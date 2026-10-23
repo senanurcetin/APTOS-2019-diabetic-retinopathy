@@ -100,7 +100,7 @@ def stage_dataset(
         "staging": "read-only image-directory symlinks",
     }
     if not dry_run:
-        for csv_src, csv_dst, _, img_dst in planned:
+        for csv_src, csv_dst, _, _img_dst in planned:
             csv_dst.parent.mkdir(parents=True, exist_ok=True)
             if not csv_dst.exists():
                 shutil.copy2(csv_src, csv_dst)

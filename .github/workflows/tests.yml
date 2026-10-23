@@ -45,6 +45,9 @@ jobs:
       - name: Validate committed research evidence (offline)
         run: python -m aptos.reporting.research_evidence --reports-dir reports --format json > /dev/null
 
+      - name: Check static research explorer matches source reports
+        run: python -m aptos.reporting.portfolio --check
+
       - name: Audit stored referral operating points (offline)
         run: python -m aptos.reporting.operating_point_audit --reports-dir reports --format json > /dev/null
 
