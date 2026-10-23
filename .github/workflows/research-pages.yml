@@ -1,0 +1,42 @@
+name: research pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'serving/static/research*'
+      - 'serving/static/nexus-*.svg'
+      - '.github/workflows/research-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: research-pages
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - name: Package the static research explorer only
+        run: |
+          mkdir _site
+          cp serving/static/research.html _site/index.html
+          cp serving/static/research.html serving/static/research.css serving/static/research.js _site/
+          cp serving/static/nexus-logo.svg serving/static/nexus-x.svg _site/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - uses: actions/deploy-pages@v4
+        id: deployment
