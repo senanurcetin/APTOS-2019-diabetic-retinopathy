@@ -44,9 +44,11 @@ on 24 October 2026. [Successful deployment](https://github.com/senanurcetin/APTO
   Windows privilege (WinError 1314); Linux CI passed that contract. No system
   permission was changed to work around it.
 - Kaggle public narrative version 6 was uploaded and its source read back exactly.
-  At this verification point its CPU execution was still RUNNING. Source upload
-  and source parity do not establish successful execution. Earlier version 5
-  reported COMPLETE before the final lint-only publication revision.
+  Its CPU execution subsequently reported COMPLETE. The downloaded execution log
+  confirms the metadata classifier ran and nbconvert produced the executed notebook
+  and HTML output. This execution recomputes the metadata baseline; the imaging
+  model results remain historical release reports. See the
+  [completion record](../reports/kaggle_publication_v6.json).
 - No new imaging-model performance is claimed. The existing separate GPU
   `aptos-research-reg-seed42` reported COMPLETE, but all five fold result artifacts
   were not audited in this delivery.
