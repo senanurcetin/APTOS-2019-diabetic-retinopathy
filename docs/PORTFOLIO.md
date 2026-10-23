@@ -1,5 +1,7 @@
 # NEXUS / APTOS research portfolio
 
+**[Published research explorer](https://senanurcetin.github.io/APTOS-2019-diabetic-retinopathy/)**
+
 ## Review the evidence
 
 The central question is whether a high in-distribution score transfers across
@@ -24,6 +26,32 @@ The existing FastAPI demonstration also serves `/static/research.html`. Static
 hosting can publish the contents of `serving/static` without a custom domain,
 database, server, GPU, account or paid API. Hosting configuration is separate from
 the generated artifact; a local build does not verify a deployed release.
+
+The repository now publishes the explorer through GitHub Pages using
+`.github/workflows/research-pages.yml`. Only the explorer, its CSS/JavaScript
+and official identity assets are uploaded. The inference demonstration and model
+weights are excluded. The public URL returned HTTP 200 with generated evidence
+on 24 October 2026. [Successful deployment](https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy/actions/runs/40027466025).
+
+## Delivery verification — 24 October 2026
+
+- [GitHub validation](https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy/actions/runs/40027233287):
+  Python 3.10/3.11/3.12 pure tests, full CPU tests with coverage and Ruff succeeded.
+- Local focused evidence/identity/operating-point checks: 23 passed.
+- Node VM verification: both cohort selections rendered the expected counts,
+  sensitivities and grade recalls without browser automation.
+- A separate local Kaggle-staging test cannot create directory symlinks without
+  Windows privilege (WinError 1314); Linux CI passed that contract. No system
+  permission was changed to work around it.
+- Kaggle public narrative version 6 was uploaded and its source read back exactly.
+  At this verification point its CPU execution was still RUNNING. Source upload
+  and source parity do not establish successful execution. Earlier version 5
+  reported COMPLETE before the final lint-only publication revision.
+- No new imaging-model performance is claimed. The existing separate GPU
+  `aptos-research-reg-seed42` reported COMPLETE, but all five fold result artifacts
+  were not audited in this delivery.
+- Playwright was excluded from the final verification. Earlier screenshot
+  capture attempts timed out; responsive visual acceptance is not claimed.
 
 ## Architecture and source contracts
 

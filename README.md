@@ -34,6 +34,8 @@ through the three experiments.
 
 ## Research explorer and evidence status
 
+**[Explore the NEXUS research dashboard](https://senanurcetin.github.io/APTOS-2019-diabetic-retinopathy/)** — static, no account, GPU or image upload required.
+
 **[Open the research guide](docs/PORTFOLIO.md)** · [Kaggle publication source](notebooks/kaggle_publication) · [Reproducible notebooks](notebooks/README.md)
 
 The NEXUS research explorer compares both external cohorts, two distinct operating
