@@ -191,7 +191,7 @@ validity, generalization or clinical utility.
 | Patient-level inference | Not established; authentic linkage is missing |
 | Ordinal-vs-MSE superiority | Not tested by the completed scalar-only run |
 | Clinical use | Unsupported; no prospective utility or safety evaluation |
-| Visual acceptance | Browser policy stopped native inspection; no desktop/mobile visual sign-off claimed |
+| Screen-based visual acceptance | Excluded by user instruction; CLI/API/source checks passed, no pixel-rendering claim |
 
 The next scientifically necessary work is data-dependent: authentic patient
 linkage, independent confirmatory data and matching frozen external predictions.
@@ -214,5 +214,9 @@ specific falsifiable question and available free quota.
 - Kaggle narrative version 8 was uploaded and its complete cell source read back
   exactly. Its executable cells are unchanged from completed version 6; the code
   SHA-256 is `e9d2b3d6d8ecb955433d3b62813f57382f2f2ff7f6951ae15f5a506c5fe53dee`.
-  This source-equivalence check does not itself establish completion of the new
-  execution. Check its live status before citing version 8 as executed.
+  Version 8 subsequently reported **COMPLETE**. Its downloaded execution log
+  confirms 3,662 images, metadata QWK **0.641** and HTML conversion.
+  [Final execution record](../reports/research/kaggle_publication_v8.json) includes
+  the code/log hashes and source readback result. No imaging model was retrained.
+- Final checks used CLI/API, source files, Node VM and tests only. No PC-screen
+  access or Playwright was used after the user's exclusion instruction.

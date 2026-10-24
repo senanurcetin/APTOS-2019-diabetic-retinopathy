@@ -109,3 +109,16 @@ separately with hashes. When training limits are reached, reduce the experiment
 matrix or defer runs. Additional infrastructure is not needed to scale the static
 portfolio. Professional value comes from reviewable methods and evidence; direct
 monetization is intentionally excluded by this project's noncommercial scope.
+
+## Scientific closeout — 24 October 2026
+
+[Scientific review](SCIENTIFIC_REVIEW.md) and [GPU prediction audit](../reports/research/kaggle_reg42_audit.json)
+are complete. All five recorded fold predictions/metrics were checked; no new
+checkpoint inference is claimed. The final [Kaggle narrative v8 execution](../reports/research/kaggle_publication_v8.json)
+reported COMPLETE and matched the local source. CI passed 393 tests with 72.37%
+coverage, and the static deployment succeeded. Final verification used CLI/API
+and source checks, with PC-screen access and Playwright excluded by instruction.
+
+Authentic patient/examination linkage and new independent validation data remain
+scientific prerequisites, not incomplete implementation steps. No such data or
+clinical validity has been fabricated.

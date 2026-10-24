@@ -1,17 +1,11 @@
 """Grad-CAM, and a measurement rather than a pretty picture.
 
-The project's central claim is that the model reads the retina and not the
-camera. External validation supports it: discrimination transferred intact to a
-dataset where the acquisition shortcut is structurally unavailable. Grad-CAM was
-meant to test the same claim from the inside - where the model is looking.
-
-It turned out not to be able to. Measured with proper controls - several draws
-of untrained baselines and all five trained folds, compared draw against draw -
-the attention concentration of trained and untrained models is
-indistinguishable (Mann-Whitney p = 0.77), and the five trained folds disagree
-with each other as much as they differ from noise. The instrument is too noisy
-here to answer the question, and the report says so rather than printing the one
-fold whose number told a story.
+The research question is whether predictions depend on retinal structure or
+acquisition proxies. IDRiD rejected exclusive reliance on one tested resolution
+proxy; it did not exclude all camera effects. Grad-CAM concentration was used as
+an exploratory instrument, with several untrained weight draws and five trained
+folds. The reported p-value does not establish equivalence, especially because
+training folds overlap. This experiment does not support lesion localization.
 
 Why measure rather than just draw: a heatmap alone is weak evidence. Overlays are easy to read
 charitably, and every fundus image is a bright disc on a black frame, so an

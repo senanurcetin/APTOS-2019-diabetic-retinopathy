@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "verified_date": "2026-10-24",
+  "kernel": "senanuretin/aptos-three-predictions-i-wrote-before-the-data",
+  "version": 8,
+  "status": "COMPLETE",
+  "source_cell_readback_matches": true,
+  "executable_code_sha256": "e9d2b3d6d8ecb955433d3b62813f57382f2f2ff7f6951ae15f5a506c5fe53dee",
+  "execution_log_sha256": "5df805aac88d10c0ed56c488fcdb6ee272cebb9743a5a5c75cf0de3ac0390f25",
+  "observed_stdout": [
+    "reports loaded from the v1.0.0 release",
+    "3662 labelled images",
+    "17 distinct resolutions",
+    "QWK from file metadata alone, 5-fold CV: 0.641",
+    "QWK from always predicting 'No DR':      0.000",
+    "(the repository reports 0.652 with its own fold split)",
+    "Messidor-2 referable ROC AUC: 0.819",
+    "Sensitivity at the APTOS cut: 0.260"
+  ],
+  "metadata_qwk_logged_rounded": 0.641,
+  "imaging_models_retrained": false,
+  "github_ci": {
+    "run_id": 40083142586,
+    "status": "success",
+    "tests_passed": 393,
+    "coverage_percent": 72.37
+  },
+  "screen_and_playwright_checks": "excluded by user instruction; CLI/API/source checks only"
+}
