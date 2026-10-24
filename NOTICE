@@ -10,3 +10,29 @@ terms:
     https://www.kaggle.com/datasets/mariaherrerot/aptos2019
 
 Download them yourself and accept those terms before running the pipeline.
+
+External evaluation datasets
+----------------------------
+
+The code license does not cover IDRiD, Messidor-2 images, their mirrors or
+third-party grading files. Obtain each source under its applicable terms.
+No rights to image redistribution are granted by this repository.
+
+The official Messidor-2 provider describes research and educational use,
+prohibits redistribution and unauthorized commercial use, and requires
+attribution. See https://www.adcis.net/en/third-party/messidor2/.
+
+Acknowledgment: Kindly provided by the Messidor program partners
+(see https://www.adcis.net/en/third-party/messidor/) and the LaTIM laboratory.
+
+References requested by the provider:
+- Decenciere et al. Feedback on a publicly distributed database: the Messidor
+  database. Image Analysis & Stereology 33(3), 231-234, 2014.
+  https://doi.org/10.5566/ias.1155
+- Abramoff et al. Automated analysis of retinal images for detection of
+  referable diabetic retinopathy. JAMA Ophthalmology 131(3), 351-357, 2013.
+  https://doi.org/10.1001/jamaophthalmol.2013.1743
+
+The adjudicated grades used in this project's mirror are separate third-party
+annotations. They are not ground-truth annotations supplied by ADCIS itself.
+The original distribution's pairing spreadsheet is not included here.

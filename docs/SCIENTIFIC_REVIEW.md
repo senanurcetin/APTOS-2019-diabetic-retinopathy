@@ -100,6 +100,15 @@ patient leakage. The existing uncertainty code accepts genuine patient IDs, but
 the filename proxies must never be passed off as those IDs. Fabricating a mapping
 or relabeling an eye-level interval would create a false result.
 
+The [official Messidor-2 provider](https://www.adcis.net/en/third-party/messidor2/)
+states that the original distribution has 1,748 images in 874 examinations and
+includes an image-pairing spreadsheet. The project's 1,744-image gradable mirror
+must be reconciled to that original pairing table before examination-level
+inference. Examination pairing alone would still not prove longitudinal patient
+identity. Official access currently requires a personal-information form and
+license acceptance; neither was submitted on the researcher's behalf in this
+audit. Existing authorized pairing data can be used locally when available.
+
 ## 3. Internal evaluation and model selection
 
 Strengths include leakage checks, explicit test identifiers, saved predictions,
@@ -190,3 +199,20 @@ These cannot be replaced by additional styling, synthetic identities or another
 score on the reused APTOS test split. Under the zero-budget constraint, retain the
 current model and static explorer; do not launch more GPU experiments without a
 specific falsifiable question and available free quota.
+
+## Verification of this revision
+
+- [Full CI run](https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy/actions/runs/40083142586):
+  **393 tests passed**, coverage **72.37%**; Ruff passed. Python 3.10, 3.11
+  and 3.12 each passed 274 pure tests (5 skipped, 66 deselected).
+- Six new audit tests cover complete input, missing folds, mismatched identifiers,
+  nonfinite scores, a changed ensemble summary and wrong cohort size.
+- [Static publication](https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy/actions/runs/40083142575)
+  succeeded. Live HTML, CSS, JavaScript and official logo matched local sources
+  after normalizing line endings. The cohort rendering check passed without
+  browser automation.
+- Kaggle narrative version 8 was uploaded and its complete cell source read back
+  exactly. Its executable cells are unchanged from completed version 6; the code
+  SHA-256 is `e9d2b3d6d8ecb955433d3b62813f57382f2f2ff7f6951ae15f5a506c5fe53dee`.
+  This source-equivalence check does not itself establish completion of the new
+  execution. Check its live status before citing version 8 as executed.
