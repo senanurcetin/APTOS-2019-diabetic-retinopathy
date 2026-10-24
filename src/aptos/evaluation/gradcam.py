@@ -328,9 +328,8 @@ def main(argv=None) -> int:
     print(controls.to_string(index=False))
     by_weights = dict(zip(controls["weights"], controls["concentration"], strict=True))
 
-    # Draws, not images, are the independent units: every image appears once per
-    # draw, so pooling per-image values would multiply the sample size by the
-    # number of draws and manufacture significance.
+    # Compare draws rather than repeatedly pooling the same images. Folds still
+    # overlap in training data, so this does not guarantee draw independence.
     draws = raw_controls["draw_means"]
     untrained_draws = draws["random"] + draws["imagenet"]
     trained_draws = draws["trained"]
@@ -402,18 +401,20 @@ def main(argv=None) -> int:
         f"photograph). The trained folds average **{by_weights['trained']:.2f}**.",
         "",
         f"Compared draw against draw - {len(trained_draws)} trained folds "
-        f"against {len(untrained_draws)} untrained draws, the draws being the "
-        f"independent units - the Mann-Whitney p is {draw_p:.3f}, and the two "
+        f"against {len(untrained_draws)} untrained draws, using draws as "
+        f"comparison units - the exploratory Mann-Whitney p is {draw_p:.3f}, and the two "
         f"sets {'do not' if separated else 'do'} overlap "
         f"(trained up to {max(trained_draws):.2f}, untrained down to "
         f"{min(untrained_draws):.2f}).",
         "",
     ]
+    lines += ["Training folds overlap; draw independence is not guaranteed. "
+              "A nonsignificant p-value does not establish equivalence."]
     if separated:
         lines += [
-            "**Every trained fold sits below every untrained draw.** Training on "
-            "APTOS moved gradient attention off the retina, and that is a learned "
-            "change rather than an artefact of the method.",
+            "**Every trained fold sits below every untrained draw in this sample.** "
+            "This descriptive separation does not by itself establish a causal "
+            "training effect or rule out attribution-method artifacts.",
             "",
             "That does not overturn the external-validation result, and the two "
             "are not comfortably consistent either. On IDRiD, where every image "

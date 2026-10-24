@@ -32,6 +32,16 @@ boundary.
   control does not.
 - If it comes from the **images**, both improve.
 
+## Methodological correction — 24 October 2026
+
+The historical design below calls filename-derived groups patient groups and
+claims they never split a patient. That guarantee was not established from
+authentic patient linkage. The original text is retained as a historical protocol,
+not endorsed as proof. Dates and consecutive IM-number chains are acquisition
+proxies; no proxy group overlaps partitions, but residual patient overlap is
+unknown. Patient-level confidence intervals must not use these keys as patient IDs.
+See [scientific review](SCIENTIFIC_REVIEW.md).
+
 ## Design, fixed in advance
 
 **Split.** Messidor-2's 1744 gradable images are split into a *tune* half and a

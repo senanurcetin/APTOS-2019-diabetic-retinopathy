@@ -286,7 +286,7 @@ def test_unknown_external_dataset_names_the_known_ones():
 
 # -------------------------------------------------------------- fine-tune split
 
-def test_patient_groups_keep_both_eyes_together():
+def test_filename_proxy_groups_follow_date_and_consecutive_number_rules():
     from aptos.training.finetune import patient_groups
 
     ids = pd.Series(["20051020_43808_0100_PP", "20051020_43832_0100_PP",
@@ -302,7 +302,7 @@ def test_messidor2_split_never_separates_a_group():
     from aptos.training.finetune import make_split
 
     rng = np.random.default_rng(0)
-    # 200 patients: two consecutive numbers each, a gap before the next patient.
+    # Synthetic filename groups; these are not authenticated patient identities.
     ids = [f"IM{3 * i + eye:06d}" for i in range(200) for eye in (0, 1)]
     labels = pd.DataFrame({"id_code": ids, "diagnosis": rng.integers(0, 5, len(ids))})
     split = make_split(labels)

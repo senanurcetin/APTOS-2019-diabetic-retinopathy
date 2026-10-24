@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "checked_date": "2026-10-24",
+  "kernel": "senanuretin/aptos-research-reg-seed42",
+  "source_commit_logged": "fc4aa0a9c54c3719e2fd2d33b4686d666828f62c",
+  "output_pages": 8,
+  "output_files": 3894,
+  "checkpoint_names_present": [
+    "aptos-research/models/cv/baseline-c8232af68337/fold1.pt",
+    "aptos-research/models/cv/baseline-c8232af68337/fold2.pt",
+    "aptos-research/models/cv/baseline-c8232af68337/fold3.pt",
+    "aptos-research/models/cv/baseline-c8232af68337/fold4.pt",
+    "aptos-research/models/cv/baseline-c8232af68337/fold5.pt"
+  ],
+  "checkpoint_contents_verified": false,
+  "execution_log_sha256": "2127d456fde2a46579d12d0d9f90550236d515a0fe58a156c0d84060cc257ca5",
+  "metric_audit": "kaggle_reg42_audit.json",
+  "no_new_training_for_audit": true
+}

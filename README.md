@@ -22,7 +22,7 @@ part — public solutions reach 0.93+. The five findings below are.
 
 **In one read:** [Three predictions written first](docs/WRITEUP.md) — the
 findings as a story, from the metadata shortcut through two pre-registered
-external tests to the experiment that found the cause. Live demo:
+external tests to a controlled experiment on a possible cause. Live demo:
 [aptos-2019-diabetic-retinopathy.onrender.com](https://aptos-2019-diabetic-retinopathy.onrender.com),
 or in the browser with no server at
 [huggingface.co/spaces/senanurcetin/aptos-retinopathy-referral](https://huggingface.co/spaces/senanurcetin/aptos-retinopathy-referral).
@@ -33,6 +33,8 @@ through the three experiments.
 ---
 
 ## Research explorer and evidence status
+
+**[Scientific assessment and new GPU run audit](docs/SCIENTIFIC_REVIEW.md)** — methods, corrected claims and remaining data requirements.
 
 **[Explore the NEXUS research dashboard](https://senanurcetin.github.io/APTOS-2019-diabetic-retinopathy/)** — static, no account, GPU or image upload required.
 
@@ -68,7 +70,7 @@ The best recorded ensemble (0.9098) differs from the externally evaluated baseli
 
 A RandomForest trained **only on file metadata** — resolution, aspect ratio,
 brightness, contrast, file size — reaches **QWK 0.652** under five-fold
-cross-validation. It never sees a pixel of retina.
+cross-validation. It uses global pixel summaries rather than spatial retinal features.
 
 ![Shortcut](reports/figures/07_resolution_confound.png)
 
@@ -162,10 +164,8 @@ The main one failed:
 
 The failure has one address: **83% of Moderate (grade 2) eyes are graded below
 2**, against 21% on IDRiD. Moderate eyes with hard exudates are caught (median
-score 1.02); Moderate eyes without them are scored like Mild (0.46). The model
-reads the retina — IDRiD showed that — but it reads it through its training
-labels, and APTOS's single graders put the Mild/Moderate line higher than an
-adjudicating panel does. And recalibrating at one new site does not fix the
+score 1.02); Moderate eyes without them are scored like Mild (0.46). The pattern supports a grading-standard hypothesis; IDRiD alone does not
+exclude every camera or acquisition confound. And recalibrating at one new site does not fix the
 next: a threshold fitted on Messidor-2 takes IDRiD specificity from 1.00 to
 0.13.
 
@@ -365,7 +365,7 @@ kaggle datasets download mariaherrerot/messidor2preprocess -p data/external/mess
 python -m aptos.evaluation.external --sweep models/cv/baseline-<id> --dataset messidor2
 python -m aptos.evaluation.calibration --sweep models/cv/baseline-<id>
 
-# the fine-tuning experiment: patient-grouped split, then both arms
+# the fine-tuning experiment: filename-proxy-grouped split, then both arms
 python -m aptos.training.finetune split
 python -m aptos.training.finetune run
 ```

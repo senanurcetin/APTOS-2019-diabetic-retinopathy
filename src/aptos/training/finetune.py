@@ -15,7 +15,7 @@ Two arms are fine-tuned on the same Messidor-2 images:
 If the gain is the labels, only the adjudicated arm improves. If it is the
 camera, both do.
 
-    python -m aptos.training.finetune split       # write the patient-grouped split
+    python -m aptos.training.finetune split       # write the filename-proxy-grouped split
     python -m aptos.training.finetune run         # both arms, then the report
 """
 from __future__ import annotations
@@ -43,13 +43,12 @@ SPLIT_FILE = "messidor2_split.csv"
 # ------------------------------------------------------------------------ split
 
 def patient_groups(id_codes: pd.Series) -> pd.Series:
-    """A group key that never separates a patient's two eyes.
+    """Historical filename-derived grouping proxy, not verified patient linkage.
 
-    Original Messidor images start with the exam date, and both eyes of a
-    patient are photographed on the same day, so the date is the group. The
-    later Brest images number a patient's two eyes consecutively, so every
-    chain of consecutive IM numbers is one group. Both are coarser than a
-    patient - a group can hold several - which costs balance, never leakage.
+    Dates and consecutive IM-number chains approximate acquisition groups.
+    Without authentic patient IDs, these rules cannot prove that both eyes of
+    every patient remain together. Keep the historical algorithm for result
+    reproducibility; never reuse its keys as patient IDs for inference.
     """
     keys = pd.Series(index=id_codes.index, dtype=object)
     im = id_codes.str.extract(r"^IM(\d+)")[0]
@@ -67,7 +66,7 @@ def patient_groups(id_codes: pd.Series) -> pd.Series:
 
 
 def make_split(labels: pd.DataFrame, seed: int = 0) -> pd.DataFrame:
-    """Assign every image to test, tune-train or tune-valid, by patient group."""
+    """Assign every image to test, tune-train or tune-valid, by filename-proxy group."""
     from sklearn.model_selection import StratifiedGroupKFold
 
     df = labels[["id_code", "diagnosis"]].copy().reset_index(drop=True)

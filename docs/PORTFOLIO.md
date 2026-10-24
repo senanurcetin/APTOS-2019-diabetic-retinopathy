@@ -50,10 +50,12 @@ on 24 October 2026. [Successful deployment](https://github.com/senanurcetin/APTO
   model results remain historical release reports. See the
   [completion record](../reports/kaggle_publication_v6.json).
 - No new imaging-model performance is claimed. The existing separate GPU
-  `aptos-research-reg-seed42` reported COMPLETE, but all five fold result artifacts
-  were not audited in this delivery.
-- Playwright was excluded from the final verification. Earlier screenshot
-  capture attempts timed out; responsive visual acceptance is not claimed.
+  `aptos-research-reg-seed42` reported COMPLETE, and all five recorded test-prediction/metric artifacts were subsequently audited.
+  See [scientific assessment](SCIENTIFIC_REVIEW.md) and the aggregate audit.
+  Checkpoint inference was not rerun.
+- Playwright was excluded. Native Windows inspection was subsequently stopped
+  because the tool could not confidently determine the current browser URL.
+  No desktop/mobile visual sign-off is claimed; the block was not bypassed.
 
 ## Architecture and source contracts
 

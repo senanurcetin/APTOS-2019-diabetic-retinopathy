@@ -1,0 +1,179 @@
+{
+  "schema_version": 1,
+  "status": "PASS_RECORDED_PREDICTION_AUDIT",
+  "sweep": "baseline-c8232af68337",
+  "n_test_images": 366,
+  "folds": 5,
+  "config": {
+    "variant": "baseline",
+    "preprocess.size": 512,
+    "preprocess.clahe": false,
+    "preprocess.clip_limit": null,
+    "preprocess.square_mode": "pad",
+    "preprocess.crop_tol": 7,
+    "preprocess.jpeg_quality": 95,
+    "preprocess.workers": 8,
+    "quality.hard_dark": 8.0,
+    "quality.hard_bright": 250.0,
+    "quality.mad_k": 3.5,
+    "quality.dup_min_corr": 0.995,
+    "quality.dup_max_mae": 3.0,
+    "quality.thumb_size": 128,
+    "augment.resized_crop_scale": [
+      0.85,
+      1.0
+    ],
+    "augment.hflip_p": 0.5,
+    "augment.vflip_p": 0.5,
+    "augment.rotation_degrees": 20,
+    "augment.color_jitter_brightness": 0.15,
+    "augment.color_jitter_contrast": 0.15,
+    "thresholds.start": [
+      0.5,
+      1.5,
+      2.5,
+      3.5
+    ],
+    "thresholds.rounds": 60,
+    "thresholds.deltas": [
+      -0.12,
+      -0.04,
+      0.04,
+      0.12
+    ],
+    "thresholds.min_gap": 0.05,
+    "train.model": "efficientnet_b0",
+    "train.mode": "reg",
+    "train.size": 384,
+    "train.batch": 16,
+    "train.grad_accum": 1,
+    "train.epochs": 15,
+    "train.lr": 0.0003,
+    "train.weight_decay": 0.0001,
+    "train.patience": 5,
+    "train.min_delta": 0.0,
+    "train.seed": 42,
+    "train.workers": 2,
+    "train.persistent_workers": true,
+    "train.amp": true,
+    "train.exclude_leaked": true,
+    "cv.folds": 5,
+    "cv.stratify_on": "diagnosis",
+    "cv.pool_splits": [
+      "train",
+      "valid"
+    ],
+    "confound.meta_cols": [
+      "width",
+      "height",
+      "aspect_ratio",
+      "megapixels",
+      "brightness",
+      "contrast_std",
+      "file_kb"
+    ],
+    "confound.n_estimators": 200,
+    "confound.cv_folds": 5,
+    "confound.random_state": 0,
+    "confound.confounded_resolution": [
+      1050,
+      1050
+    ]
+  },
+  "recomputed_ensemble": {
+    "qwk": 0.9007633587786259,
+    "accuracy": 0.8087431693989071,
+    "macro_f1": 0.5510719131614654,
+    "recall_grade_0": 0.9899497487437185,
+    "recall_grade_1": 0.13333333333333333,
+    "recall_grade_2": 0.8850574712643678,
+    "recall_grade_3": 0.5294117647058824,
+    "recall_grade_4": 0.2727272727272727,
+    "referable_tp": 132,
+    "referable_fp": 21,
+    "referable_tn": 208,
+    "referable_fn": 5,
+    "referable_sensitivity": 0.9635036496350365,
+    "referable_specificity": 0.9082969432314411,
+    "referable_precision": 0.8627450980392157,
+    "referable_referral_rate": 0.4180327868852459,
+    "severe_total": 50,
+    "severe_missed": 1,
+    "gain_over_fold_mean": 0.01324659068398526
+  },
+  "folds_checked": [
+    {
+      "fold": 1,
+      "best_epoch": 14,
+      "epochs_run": 15,
+      "test_qwk": 0.8804836480266248
+    },
+    {
+      "fold": 2,
+      "best_epoch": 12,
+      "epochs_run": 15,
+      "test_qwk": 0.8773552865740175
+    },
+    {
+      "fold": 3,
+      "best_epoch": 10,
+      "epochs_run": 15,
+      "test_qwk": 0.8955465368694973
+    },
+    {
+      "fold": 4,
+      "best_epoch": 15,
+      "epochs_run": 15,
+      "test_qwk": 0.881155875367966
+    },
+    {
+      "fold": 5,
+      "best_epoch": 14,
+      "epochs_run": 15,
+      "test_qwk": 0.9030424936350977
+    }
+  ],
+  "inputs_sha256": {
+    "summary.json": "6ed7a25b9c4cc906a0726607b270fef207135a6e0a3f79f3e410d2b9ea7f9c2a",
+    "config.json": "aaeddef52fef35b0a87a5154da4619830c2ebbf5bba23416e5af667e61b33853",
+    "fold1.json": "e06b3f04c2fac6f3ac20c54ddc132d9f391937bb3e69284598dc8100822d8551",
+    "fold1.npz": "9674142e40d5c4a1abf1d9503ed6aaabc11e62a940abd1e9cfffc44158013baa",
+    "fold2.json": "a9a0337e8408c0604da0563d61adc64b68a2d5ccecc3e43017e29c378f05b59a",
+    "fold2.npz": "4a52766d29e777134764b475065e82ba06ecbfd4e42a10c967b0edf0a5c59053",
+    "fold3.json": "672c0f71a1c1184a805e3ffc3ada75633b03fdec04dff24e77a980f5a4d5a744",
+    "fold3.npz": "9d6a1304919c7c8a47bf124c6bd46cf4370dbea698b1446da5b1d40d3993fa20",
+    "fold4.json": "c7a752ace23e4019e101551ca95ed151209b0fc47efe479cbde7eb19a2a6acc2",
+    "fold4.npz": "4cff0ec1dbbb1b7c4a2a14266aafa29bd149f3280e3a5dad0760d8fd1723909b",
+    "fold5.json": "1cd3bc7dd83f55658b6e323059c05fd3f90638a4a938a52be125d8b95a910f05",
+    "fold5.npz": "8ad62469a36751588f4324ffdd8953a75898f641714657240e8bc80c2a69f098",
+    "provenance.json": "d8f5a8ef1e3cb25321bf5fb5f1e8f20a9e4a89c284af736872cf70a1d1b6176f"
+  },
+  "recorded_provenance": {
+    "cache_settings": {
+      "clahe": false,
+      "clip_limit": null,
+      "size": 512,
+      "square_mode": "pad"
+    },
+    "identity_version": 2,
+    "labels_sha256": "a47726c2b75177b8f15f349d74df04ec61f48748ba55c766dd2b2e50f16c5a03",
+    "run_id": "c8232af68337",
+    "run_kind": "full"
+  },
+  "wilson95_independent_eye_assumption": {
+    "sensitivity": [
+      0.9174099773313313,
+      0.9843122411041312
+    ],
+    "specificity": [
+      0.8638826863642437,
+      0.9392384053994274
+    ]
+  },
+  "limitations": [
+    "Recomputes recorded predictions; does not rerun checkpoint inference or training.",
+    "Checkpoint contents, source image hashes and patient identities are not audited here.",
+    "Shared test images do not constitute five independent evaluation cohorts.",
+    "No external evaluation or ordinal-model comparison is established for this sweep."
+  ]
+}

@@ -20,7 +20,7 @@ and camera correlates with disease. 92.5% of the 1050x1050 images are graded
 healthy, against 33.6% at every other resolution. Resizing does not remove the
 signal; aspect ratio and sharpness survive it.
 
-So a score of 0.9 has a floor of 0.65 that requires no medicine at all. That
+The metadata score is an alternative baseline, not a mathematical floor. That
 reframed every later question from "how high is the score?" to "how much of it
 is the retina?"
 
@@ -61,7 +61,7 @@ It did the opposite. With no fine-tuning and APTOS thresholds unchanged:
 | referable specificity | 0.917 | **0.987** |
 
 Specificity went *up*. On the one dataset built to expose a shortcut, the model
-ranked patients exactly as well as at home. It reads the retina.
+ranked patients exactly as well as at home. This rejects exclusive reliance on the tested resolution proxy, not every acquisition confound.
 
 What did move was calibration: scores shifted down, so a cut chosen for 90%
 sensitivity on APTOS gave 82% on IDRiD. The model was not confused about who
@@ -115,8 +115,8 @@ labelled data, site by site.
 ## 6. The cause, tested
 
 "It was the labels" was a reading made after seeing the data, so it got its own
-pre-registered experiment. Half of Messidor-2 - split by patient, so no one's
-two eyes landed on both sides - was used to fine-tune the five fold models on
+pre-registered experiment. Half of Messidor-2 - split using filename-derived proxy groups, without
+authenticated patient linkage - was used to fine-tune the five fold models on
 the panel's grades.
 
 The obvious objection is that fine-tuning also shows the model Messidor-2's
@@ -141,14 +141,13 @@ needs every training image graded to the same standard.
 
 ## What this adds up to
 
-- **The shortcut was real, and the model does not depend on it.** The IDRiD
-  test was designed to catch exactly that and found the opposite.
-- **The model inherits its labels.** It reads the retina the way APTOS's single
-  graders did, and an adjudicated reference standard exposes the difference at
-  the one boundary that decides referral. Re-labelled training data moves that
-  boundary; the same images with the old labels do not.
-- **The ceiling on this project is label quality, not architecture.** The next
-  step is not a bigger network; it is training on better grades.
+- **A predictive metadata shortcut exists.** IDRiD rejects exclusive reliance
+  on the tested resolution proxy; it does not settle every acquisition confound.
+- **The label intervention matters in this experimental setting.** The adjudicated
+  arm improved on Messidor-2 while the same-image model-label control did not.
+  Patient linkage remains unverified, so stronger causal conclusions are limited.
+- **No architecture-independent accuracy ceiling is established.** Better reference
+  labels are a reasonable next experiment, not proof that architecture is irrelevant.
 
 Three pre-registered experiments: one prediction falsified in the model's
 favour, one against it, and a third that confirmed the explanation for the

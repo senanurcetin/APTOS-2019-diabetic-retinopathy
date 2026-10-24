@@ -3,14 +3,12 @@
 A model scoring well does not mean it scores well for the right reason. This
 script answers two questions:
 
-1. SHORTCUT: how well can a model do without looking at the retina? A
-   classifier trained only on file metadata (resolution, aspect ratio,
-   brightness, file size) sets a floor. If that floor is high, part of the real
-   model's score may come from the capture device rather than from pathology.
+1. SHORTCUT: measure prediction from low-level file/image summaries. A high
+   score reveals an alternative predictive signal, not a mathematical floor
+   on an image model or proof of a particular causal mechanism.
 
-2. LABEL NOISE: where the same image appears twice with different labels, the
-   disagreement rate bounds inter-rater agreement from below and therefore
-   caps how well any model can do.
+2. LABEL NOISE: report disagreement in selected duplicate-image pairs.
+   These pairs do not identify population accuracy or inter-rater reliability.
 
 Output: reports/confounds_and_noise.md
 
@@ -38,7 +36,7 @@ META_COLS = ["width", "height", "aspect_ratio", "megapixels",
 
 
 def shortcut_baseline(m):
-    """Classifier trained on metadata only - the shortcut floor."""
+    """Classifier trained on metadata only - a shortcut baseline."""
     X, y = m[META_COLS].values, m.diagnosis.values
     clf = RandomForestClassifier(n_estimators=200, random_state=0, n_jobs=-1)
     pred = cross_val_predict(clf, X, y, cv=5, n_jobs=-1)
@@ -93,9 +91,10 @@ def build(m, sc, ln):
     # ---------------------------------------------------------- shortcut
     md.append("\n## 1. The metadata shortcut\n\n")
     md.append("A RandomForest trained only on file properties - resolution, "
-              "aspect ratio, brightness, contrast, file size. **It never looks "
-              "at the retina.** Five-fold cross-validation.\n\n")
-    md.append("| measure | metadata floor | always-predict-0 |\n|---|---|---|\n")
+              "aspect ratio, brightness, contrast, file size. It does not explicitly "
+              "model retinal structure; brightness and contrast are pixel summaries. "
+              "Five-fold cross-validation.\n\n")
+    md.append("| measure | metadata baseline | always-predict-0 |\n|---|---|---|\n")
     md.append(f"| Accuracy | {sc['accuracy']:.4f} | {sc['all_zero_acc']:.4f} |\n")
     md.append(f"| QWK | **{sc['qwk']:.4f}** | 0.0000 |\n")
 
@@ -124,7 +123,7 @@ def build(m, sc, ln):
               "geometry still carry that information.\n\n")
     md.append(f"This does not invalidate the results, but it does mean **QWK "
               f"{sc['qwk']:.3f} is reachable without any diagnosis at all**. "
-              "Reported scores should be read alongside this floor.\n")
+              "This baseline is not a lower bound on the image model score.\n")
 
     # ------------------------------------------------------ class properties
     md.append("\n## 2. Image properties by class\n\n")
@@ -169,8 +168,8 @@ def build(m, sc, ln):
         md.append("No duplicate pairs found; no estimate possible.\n")
     else:
         md.append("Where the same image appears more than once in the dataset, "
-                  "its labels should match. The cases where they do not give a "
-                  "lower bound on inter-rater agreement.\n\n")
+                  "its labels should match. Discordance here describes selected pairs, "
+                  "not a formal population-level reliability estimate.\n\n")
         md.append("| measure | value |\n|---|---|\n")
         md.append(f"| Verified duplicate groups | {ln['groups']} |\n")
         md.append(f"| Same-image pairs | {ln['pairs']} |\n")
@@ -178,7 +177,7 @@ def build(m, sc, ln):
                   f"({ln['rate'] * 100:.1f}%) |\n")
         md.append(f"| Mean disagreement size | {ln['mean_gap']:.2f} grades |\n")
         md.append(f"| Agreement rate | {ln['agree'] * 100:.1f}% |\n")
-        md.append(f"| Estimated single-label accuracy | "
+        md.append(f"| Historical agreement heuristic (not an accuracy ceiling) | "
                   f"{ln['single_label_acc'] * 100:.1f}% |\n")
         if ln["gap_dist"]:
             dist = ", ".join(f"{k} grade(s): {v}" for k, v in ln["gap_dist"].items())
@@ -189,15 +188,11 @@ def build(m, sc, ln):
         # model sits near 0.82 on test", which was a claim this stage could not
         # know and which went stale when the model changed. The comparison lives
         # in RESULTS.md, next to the model numbers.
-        md.append(f"A single label is correct roughly "
-                  f"**{ln['single_label_acc'] * 100:.0f}%** of the time. That caps "
-                  "the accuracy any model, however good, can reach on this "
-                  "dataset: a model near that figure is close to the ceiling, "
-                  "and part of its remaining error belongs to the labels rather "
-                  "than to the model. RESULTS.md reads the trained models "
-                  "against this number.\n\n")
-        md.append("This is a **lower bound**: it only measures noise visible in "
-                  "duplicated images, not in the rest of the dataset.\n")
+        md.append(f"The historical square-root agreement heuristic is "
+                  f"**{ln['single_label_acc'] * 100:.1f}%**. This does not estimate "
+                  "the correctness of a label without strong unverified assumptions. "
+                  "The selected duplicate pairs do not establish an accuracy ceiling, "
+                  "a lower bound on population label noise, or inter-rater reliability.\n")
 
     md.append("\n---\n\nGenerated by `python scripts/confound_analysis.py`\n")
     return "".join(md)

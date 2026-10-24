@@ -30,9 +30,12 @@ A concentration below 1.00 would be meaningless if the measurement were biased -
 
 Untrained baselines average 0.90 (random) and 1.09 (ImageNet, never shown a fundus photograph). The trained folds average **0.94**.
 
-Compared draw against draw - 5 trained folds against 10 untrained draws, the draws being the independent units - the Mann-Whitney p is 0.768, and the two sets do overlap (trained up to 1.11, untrained down to 0.71).
+Compared draw against draw - 5 trained folds against 10 untrained draws, using draws rather than repeated image rows as comparison units - the Mann-Whitney p is 0.768, and the two sets do overlap (trained up to 1.11, untrained down to 0.71).
 
-**This measurement cannot say where the model looks.** The trained folds average 0.94, which sits inside the range untrained models with a random output head produce (0.71-1.39). The trained folds also disagree with each other by as much (0.72-1.11): five models trained identically, on overlapping data, give attention concentrations that differ more than any effect training could be credited with.
+The trained folds share training data and need not be independent. The p-value
+is exploratory and does not establish equivalence.
+
+**This measurement does not support a lesion-localization claim.** The trained folds average 0.94, which sits inside the range untrained models with a random output head produce (0.71-1.39). The trained folds also disagree with each other by as much (0.72-1.11): five models trained identically, on overlapping data, give attention concentrations that differ more than any effect training could be credited with.
 
 That is a result about the instrument, not about the model. With a single regression output and weights that were never trained on the task, the randomly initialised head alone sets the gradient direction, so Grad-CAM on an untrained baseline is close to noise - and a baseline made of noise cannot anchor a comparison.
 

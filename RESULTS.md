@@ -17,15 +17,15 @@ thresholds tuned on validation.
 |---|---|
 | Best test QWK | **0.9098** — 5-fold squash ensemble |
 | Baseline, 5-fold CV | 0.8902 ± 0.0086 per fold; ensemble **0.9091** |
-| Metadata-only floor | **QWK 0.652** — without looking at the retina |
-| Estimated label ceiling | **~84%** single-label accuracy |
+| Metadata-only baseline | **QWK 0.652** — low-level file/image summaries |
+| Duplicate-label discordance | **43 / 148 pairs (29.1%)**; no population accuracy ceiling established |
 | Preprocessing ideas tested | **2 of 2 came back null** |
 | External validation (IDRiD) | **QWK 0.8045**, referable specificity **0.987** |
 | Second external set (Messidor-2, adjudicated labels) | referable AUC **0.819**; pre-registered prediction **failed** |
 | Fine-tuned on adjudicated labels (Messidor-2 test half) | AUC 0.830 -> **0.925**; a same-image control gains nothing |
 
 The score is not the interesting part of this project. Public APTOS solutions
-reach 0.93+. What follows — the shortcut floor, the label ceiling, and two
+reach 0.93+. What follows — the metadata baseline, the duplicate-label discordance, and two
 preprocessing techniques that did not survive measurement — is.
 
 The largest effect found anywhere in this project is not a preprocessing
@@ -349,8 +349,8 @@ refitted:
 
 1.6% of healthy eyes were called referable; 82.9% were graded healthy outright.
 Specificity is *higher* on IDRiD than on APTOS. The prediction was falsified in
-the direction that favours the model, and it is the strongest evidence here that
-the model reads the retina rather than the camera.
+the direction that favours the model. This rejects exclusive reliance on the
+tested resolution proxy, but does not eliminate other acquisition confounds.
 
 Transfer is not free, and the damage has a shape: the model issues 8 grade-4
 predictions where 64 exist, with per-class recall 0.829 / 0.364 / 0.705 / 0.417
@@ -464,8 +464,8 @@ The labels reading above was made after seeing the data. It was then tested,
 with the design and five predictions committed first
 (`docs/finetune-prediction.md`, commit `238587b`).
 
-Messidor-2 was split in half by patient group - a patient's two eyes never
-separated - and each of the five deployed fold models was fine-tuned on the tune
+Messidor-2 was split using filename-derived proxy groups. Group separation
+is verifiable; patient separation is not established without authentic linkage. and each of the five deployed fold models was fine-tuned on the tune
 half for 8 epochs. The confound is that fine-tuning changes the labels *and*
 the camera. So a control arm was fine-tuned on the same images with the
 unchanged ensemble's own grades as labels: Messidor-2's cameras, APTOS's
@@ -631,7 +631,7 @@ none. Generated report: `reports/attention.md`.
 
 ---
 
-## The label ceiling
+## Duplicate-label disagreement
 
 The dataset contains the same image more than once. Where it does, the labels
 should agree.
@@ -642,13 +642,14 @@ should agree.
 | Same-image pairs | 148 |
 | Pairs with conflicting labels | **43 (29.1%)** |
 | Agreement rate | 70.9% |
-| Estimated single-label accuracy | **~84%** |
+| Historical agreement heuristic (not an accuracy ceiling) | **~84%** |
 
 Disagreement sizes: 33 pairs differ by one grade, 9 by two, 1 by three.
 
-The five-fold baseline ensemble's test accuracy is 0.8033 — near that ceiling. Part of the remaining
-error belongs to the labels, not the model. This is a **lower bound**: it only
-measures noise visible in duplicated images.
+The baseline ensemble's test accuracy is 0.8033. The approximate 84% heuristic
+is not a valid population ceiling against which to judge that accuracy. These
+selected duplicate pairs do not identify how much of the model error is due to
+label noise across the full population. [Scientific assessment](docs/SCIENTIFIC_REVIEW.md).
 
 ---
 

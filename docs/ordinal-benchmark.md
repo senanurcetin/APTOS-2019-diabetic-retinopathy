@@ -13,9 +13,10 @@ attach your authorized APTOS, IDRiD and adjudicated Messidor-2 datasets as
 read-only inputs and build the matching preprocessed cache. Do not add retina
 photographs or credentials to this public repository.
 
-This ChatGPT session has **no Kaggle execution connector** and **no BigQuery
-access**. Commands below are **run instructions, not completed experiments**.
-Do not record benchmark metrics until GPU inference/training has actually run.
+The authorized Kaggle CLI is available. The scalar MSE seed-42 run completed
+and its recorded test predictions were audited; see [scientific review](SCIENTIFIC_REVIEW.md).
+The ordinal comparison, additional seeds and matching external evaluations are
+still protocols, not completed experiments. BigQuery is not required.
 
 ## Fixed paired-training protocol
 

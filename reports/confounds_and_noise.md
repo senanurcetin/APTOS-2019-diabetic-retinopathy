@@ -4,9 +4,9 @@ Two analyses asking whether the model earns its score for the right reason, and 
 
 ## 1. The metadata shortcut
 
-A RandomForest trained only on file properties - resolution, aspect ratio, brightness, contrast, file size. **It never looks at the retina.** Five-fold cross-validation.
+A RandomForest trained only on file properties - resolution, aspect ratio, brightness, contrast, file size. It does not explicitly model retinal structure; brightness and contrast are pixel summaries. Five-fold cross-validation.
 
-| measure | metadata floor | always-predict-0 |
+| measure | metadata baseline | always-predict-0 |
 |---|---|---|
 | Accuracy | 0.7081 | 0.4929 |
 | QWK | **0.6519** | 0.0000 |
@@ -35,7 +35,7 @@ Where it comes from: **92.5%** of the 1050x1050 images (the most common resoluti
 
 APTOS data was collected across several sites in India with different cameras. Resolution is the device's signature, and device correlates strongly with disease prevalence. Even though the model sees resized images, aspect ratio, sharpness and edge geometry still carry that information.
 
-This does not invalidate the results, but it does mean **QWK 0.652 is reachable without any diagnosis at all**. Reported scores should be read alongside this floor.
+This does not invalidate the results, but it does mean **QWK 0.652 is reachable without any diagnosis at all**. Reported scores should be read alongside this baseline; it is not a lower bound on the image model score.
 
 ## 2. Image properties by class
 
@@ -68,15 +68,16 @@ Where the same image appears more than once in the dataset, its labels should ma
 | Pairs with conflicting labels | 43 (29.1%) |
 | Mean disagreement size | 1.26 grades |
 | Agreement rate | 70.9% |
-| Estimated single-label accuracy | 84.2% |
+| Historical agreement heuristic (not an accuracy ceiling) | 84.2% |
 
 Disagreement sizes: 1 grade(s): 33, 2 grade(s): 9, 3 grade(s): 1.
 
 ### What this means
 
-A single label is correct roughly **84%** of the time. That caps the accuracy any model, however good, can reach on this dataset: a model near that figure is close to the ceiling, and part of its remaining error belongs to the labels rather than to the model. RESULTS.md reads the trained models against this number.
-
-This is a **lower bound**: it only measures noise visible in duplicated images, not in the rest of the dataset.
+The historical square-root agreement heuristic is **84.2%**. Without
+strong unverified assumptions it does not estimate label correctness. These
+selected pairs do not establish a population accuracy ceiling, a lower bound
+on population label noise, or inter-rater reliability.
 
 ---
 

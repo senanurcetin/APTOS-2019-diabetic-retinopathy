@@ -16,6 +16,13 @@ Can a retinal-image classifier generalize beyond dataset shortcuts, label noise 
 | Is there out-of-domain evidence? | IDRiD **QWK 0.8045**, Messidor-2 **QWK 0.4928**. At the original grade-2 boundary, referral sensitivity fell from **88.5% to 32.8%**. [Fixed-threshold evidence](PORTFOLIO.md#interpretation-boundaries) |
 | Can a reviewer examine the model? | [Serving model card](../serving/MODEL_CARD.md), [full README](../README.md), [source tests](../tests/) |
 
+## Scientific review
+
+[Methodological assessment](SCIENTIFIC_REVIEW.md) records a completed five-fold
+saved-prediction audit (new-run QWK 0.900763), the correction from patient groups
+to filename proxies, and remaining limits on causal and patient-level inference.
+The new run does not replace the historical model or its external evidence.
+
 ## Engineering choices
 
 - Cross-validation, threshold search and explicit label-noise analysis.
