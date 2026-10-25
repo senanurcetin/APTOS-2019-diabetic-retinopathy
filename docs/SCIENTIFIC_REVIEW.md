@@ -228,7 +228,7 @@ specific falsifiable question and available free quota.
 
 ## 25 October acquisition revision: verification
 
-- [Linux CI](https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy/actions/runs/40216093267)
+- [Linux CI](https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy/actions/runs/40216299248)
   passed **401 tests**. Python 3.10/3.11/3.12 each passed 282 pure tests;
   Ruff passed. The local Windows run passed 281 pure tests but one existing
   symlink staging test lacked OS privileges; that same test passed on Linux.
@@ -239,7 +239,8 @@ specific falsifiable question and available free quota.
 - [Pages deployment](https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy/actions/runs/40216092250)
   succeeded; live HTML/CSS/JS/logo matched source. Node VM cohort rendering passed.
 - Kaggle narrative v9 was submitted and its full cell source read back exactly.
-  Executable cells are identical to completed v8. Its new run completion must
-  be checked separately; source readback is not execution proof. The latest
+  Executable cells are identical to completed v8. Version 9 subsequently reported
+  **COMPLETE**; its downloaded log confirms 3,662 images, metadata QWK **0.641**
+  and HTML conversion without recorded exceptions. The
   [v9 verification record](../reports/research/kaggle_publication_v9.json)
-  distinguishes those states. No imaging model was retrained.
+  contains source/code/log fingerprints. No imaging model was retrained.

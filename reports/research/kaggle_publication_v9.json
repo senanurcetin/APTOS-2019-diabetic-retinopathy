@@ -6,5 +6,31 @@
   "executable_code_unchanged_from_completed_v8": true,
   "executable_code_sha256": "e9d2b3d6d8ecb955433d3b62813f57382f2f2ff7f6951ae15f5a506c5fe53dee",
   "changes": "Scientific correction: retrieved pairing transcription reveals seven cross-partition examinations, including six test/development overlaps. No new model result.",
-  "execution_status": "submitted; completion not yet verified"
+  "execution_status": "COMPLETE",
+  "execution_log_sha256": "2f594a0c426afa2f8c306be8e2959b79ac404a8523da5e942fce1490ed029590",
+  "metadata_qwk_logged_rounded": 0.641,
+  "observed_stdout": [
+    "reports loaded from the v1.0.0 release",
+    "3662 labelled images",
+    "17 distinct resolutions",
+    "QWK from file metadata alone, 5-fold CV: 0.641",
+    "QWK from always predicting 'No DR':      0.000",
+    "(the repository reports 0.652 with its own fold split)",
+    "Messidor-2 referable ROC AUC: 0.819",
+    "Sensitivity at the APTOS cut: 0.260"
+  ],
+  "imaging_models_retrained": false,
+  "github_ci": {
+    "run_id": 40216299248,
+    "source_commit": "aaad55bd80b85d7a351eb89f0ded8c7ad8b32640",
+    "status": "success",
+    "tests_passed": 401,
+    "pure_tests_each_python_version": 282,
+    "python_versions": [
+      "3.10",
+      "3.11",
+      "3.12"
+    ]
+  },
+  "live_pages_verification": "HTTP 200 and normalized source parity for HTML/CSS/JS/official logo; Node VM cohort logic passed. No PC-screen access or Playwright."
 }
