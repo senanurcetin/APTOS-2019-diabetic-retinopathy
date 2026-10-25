@@ -101,3 +101,14 @@ substituting patient IDs for examination IDs. The report labels its unit explici
 and exports aggregate differences only. No interval was computed for v2 because
 the new arms have not been trained; synthetic tests verify the software contract
 and are not reported as scientific results.
+
+## Verification completed — 26 October 2026
+
+[CI for source commit 02a0608](https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy/actions/runs/40218008457)
+passed **418 tests**, coverage **73.69%**, and Ruff. Python 3.10/3.11/3.12 each
+passed 299 pure tests. Real-cohort checks reconfirmed all labels and IDs,
+zero follow-up cross-partition examinations, unchanged historical CSV bytes,
+and matching split/source-code hashes. The
+[verification record](../reports/research/messidor2_examination_v2_verification.json)
+pins the CI source, downloaded log and aggregate plan. This verifies software
+and allocation; no new model was trained and no new performance was measured.

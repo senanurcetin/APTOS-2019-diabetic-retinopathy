@@ -261,3 +261,14 @@ validation and 24 in test. Examination bootstrap is now an explicit software
 option, distinct from patient bootstrap, but no v2 interval or new AUC has been
 computed. Actual matched model outputs are still required. The historical
 Kaggle narrative and all historical performance values retain their prior scope.
+
+## Verification completed — 26 October 2026
+
+[CI for source commit 02a0608](https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy/actions/runs/40218008457)
+passed **418 tests**, coverage **73.69%**, and Ruff. Python 3.10/3.11/3.12 each
+passed 299 pure tests. Real-cohort checks reconfirmed all labels and IDs,
+zero follow-up cross-partition examinations, unchanged historical CSV bytes,
+and matching split/source-code hashes. The
+[verification record](../reports/research/messidor2_examination_v2_verification.json)
+pins the CI source, downloaded log and aggregate plan. This verifies software
+and allocation; no new model was trained and no new performance was measured.

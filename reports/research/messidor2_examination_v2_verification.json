@@ -1,0 +1,30 @@
+{
+  "verified_date": "2026-10-26",
+  "source_commit": "02a0608cbc83cfe279519106413c06dbf8b281d4",
+  "github_ci": {
+    "url": "https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy/actions/runs/40218008457",
+    "conclusion": "success",
+    "tests_passed": 418,
+    "coverage_percent": 73.69,
+    "pure_tests_each_python_version": 299,
+    "python_versions": [
+      "3.10",
+      "3.11",
+      "3.12"
+    ],
+    "ruff": "success",
+    "downloaded_log_sha256": "03ae98cb5c99fab0a9d4c9abdc170c03f32c2427eebe1e27e937085f0addc8a0"
+  },
+  "plan_sha256": "c1e39631a58ca610c5830cf70e2a19bdd42b231b4fb805f5ec31a37d5c166f1b",
+  "real_cohort_validation": {
+    "labels_and_ids_match": true,
+    "historical_cross_partition_examinations": 7,
+    "followup_cross_partition_examinations": 0,
+    "historical_csv_preserved": true,
+    "followup_csv_and_code_hashes_match_plan": true,
+    "new_test_eyes_previously_in_development": 426
+  },
+  "new_model_training": "not performed",
+  "new_model_performance": "not measured",
+  "screen_or_playwright_used": false
+}
