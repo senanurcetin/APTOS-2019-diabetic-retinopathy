@@ -15,8 +15,8 @@ Two arms are fine-tuned on the same Messidor-2 images:
 If the gain is the labels, only the adjudicated arm improves. If it is the
 camera, both do.
 
-    python -m aptos.training.finetune split       # write the filename-proxy-grouped split
-    python -m aptos.training.finetune run         # both arms, then the report
+    python -m aptos.training.finetune split --legacy-replay  # archival proxy split only
+    python -m aptos.training.finetune run --legacy-replay    # historical experiment only
 """
 from __future__ import annotations
 
@@ -90,7 +90,7 @@ def make_split(labels: pd.DataFrame, seed: int = 0) -> pd.DataFrame:
 def load_split(cfg: Config) -> pd.DataFrame:
     path = cfg.paths.reports / SPLIT_FILE
     if not path.exists():
-        raise FileNotFoundError(f"{path} not found - run `python -m aptos.training.finetune split`")
+        raise FileNotFoundError(f"{path} not found - run `python -m aptos.training.finetune split --legacy-replay`")
     return pd.read_csv(path)
 
 
@@ -265,7 +265,16 @@ def main(argv=None) -> int:
 
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("command", choices=["split", "run"])
+    parser.add_argument("--legacy-replay", action="store_true",
+                        help="explicitly replay the historical split with known examination overlap")
     args = parser.parse_args(argv)
+    if not args.legacy_replay:
+        parser.error(
+            "This archival workflow uses filename proxies with known examination overlap. "
+            "Prepare the follow-up with `python -m aptos.evaluation.examination_split --help`. "
+            "--legacy-replay is only for reproducing the historical exploratory experiment; "
+            "it is not a corrected evaluation."
+        )
 
     cfg = Config.load("configs/baseline.yaml")
     base = Config.load("configs/cv.yaml")

@@ -50,6 +50,44 @@ def test_identical_models_have_zero_width_interval():
 
 
 @pytest.mark.pure
+def test_examination_cluster_uses_pairs_without_claiming_patient_identity():
+    y, a, b, ids = _cohort()
+    result = paired_bootstrap(y, a, b, unit="examination", examination_ids=ids,
+                              n_resamples=200, seed=8)
+    same_clusters = paired_bootstrap(y, a, b, unit="patient", patient_ids=ids,
+                                     n_resamples=200, seed=8)
+    assert result["analysis_unit"] == "examination"
+    assert result["n_units"] == 10
+    assert result["metrics"] == same_clusters["metrics"]
+    with pytest.raises(ValueError, match="substituted"):
+        paired_bootstrap(y, a, b, unit="examination", patient_ids=ids)
+    with pytest.raises(ValueError, match="examination unit requires"):
+        paired_bootstrap(y, a, b, unit="examination")
+    with pytest.raises(ValueError, match="explicitly choose"):
+        paired_bootstrap(y, a, b, unit="eye", examination_ids=ids)
+
+
+@pytest.mark.pure
+def test_examination_cli_reads_explicit_exam_column(tmp_path):
+    from aptos.evaluation.paired_uncertainty import main
+
+    y, a, b, ids = _cohort()
+    path, output = tmp_path / "scores.csv", tmp_path / "aggregate.json"
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["id_code", "diagnosis", "baseline_grade", "candidate_grade", "exam_id"])
+        writer.writerows((f"eye-{i}", y[i], a[i], b[i], ids[i]) for i in range(len(y)))
+    assert read_paired_csv(path, unit="examination")[-1] == ids
+    assert main(["--predictions", str(path), "--unit", "examination", "--draws", "200",
+                 "--output", str(output)]) == 0
+    result = json.loads(output.read_text())
+    assert result["analysis_unit"] == "examination"
+    assert "eye-0" not in output.read_text()
+    with pytest.raises(ValueError, match="patient_id"):
+        read_paired_csv(path, unit="patient")
+
+
+@pytest.mark.pure
 def test_swapping_models_negates_point_estimates():
     y, a, b, p = _cohort()
     forward = paired_bootstrap(y, a, b, unit="patient", patient_ids=p, n_resamples=300)

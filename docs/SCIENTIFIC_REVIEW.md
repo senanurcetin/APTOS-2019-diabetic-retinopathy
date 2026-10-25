@@ -244,3 +244,20 @@ specific falsifiable question and available free quota.
   and HTML conversion without recorded exceptions. The
   [v9 verification record](../reports/research/kaggle_publication_v9.json)
   contains source/code/log fingerprints. No imaging model was retrained.
+
+## Examination-disjoint follow-up preparation
+
+The [v2 follow-up split](MESSIDOR2_FOLLOWUP.md) is now prepared with 698 training,
+174 validation and 872 test eyes, representing 350/87/437 examinations. Under
+the supplied pairing transcription, **no examination spans partitions**.
+The old split was preserved byte-for-byte. The allocation, seed, software
+versions, source/code hashes and class counts are recorded in the
+[aggregate plan](../reports/research/messidor2_examination_v2_plan.json).
+
+This is a methodological repair, not a completed model experiment. In particular,
+339 new test eyes were in historical training and 87 in historical validation;
+old fine-tuned checkpoints must not be reused. Grade-4 support is only two in
+validation and 24 in test. Examination bootstrap is now an explicit software
+option, distinct from patient bootstrap, but no v2 interval or new AUC has been
+computed. Actual matched model outputs are still required. The historical
+Kaggle narrative and all historical performance values retain their prior scope.

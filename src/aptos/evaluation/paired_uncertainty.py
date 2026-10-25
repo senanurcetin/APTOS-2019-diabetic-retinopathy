@@ -1,7 +1,7 @@
 """Paired, uncertainty-aware research comparisons on the SAME retinal images.
 
-A percentile cluster bootstrap resamples patients (all eyes together) when a
-real patient linkage key exists. An eye-level bootstrap is explicit opt-in.
+A percentile cluster bootstrap resamples supplied examinations or patients
+(all eyes together). An eye-level bootstrap is explicit opt-in.
 Only binary referable metrics are compared. No site recalibration, model
 training, clinical claim, or synthetic per-eye reconstruction is performed.
 """
@@ -46,6 +46,7 @@ def paired_bootstrap(
     *,
     unit: str,
     patient_ids=None,
+    examination_ids=None,
     n_resamples: int = 2000,
     seed: int = 42,
     confidence: float = 0.95,
@@ -53,8 +54,8 @@ def paired_bootstrap(
     """Percentile intervals for candidate-minus-baseline *paired* metrics.
 
     Both models must have predictions for the exact same eyes in the same
-    order. Patient resampling requires patient IDs; it must never be inferred
-    from eye IDs. No clustering is possible from aggregate reports.
+    order. Patient or examination resampling requires supplied linkage keys;
+    neither is inferred from eye IDs. Aggregate reports cannot support clustering.
     """
     truth = _grades(diagnosis, "diagnosis")
     baseline = _grades(baseline_grade, "baseline_grade")
@@ -65,8 +66,8 @@ def paired_bootstrap(
     positives = int((truth >= 2).sum())
     if positives == 0 or positives == n:
         raise ValueError("both referable and non-referable eyes are required")
-    if unit not in ("eye", "patient"):
-        raise ValueError("unit must be explicitly 'eye' or 'patient'")
+    if unit not in ("eye", "patient", "examination"):
+        raise ValueError("unit must be explicitly 'eye', 'patient' or 'examination'")
     if not isinstance(n_resamples, int) or n_resamples < 100:
         raise ValueError("at least 100 bootstrap draws are required")
     if not isinstance(seed, int) or not isinstance(confidence, (int, float)):
@@ -74,17 +75,24 @@ def paired_bootstrap(
     if not np.isfinite(confidence) or not 0 < confidence < 1:
         raise ValueError("confidence must lie strictly between 0 and 1")
 
-    if unit == "patient":
-        if patient_ids is None or len(patient_ids) != n:
-            raise ValueError("patient unit requires one real patient ID per eye")
-        names = np.asarray(patient_ids, dtype=str)
-        if any(not name.strip() or name.lower() in ("nan", "none") for name in names):
-            raise ValueError("patient IDs cannot be empty")
+    if unit in ("patient", "examination"):
+        identifiers = patient_ids if unit == "patient" else examination_ids
+        other = examination_ids if unit == "patient" else patient_ids
+        if other is not None:
+            raise ValueError("patient and examination IDs must not be substituted for each other")
+        if identifiers is None or len(identifiers) != n:
+            raise ValueError(f"{unit} unit requires one real {unit} ID per eye")
+        names = np.asarray(identifiers, dtype=str)
+        if names.ndim != 1 or any(
+            not name.strip() or name != name.strip() or name.lower() in ("nan", "none", "<na>")
+            for name in names
+        ):
+            raise ValueError(f"{unit} IDs cannot be empty, padded or multidimensional")
         _, inverse = np.unique(names, return_inverse=True)
         clusters = [np.flatnonzero(inverse == k) for k in range(int(inverse.max()) + 1)]
     else:
-        if patient_ids is not None:
-            raise ValueError("patient IDs supplied: explicitly choose unit='patient'")
+        if patient_ids is not None or examination_ids is not None:
+            raise ValueError("cluster IDs supplied: explicitly choose unit='patient' or 'examination'")
         clusters = [np.array([i]) for i in range(n)]
     if len(clusters) < 2:
         raise ValueError("at least two independent resampling units are required")
@@ -136,6 +144,7 @@ def paired_bootstrap(
         "limitations": [
             "Percentile bootstrap describes the sampled cohort; it is not a clinical safety bound.",
             "Patient-level resampling only accounts for correlation within known patient IDs.",
+            "Examination resampling does not establish longitudinal patient independence.",
             "Eye-level sampling assumes independent eyes and may understate uncertainty.",
             "Fixed model predictions only: hyperparameter selection on this test set is invalid.",
         ],
@@ -145,14 +154,16 @@ def paired_bootstrap(
 def read_paired_csv(path: Path, *, unit: str) -> tuple[list[int], list[int], list[int], list[str] | None]:
     """Read aligned grade predictions without retaining identifying rows in output."""
     required = {"id_code", "diagnosis", "baseline_grade", "candidate_grade"}
-    if unit not in ("eye", "patient"):
-        raise ValueError("choose resampling unit eye or patient")
+    if unit not in ("eye", "patient", "examination"):
+        raise ValueError("choose resampling unit eye, patient or examination")
     with path.open(encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
         if not reader.fieldnames or not required.issubset(reader.fieldnames):
             raise ValueError("CSV needs id_code, diagnosis, baseline_grade, candidate_grade")
         if unit == "patient" and "patient_id" not in reader.fieldnames:
             raise ValueError("patient-level analysis needs a real patient_id column")
+        if unit == "examination" and "exam_id" not in reader.fieldnames:
+            raise ValueError("examination-level analysis needs a supplied exam_id column")
         rows = list(reader)
     if not rows:
         raise ValueError("empty prediction CSV")
@@ -165,23 +176,26 @@ def read_paired_csv(path: Path, *, unit: str) -> tuple[list[int], list[int], lis
         if any(value not in ("0", "1", "2", "3", "4") for value in values):
             raise ValueError(f"{key} must contain integer grades 0–4")
         columns.append([int(value) for value in values])
-    patients = [row["patient_id"].strip() for row in rows] if unit == "patient" else None
-    return *columns, patients
+    key = {"patient": "patient_id", "examination": "exam_id"}.get(unit)
+    clusters = [row[key].strip() for row in rows] if key else None
+    return *columns, clusters
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--predictions", required=True, type=Path,
                         help="CSV with aligned image IDs, diagnoses and two prediction columns")
-    parser.add_argument("--unit", choices=("eye", "patient"), required=True,
-                        help="choose eye-level iid or real patient-cluster bootstrap")
+    parser.add_argument("--unit", choices=("eye", "patient", "examination"), required=True,
+                        help="choose eye-level iid or supplied patient/examination clusters")
     parser.add_argument("--draws", type=int, default=2000)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--output", type=Path, help="optional aggregate-only JSON output")
     args = parser.parse_args(argv)
-    truth, baseline, candidate, patients = read_paired_csv(args.predictions, unit=args.unit)
+    truth, baseline, candidate, clusters = read_paired_csv(args.predictions, unit=args.unit)
     result = paired_bootstrap(truth, baseline, candidate, unit=args.unit,
-                              patient_ids=patients, n_resamples=args.draws, seed=args.seed)
+                              patient_ids=clusters if args.unit == "patient" else None,
+                              examination_ids=clusters if args.unit == "examination" else None,
+                              n_resamples=args.draws, seed=args.seed)
     result["source_sha256"] = hashlib.sha256(args.predictions.read_bytes()).hexdigest()
     payload = json.dumps(result, indent=2, sort_keys=True) + "\n"
     if args.output:

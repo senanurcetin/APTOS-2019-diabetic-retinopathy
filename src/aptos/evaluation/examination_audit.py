@@ -13,24 +13,34 @@ from pathlib import Path
 import pandas as pd
 
 
-def audit_examinations(pairs: pd.DataFrame, split: pd.DataFrame) -> dict:
-    """Require a complete one-to-one image mapping; count cross-partition exams."""
+def examination_mapping(pairs: pd.DataFrame) -> dict[str, str]:
+    """Validate supplied bilateral pairs; stable keys do not imply patient identity."""
     pairs = pairs.copy()
     pairs.columns = pairs.columns.str.strip()
-    if set(pairs.columns) != {"left", "right"} or pairs.empty:
+    if list(sorted(pairs.columns)) != ["left", "right"] or pairs.empty:
         raise ValueError("pairs must have exactly left/right columns and nonempty rows")
     if pairs.isna().any().any():
         raise ValueError("pair members must not be missing")
     mapping = {}
-    for exam, row in enumerate(pairs.itertuples(index=False, name=None)):
+    for row in pairs.itertuples(index=False, name=None):
+        members = []
         for value in row:
             name = str(value).strip()
-            if not name or "/" in name or "\\" in name:
+            if (not name or "/" in name or "\\" in name or "\x00" in name
+                    or name in (".", "..")):
                 raise ValueError("pair members must be nonempty filenames, not paths")
             ident = Path(name).stem
-            if not ident or ident in mapping:
+            if not ident or ident in mapping or ident in members:
                 raise ValueError("each image must occur exactly once in pairing table")
-            mapping[ident] = exam
+            members.append(ident)
+        key = "exam:" + hashlib.sha256("\0".join(sorted(members)).encode()).hexdigest()
+        mapping.update(dict.fromkeys(members, key))
+    return mapping
+
+
+def audit_examinations(pairs: pd.DataFrame, split: pd.DataFrame) -> dict:
+    """Require a complete one-to-one image mapping; count cross-partition exams."""
+    mapping = examination_mapping(pairs)
     if not {"id_code", "part"} <= set(split.columns) or split.empty:
         raise ValueError("split needs nonempty id_code/part columns")
     split = split.copy()

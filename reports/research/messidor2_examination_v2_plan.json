@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "experiment": "messidor2-examination-followup-v2",
+  "seed": 42,
+  "algorithm": "first SGKF(2) split, then first SGKF(5) development split",
+  "stratification_target": "eye-level diagnosis >= 2, grouped by supplied examination",
+  "audit": {
+    "unit": "examination; not authenticated longitudinal patient identity",
+    "pair_table_examinations": 874,
+    "pair_table_images": 1748,
+    "split_images": 1744,
+    "covered_split_images": 1744,
+    "represented_examinations": 874,
+    "complete_pairs": 870,
+    "single_gradable_eye_examinations": 4,
+    "partition_images": {
+      "test": 872,
+      "tune-train": 698,
+      "tune-valid": 174
+    },
+    "cross_partition_examinations": 0,
+    "partition_combinations": {
+      "test": 437,
+      "tune-train": 350,
+      "tune-valid": 87
+    },
+    "test_development_overlap_examinations": 0,
+    "test_images_with_development_partner": 0,
+    "examination_disjoint": true,
+    "interpretation": "No examination crosses partitions in the supplied mapping; this does not establish longitudinal patient independence or clinical validity."
+  },
+  "partition_summary": {
+    "test": {
+      "eyes": 872,
+      "examinations": 437,
+      "referable_eyes": 228,
+      "grade_counts": {
+        "0": 509,
+        "1": 135,
+        "2": 162,
+        "3": 42,
+        "4": 24
+      }
+    },
+    "tune-train": {
+      "eyes": 698,
+      "examinations": 350,
+      "referable_eyes": 184,
+      "grade_counts": {
+        "0": 409,
+        "1": 105,
+        "2": 146,
+        "3": 29,
+        "4": 9
+      }
+    },
+    "tune-valid": {
+      "eyes": 174,
+      "examinations": 87,
+      "referable_eyes": 45,
+      "grade_counts": {
+        "0": 99,
+        "1": 30,
+        "2": 39,
+        "3": 4,
+        "4": 2
+      }
+    }
+  },
+  "split_csv_sha256": "0d24bc8fa53792235eaac89df30629ff7b279e64b10d17a868fa533e16f32c54",
+  "model_training_status": "not started; split preparation only",
+  "interpretation": "Examination-disjoint under supplied third-party transcription. Original ADCIS parity and longitudinal patient identity remain unverified. This reuses an already inspected cohort and is not independent confirmatory data. Historical AUC values must not be assigned to this new split.",
+  "inputs_sha256": {
+    "pairs": "d52696ff9e289feb9cf08a7f1ccc5e9a8f63bb5d6a305cc55f5b873fa06d22d3",
+    "labels": "bb8bbd82eb4bfddc8a0eb9aa45d84274d814e913534f8027f6a4ff0a310fda72",
+    "historical_split": "4f19ae001072814341a19e774a76a3719b2bdac8a97b191bebefbe39dda1f04e"
+  },
+  "historical_comparison": {
+    "partition_transitions": {
+      "test": {
+        "test": 446,
+        "tune-train": 346,
+        "tune-valid": 80
+      },
+      "tune-train": {
+        "test": 339,
+        "tune-train": 283,
+        "tune-valid": 76
+      },
+      "tune-valid": {
+        "test": 87,
+        "tune-train": 69,
+        "tune-valid": 18
+      }
+    },
+    "new_test_eyes_previously_in_training": 339,
+    "new_test_eyes_previously_in_validation": 87,
+    "old_finetuned_checkpoint_reuse_allowed": false,
+    "interpretation": "Restart both arms from the frozen APTOS-only base checkpoints. Historical fine-tuned checkpoints have development exposure to new test eyes."
+  },
+  "code_sha256": {
+    "examination_split.py": "bf528d6f24c6a435f8af1fd186c1c687e757330e877df944b6cf84af707c36af",
+    "examination_audit.py": "9b3bf2cfdda0f2b8e509e669cce4887674403ef06a51d450185df2946318f93d"
+  },
+  "software": {
+    "pandas": "2.2.3",
+    "scikit_learn": "1.8.0"
+  }
+}

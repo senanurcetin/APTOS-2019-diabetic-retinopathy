@@ -82,3 +82,7 @@ release has no binary assets. Thus no matched per-eye fine-tuning uncertainty
 estimate is claimed. These
 downloaded images cannot recreate absent fine-tuned weights. No scores or patient
 IDs were fabricated, and no new GPU experiment was launched to conceal this gap.
+
+A separate [examination-disjoint follow-up allocation](MESSIDOR2_FOLLOWUP.md)
+has now been prepared. It does not replace this historical audit or imply
+new fine-tuning results.

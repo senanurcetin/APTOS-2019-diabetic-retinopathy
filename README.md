@@ -189,7 +189,9 @@ partitions; six have one eye in test and the other in development** (five in
 training, one in validation). The historical AUC 0.925 is exploratory and is
 not an examination-independent confirmatory result. Original ADCIS spreadsheet
 parity and longitudinal patient identity remain unverified. See the
-[reproducible audit](docs/MESSIDOR2_ACQUISITION.md).
+[reproducible audit](docs/MESSIDOR2_ACQUISITION.md). A separate
+[examination-disjoint follow-up split](docs/MESSIDOR2_FOLLOWUP.md) now has zero
+cross-partition examinations; no new model performance is claimed.
 
 The adjudicated-label arm improved on this historical split; the same-image
 control did not. **The experiment supports a role for the grading labels rather than image-domain
@@ -373,9 +375,10 @@ kaggle datasets download mariaherrerot/messidor2preprocess -p data/external/mess
 python -m aptos.evaluation.external --sweep models/cv/baseline-<id> --dataset messidor2
 python -m aptos.evaluation.calibration --sweep models/cv/baseline-<id>
 
-# the fine-tuning experiment: filename-proxy-grouped split, then both arms
-python -m aptos.training.finetune split
-python -m aptos.training.finetune run
+# archival replay ONLY: this proxy split has known bilateral overlap
+# for the separate examination-disjoint follow-up, see docs/MESSIDOR2_FOLLOWUP.md
+python -m aptos.training.finetune split --legacy-replay
+python -m aptos.training.finetune run --legacy-replay
 ```
 
 Each external run was preceded by a prediction committed to `docs/` before the

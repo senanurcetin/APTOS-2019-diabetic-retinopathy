@@ -124,3 +124,7 @@ transcription were retrieved. The [audit](MESSIDOR2_ACQUISITION.md) detects seve
 examinations crossing partitions, six between test and development. Historical
 fine-tuning remains exploratory. Independent confirmation and matching per-eye
 fine-tuned outputs are still required; no clinical validity has been fabricated.
+
+The [follow-up allocation](MESSIDOR2_FOLLOWUP.md) repairs examination separation
+with zero cross-partition pairs. New model training remains separate; the
+software now supports explicitly labelled examination-cluster uncertainty.
