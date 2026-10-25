@@ -1,0 +1,32 @@
+{
+  "unit": "examination; not authenticated longitudinal patient identity",
+  "pair_table_examinations": 874,
+  "pair_table_images": 1748,
+  "split_images": 1744,
+  "covered_split_images": 1744,
+  "represented_examinations": 874,
+  "complete_pairs": 870,
+  "single_gradable_eye_examinations": 4,
+  "partition_images": {
+    "test": 872,
+    "tune-train": 698,
+    "tune-valid": 174
+  },
+  "cross_partition_examinations": 7,
+  "partition_combinations": {
+    "test": 434,
+    "tune-train": 347,
+    "tune-valid": 86,
+    "test + tune-train": 5,
+    "test + tune-valid": 1,
+    "tune-train + tune-valid": 1
+  },
+  "test_development_overlap_examinations": 6,
+  "test_images_with_development_partner": 6,
+  "examination_disjoint": false,
+  "interpretation": "Historical split is not examination-disjoint. Fine-tuning results remain exploratory; removing test eyes after training does not restore a fresh confirmatory evaluation. Retraining requires a new prespecified grouped split.",
+  "inputs_sha256": {
+    "pairs": "d52696ff9e289feb9cf08a7f1ccc5e9a8f63bb5d6a305cc55f5b873fa06d22d3",
+    "split": "4f19ae001072814341a19e774a76a3719b2bdac8a97b191bebefbe39dda1f04e"
+  }
+}

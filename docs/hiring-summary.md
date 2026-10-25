@@ -20,7 +20,8 @@ Can a retinal-image classifier generalize beyond dataset shortcuts, label noise 
 
 [Methodological assessment](SCIENTIFIC_REVIEW.md) records a completed five-fold
 saved-prediction audit (new-run QWK 0.900763), the correction from patient groups
-to filename proxies, and remaining limits on causal and patient-level inference.
+to filename proxies, and a subsequent pairing audit detecting seven examinations
+across split partitions (six test/development). The fine-tuning result is exploratory.
 The new run does not replace the historical model or its external evidence.
 
 ## Engineering choices

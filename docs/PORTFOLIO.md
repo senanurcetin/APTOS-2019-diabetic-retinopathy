@@ -119,6 +119,8 @@ reported COMPLETE and matched the local source. CI passed 393 tests with 72.37%
 coverage, and the static deployment succeeded. Final verification used CLI/API
 and source checks, with PC-screen access and Playwright excluded by instruction.
 
-Authentic patient/examination linkage and new independent validation data remain
-scientific prerequisites, not incomplete implementation steps. No such data or
-clinical validity has been fabricated.
+On 25 October, Kaggle images/Google labels and an author-released ADCIS pairing
+transcription were retrieved. The [audit](MESSIDOR2_ACQUISITION.md) detects seven
+examinations crossing partitions, six between test and development. Historical
+fine-tuning remains exploratory. Independent confirmation and matching per-eye
+fine-tuned outputs are still required; no clinical validity has been fabricated.

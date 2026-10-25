@@ -1,6 +1,6 @@
 # Scientific assessment — APTOS / NEXUS
 
-Assessment date: **24 October 2026**. This is a repository-based methodological
+Assessment date: **25 October 2026**. This is a repository-based methodological
 audit by the development assistant, not independent peer review or a clinical
 certification. Historical outputs, current source, Kaggle execution artifacts and
 relevant primary methodological references were inspected. No new model was trained
@@ -83,31 +83,36 @@ and consecutive `IM` filename chains. The committed split contains **1,744 eyes,
 379 proxy groups**, with **698 tune-train / 174 tune-valid / 872 test** images.
 No proxy group spans partitions. The largest group contains **118 images**.
 
-These facts verify separation of the implemented groups. They do **not** verify
-that every patient's eyes stay together: no authentic patient mapping was supplied.
-Prior wording promising that separation has been corrected in the narrative,
-results and code documentation. The historical protocol is retained with an
-explicit methodological correction; its original timestamp is not rewritten.
+A newly retrieved author-released pairing table attributed to ADCIS contains
+**874 examinations / 1,748 unique eyes**. All **1,744** historical split IDs match;
+Google's gradable labels match the historical diagnoses exactly. There are
+**870 complete pairs and four examinations with one gradable eye**.
 
-The controlled fine-tuning result still supports a role for the provided labels:
-recorded Messidor-2 test-half AUC is 0.830 unchanged, 0.925 with adjudicated labels,
-and 0.834 with model-generated control labels. However, unverified patient
-separation and one experimental setting limit the strength of causal and
-transportability claims. It does not isolate every camera or optimization effect.
+**The historical split is not examination-disjoint:** seven examinations cross
+partitions: five train/test, one validation/test and one train/validation.
+Six of 872 test eyes have a development-set partner. The size or direction of
+resulting optimism cannot be estimated from the aggregate results.
 
-**Unresolved by aggregate data:** patient-cluster bootstrap and a guarantee of no
-patient leakage. The existing uncertainty code accepts genuine patient IDs, but
-the filename proxies must never be passed off as those IDs. Fabricating a mapping
-or relabeling an eye-level interval would create a false result.
+The recorded test-half AUCs (0.830 unchanged, 0.925 adjudicated, 0.834 control)
+remain historical exploratory observations. They cannot support an independent
+examination-level confirmation or definitive causal attribution. The original
+frozen APTOS model's external failure analysis is a separate experiment and is
+not caused by this later fine-tuning split error.
 
-The [official Messidor-2 provider](https://www.adcis.net/en/third-party/messidor2/)
-states that the original distribution has 1,748 images in 874 examinations and
-includes an image-pairing spreadsheet. The project's 1,744-image gradable mirror
-must be reconciled to that original pairing table before examination-level
-inference. Examination pairing alone would still not prove longitudinal patient
-identity. Official access currently requires a personal-information form and
-license acceptance; neither was submitted on the researcher's behalf in this
-audit. Existing authorized pairing data can be used locally when available.
+The pair table is an **author-released transcription**, pinned to RFM commit
+`b8c9322863b5e2d79df964e524d74ad53d1d1b7a`. Its README attributes it to the official
+ADCIS spreadsheet; original-file parity has not been independently verified.
+It identifies examinations, not longitudinal patients. Raw mapping/images remain
+local. [Acquisition, sources and reproduction](MESSIDOR2_ACQUISITION.md) document
+this distinction; [aggregate split audit](../reports/research/messidor2_examination_audit.json)
+and [download fingerprints](../reports/research/messidor2_sources.json) preserve evidence.
+
+**Still unresolved:** matching per-eye predictions for both historical fine-tuned
+arms were not found in the authenticated Kaggle inventory or pinned model release.
+Images and labels alone cannot reconstruct those outputs. Clustered confidence
+intervals cannot fix training/test overlap. A new prespecified examination-grouped
+split and retraining would be a new experiment; deleting six test eyes after
+seeing the result would not restore a fresh confirmatory test.
 
 ## 3. Internal evaluation and model selection
 
@@ -188,13 +193,13 @@ validity, generalization or clinical utility.
 | Professional portfolio | Strong: modular code, tests, reproducible evidence, honest failures and coherent presentation |
 | Scientific contribution | Useful exploratory case study of shortcut and label/domain shift |
 | New GPU result | Recorded-prediction audit completed; checkpoint inference not rerun |
-| Patient-level inference | Not established; authentic linkage is missing |
+| Patient-level inference | Longitudinal identity unverified; supplied exam pairs reveal split overlap |
 | Ordinal-vs-MSE superiority | Not tested by the completed scalar-only run |
 | Clinical use | Unsupported; no prospective utility or safety evaluation |
 | Screen-based visual acceptance | Excluded by user instruction; CLI/API/source checks passed, no pixel-rendering claim |
 
-The next scientifically necessary work is data-dependent: authentic patient
-linkage, independent confirmatory data and matching frozen external predictions.
+The next scientifically necessary work is data-dependent: independently verified
+linkage, a new examination-disjoint confirmatory design and matching frozen predictions.
 These cannot be replaced by additional styling, synthetic identities or another
 score on the reused APTOS test split. Under the zero-budget constraint, retain the
 current model and static explorer; do not launch more GPU experiments without a

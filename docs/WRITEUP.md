@@ -112,7 +112,7 @@ A cut chosen to reach 90% sensitivity on Messidor-2 turned IDRiD's specificity
 from 1.00 into 0.13. A deployment would have to set its threshold on its own
 labelled data, site by site.
 
-## 6. The cause, tested
+## 6. A controlled follow-up with a split limitation
 
 "It was the labels" was a reading made after seeing the data, so it got its own
 pre-registered experiment. Half of Messidor-2 - split using filename-derived proxy groups, without
@@ -129,8 +129,10 @@ boundary.
 | referable AUC, Messidor-2 held-out half | 0.830 | **0.925** | 0.834 |
 | Moderate eyes graded below 2 | 78% | **45%** | 83% |
 
-The control gains nothing. The adjudicated arm moves the boundary. The failure
-was the labels.
+The adjudicated arm improved while the control did not. However, the 25 October
+2026 pairing audit found seven examinations crossing partitions, including six
+between test and development. The result is exploratory; it does not establish
+an examination-independent causal confirmation. See [split audit](MESSIDOR2_ACQUISITION.md).
 
 Two things did not go the way the hypothesis said. The whole Moderate grade
 moved up, cases with exudates more than without, so there is no sign the model
@@ -145,13 +147,13 @@ needs every training image graded to the same standard.
   on the tested resolution proxy; it does not settle every acquisition confound.
 - **The label intervention matters in this experimental setting.** The adjudicated
   arm improved on Messidor-2 while the same-image model-label control did not.
-  Patient linkage remains unverified, so stronger causal conclusions are limited.
+  Examination overlap is now detected; longitudinal patient identity remains unverified.
 - **No architecture-independent accuracy ceiling is established.** Better reference
   labels are a reasonable next experiment, not proof that architecture is irrelevant.
 
 Three pre-registered experiments: one prediction falsified in the model's
-favour, one against it, and a third that confirmed the explanation for the
-second while refuting its finer detail. Each was more informative than a higher
+favour, one against it, and a third exploratory follow-up consistent with the explanation, but limited
+by examination overlap and a failed finer-detail prediction. Each was more informative than a higher
 kappa would have been, and none could have been claimed honestly without writing
 the prediction down first.
 

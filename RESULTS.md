@@ -458,14 +458,15 @@ reference standard, because Moderate disease without exudates is under-graded.
 
 Generated reports: `reports/external_validation_messidor2.md`, `reports/calibration.md`.
 
-### Fine-tuning on adjudicated labels: the cause, tested
+### Fine-tuning on adjudicated labels: an exploratory controlled study
 
 The labels reading above was made after seeing the data. It was then tested,
 with the design and five predictions committed first
 (`docs/finetune-prediction.md`, commit `238587b`).
 
 Messidor-2 was split using filename-derived proxy groups. Group separation
-is verifiable; patient separation is not established without authentic linkage. and each of the five deployed fold models was fine-tuned on the tune
+is verifiable, but the 25 October pairing audit detects seven examinations across
+partitions, including six between test and development. Each deployed fold model was fine-tuned on the tune
 half for 8 epochs. The confound is that fine-tuning changes the labels *and*
 the camera. So a control arm was fine-tuned on the same images with the
 unchanged ensemble's own grades as labels: Messidor-2's cameras, APTOS's
@@ -487,9 +488,17 @@ boundary. Those labels agree with the panel on 59.4% of images.
 | F4 - control does not reach it (AUC < 0.87, Moderate below 2 > 70%) | held (0.834, 82.5%) |
 | F5 - the gain concentrates in Moderate eyes without exudates | **failed** |
 
-The control settles the main question. Trained on exactly the same images, it
-gains nothing: domain adaptation to the camera does not explain the
-improvement, and the labels do. The Messidor-2 failure was the training labels.
+**25 October 2026 examination-pair audit:** an author-released transcription
+of the ADCIS pairing table covers all 1,744 images. **Seven examinations cross
+partitions; six have one eye in test and the other in development** (five in
+training, one in validation). The historical AUC 0.925 is exploratory and is
+not an examination-independent confirmatory result. Original ADCIS spreadsheet
+parity and longitudinal patient identity remain unverified. See the
+[reproducible audit](docs/MESSIDOR2_ACQUISITION.md).
+
+The controlled comparison supports a role for grading labels in this setting.
+Known bilateral examination overlap prevents an independent-test claim and
+precludes a definitive causal attribution to labels alone.
 
 F5 limits how far that goes. Median scores of Moderate eyes rose by 0.84 without
 exudates and by 1.26 with them: the whole grade moved up, not the subtle cases

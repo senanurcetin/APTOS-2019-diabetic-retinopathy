@@ -36,3 +36,8 @@ References requested by the provider:
 The adjudicated grades used in this project's mirror are separate third-party
 annotations. They are not ground-truth annotations supplied by ADCIS itself.
 The original distribution's pairing spreadsheet is not included here.
+
+The local examination audit uses an author-released pairing transcription from
+ok1zjf/RFM, commit b8c9322863b5e2d79df964e524d74ad53d1d1b7a, attributed there to
+the ADCIS pairing spreadsheet. That table is not redistributed by this project;
+original-file parity and longitudinal patient identity are not established.

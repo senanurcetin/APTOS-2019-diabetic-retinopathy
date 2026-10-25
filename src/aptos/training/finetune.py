@@ -49,6 +49,8 @@ def patient_groups(id_codes: pd.Series) -> pd.Series:
     Without authentic patient IDs, these rules cannot prove that both eyes of
     every patient remain together. Keep the historical algorithm for result
     reproducibility; never reuse its keys as patient IDs for inference.
+    The 2026-10-25 supplied examination-pair audit detects seven cross-partition
+    examinations (six test/development); see docs/MESSIDOR2_ACQUISITION.md.
     """
     keys = pd.Series(index=id_codes.index, dtype=object)
     im = id_codes.str.extract(r"^IM(\d+)")[0]

@@ -183,8 +183,16 @@ gain from the camera alone would show up there too.
 | APTOS test, referable AUC | 0.983 | 0.965 | 0.976 |
 | APTOS test, accuracy | 0.803 | 0.686 | 0.776 |
 
-The adjudicated labels fix it; the same images with APTOS-style labels do
-not. **The experiment supports a role for the grading labels rather than image-domain
+**25 October 2026 examination-pair audit:** an author-released transcription
+of the ADCIS pairing table covers all 1,744 images. **Seven examinations cross
+partitions; six have one eye in test and the other in development** (five in
+training, one in validation). The historical AUC 0.925 is exploratory and is
+not an examination-independent confirmatory result. Original ADCIS spreadsheet
+parity and longitudinal patient identity remain unverified. See the
+[reproducible audit](docs/MESSIDOR2_ACQUISITION.md).
+
+The adjudicated-label arm improved on this historical split; the same-image
+control did not. **The experiment supports a role for the grading labels rather than image-domain
 adaptation alone; it does not rule out all acquisition effects.** Two limits,
 both reported: the whole Moderate grade shifted up rather than the subtle cases
 specifically (the fifth prediction failed), and the fine-tuned model over-grades
@@ -491,7 +499,7 @@ added. That last one opened the first gap below. What remains:
 
 - **The deployed model under-grades Moderate disease.** Against Messidor-2's
   adjudicated labels, 83% of Moderate eyes are graded below 2. Fine-tuning on
-  adjudicated labels fixes that (45%, AUC 0.925) but over-grades APTOS (accuracy
+  adjudicated labels improves that historical split (45%, AUC 0.925; examination overlap detected) but over-grades APTOS (accuracy
   0.803 to 0.686), so it was not deployed. A model right on both needs one
   labelling standard across all its training data, which this project does not
   have. Until then, read the referral flag as "exudate-level disease or worse".

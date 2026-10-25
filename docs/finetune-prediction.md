@@ -5,6 +5,12 @@ after [IDRiD](external-validation-prediction.md) and
 [Messidor-2](second-external-validation-prediction.md). The design and the
 predictions are fixed here, and each prediction says what would count as wrong.
 
+> **Post-experiment correction, 25 October 2026:** a retrieved author-released
+> ADCIS pairing transcription reveals seven examinations crossing partitions,
+> including six between test and development. Historical predictions and outcomes
+> below are preserved as a dated record; they are not an examination-independent
+> confirmation. [Acquisition and audit](MESSIDOR2_ACQUISITION.md).
+
 ## The question
 
 Messidor-2 showed where the APTOS model fails: 83% of Moderate (grade 2) eyes

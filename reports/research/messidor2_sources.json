@@ -1,0 +1,22 @@
+{
+  "retrieved_utc_date": "2026-10-25",
+  "google_grades_source": "https://www.kaggle.com/datasets/google-brain/messidor2-dr-grades",
+  "images_source": "https://www.kaggle.com/datasets/mariaherrerot/messidor2preprocess",
+  "pairing_source": "https://github.com/ok1zjf/RFM/blob/b8c9322863b5e2d79df964e524d74ad53d1d1b7a/datasets/messidor2_pairs.csv",
+  "pairing_provenance": "Author-released transcription attributed to official ADCIS exam pairing; original ADCIS spreadsheet not independently compared. Examination identity, not longitudinal patient identity.",
+  "google_gradable_rows": 1744,
+  "historical_split_label_matches": 1744,
+  "historical_split_grade_mismatches": 0,
+  "image_files": 1744,
+  "missing_split_images": 0,
+  "image_tree_sha256": "86ab95387bdbe67a1839acef021e20f82422bd4ef28338869d817f154e9a53b6",
+  "image_tree_hash_method": "Sort files by path; append UTF-8 filename, NUL, binary SHA256(file) for each; SHA256 concatenation.",
+  "inputs_sha256": {
+    "messidor2_pairs.csv": "d52696ff9e289feb9cf08a7f1ccc5e9a8f63bb5d6a305cc55f5b873fa06d22d3",
+    "google_grades\\messidor_data.csv": "bb8bbd82eb4bfddc8a0eb9aa45d84274d814e913534f8027f6a4ff0a310fda72",
+    "google_grades\\messidor_readme.txt": "73d70083b8bf0355ba4c4b5120ecaffd1cfc1662d45bd5febeb32410a2554415",
+    "messidor_data.csv": "5ddc3facb6677851758a407b6a85a8940e2f3a777400029529774a8dd057d4cb"
+  },
+  "external_prediction_search": "Authenticated Kaggle kernels list --mine returned two APTOS kernels; completed seed42 inventory contains APTOS-only NPZ test arrays. Pinned Hugging Face release contains ONNX exports and metadata, no per-image external scores or fine-tuned arm weights.",
+  "redistribution": "Raw images and pair mapping retained in ignored data/; only aggregate audit and hashes committed."
+}
