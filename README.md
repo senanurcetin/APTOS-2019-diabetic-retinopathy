@@ -6,7 +6,7 @@
 
 > **NEXUS Open Research:** Public, non-productized reproducible research. This repository is not a clinical screening product. No customer-facing or commercial workflow is planned. The existing demonstration is strictly educational. [Offline evidence audit, Kaggle protocol and optional read-only BigQuery SQL](docs/open-research-workflow.md).
 
-**Technical reviewer brief:** [Methods, evidence and responsible-use boundaries](docs/hiring-summary.md).
+**Research evidence:** [Scientific review](docs/SCIENTIFIC_REVIEW.md) · [research guide](docs/PORTFOLIO.md) · [results](RESULTS.md).
 
 [![tests](https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy/actions/workflows/tests.yml/badge.svg)](https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy/actions/workflows/tests.yml) [![licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 
