@@ -77,6 +77,8 @@ The authenticated Kaggle kernel listing contains two APTOS kernels. The complete
 seed-42 training output inventory contains APTOS test predictions, not matching
 Messidor-2 fine-tuned predictions. The pinned Hugging Face release contains the
 original five ONNX exports and export metadata, not the two fine-tuned arms.
-Thus no matched per-eye fine-tuning uncertainty estimate is claimed. These
+The personal dataset listing returned 12 datasets, none APTOS; the GitHub v1.0.0
+release has no binary assets. Thus no matched per-eye fine-tuning uncertainty
+estimate is claimed. These
 downloaded images cannot recreate absent fine-tuned weights. No scores or patient
 IDs were fabricated, and no new GPU experiment was launched to conceal this gap.

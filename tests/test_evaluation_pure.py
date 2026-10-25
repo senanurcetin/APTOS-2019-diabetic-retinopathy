@@ -327,6 +327,7 @@ def test_finetune_summary_measures_the_moderate_boundary_and_reports_it():
 
     text = format_report({"none": {"Messidor-2 test half": out}})
     assert "| Moderate graded below 2 | 0.333 |" in text
+    assert "not examination-independent confirmation" in text
 
 
 

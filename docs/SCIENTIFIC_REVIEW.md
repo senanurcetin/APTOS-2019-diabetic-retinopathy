@@ -225,3 +225,21 @@ specific falsifiable question and available free quota.
   the code/log hashes and source readback result. No imaging model was retrained.
 - Final checks used CLI/API, source files, Node VM and tests only. No PC-screen
   access or Playwright was used after the user's exclusion instruction.
+
+## 25 October acquisition revision: verification
+
+- [Linux CI](https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy/actions/runs/40216093267)
+  passed **401 tests**. Python 3.10/3.11/3.12 each passed 282 pure tests;
+  Ruff passed. The local Windows run passed 281 pure tests but one existing
+  symlink staging test lacked OS privileges; that same test passed on Linux.
+- Eight new pairing tests cover overlap, single included eyes, disjoint exams,
+  duplicate members/IDs, missing IDs/partitions and invalid filenames.
+- The generated fine-tuning report now preserves its split limitation; the
+  formatter regression check and all eight pairing tests passed locally.
+- [Pages deployment](https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy/actions/runs/40216092250)
+  succeeded; live HTML/CSS/JS/logo matched source. Node VM cohort rendering passed.
+- Kaggle narrative v9 was submitted and its full cell source read back exactly.
+  Executable cells are identical to completed v8. Its new run completion must
+  be checked separately; source readback is not execution proof. The latest
+  [v9 verification record](../reports/research/kaggle_publication_v9.json)
+  distinguishes those states. No imaging model was retrained.

@@ -13,10 +13,10 @@
   "image_tree_hash_method": "Sort files by path; append UTF-8 filename, NUL, binary SHA256(file) for each; SHA256 concatenation.",
   "inputs_sha256": {
     "messidor2_pairs.csv": "d52696ff9e289feb9cf08a7f1ccc5e9a8f63bb5d6a305cc55f5b873fa06d22d3",
-    "google_grades\\messidor_data.csv": "bb8bbd82eb4bfddc8a0eb9aa45d84274d814e913534f8027f6a4ff0a310fda72",
-    "google_grades\\messidor_readme.txt": "73d70083b8bf0355ba4c4b5120ecaffd1cfc1662d45bd5febeb32410a2554415",
+    "google_grades/messidor_data.csv": "bb8bbd82eb4bfddc8a0eb9aa45d84274d814e913534f8027f6a4ff0a310fda72",
+    "google_grades/messidor_readme.txt": "73d70083b8bf0355ba4c4b5120ecaffd1cfc1662d45bd5febeb32410a2554415",
     "messidor_data.csv": "5ddc3facb6677851758a407b6a85a8940e2f3a777400029529774a8dd057d4cb"
   },
-  "external_prediction_search": "Authenticated Kaggle kernels list --mine returned two APTOS kernels; completed seed42 inventory contains APTOS-only NPZ test arrays. Pinned Hugging Face release contains ONNX exports and metadata, no per-image external scores or fine-tuned arm weights.",
+  "external_prediction_search": "Authenticated Kaggle kernels list --mine returned two APTOS kernels; completed seed42 inventory contains APTOS-only NPZ test arrays. Pinned Hugging Face release contains ONNX exports and metadata, no per-image external scores or fine-tuned arm weights. Authenticated personal dataset listing returned 12 datasets, none APTOS; GitHub v1.0.0 release has no binary assets.",
   "redistribution": "Raw images and pair mapping retained in ignored data/; only aggregate audit and hashes committed."
 }
