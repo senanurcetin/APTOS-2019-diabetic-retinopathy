@@ -19,6 +19,15 @@ def build_payload(reports: Path) -> dict:
         json.loads((reports / name).read_text(encoding="utf-8"))
         for name in ("external_validation.json", "external_validation_messidor2.json")
     ]
+    result_path = reports / "research/messidor2_v2_results.json"
+    audit_path = reports / "research/messidor2_v2_audit.json"
+    audit = json.loads(audit_path.read_text(encoding="utf-8"))
+    if (audit.get("status") != "PASS_PER_EYE_RECOMPUTATION"
+            or audit.get("inputs_sha256", {}).get("results.json") != file_sha256(result_path)):
+        raise ValueError("follow-up requires a matching completed per-eye audit")
+    payload["followup"] = json.loads(result_path.read_text(encoding="utf-8"))
+    for path in (result_path, audit_path):
+        payload["inputs_sha256"][path.relative_to(reports).as_posix()] = file_sha256(path)
     return payload
 
 

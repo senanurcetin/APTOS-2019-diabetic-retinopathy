@@ -98,9 +98,9 @@ python -m aptos.evaluation.paired_uncertainty \
 
 The API also accepts `unit="examination", examination_ids=...`. It rejects
 substituting patient IDs for examination IDs. The report labels its unit explicitly
-and exports aggregate differences only. No interval was computed for v2 because
-the new arms have not been trained; synthetic tests verify the software contract
-and are not reported as scientific results.
+and exports aggregate differences only. At allocation closeout no model interval
+was available. The subsequent completed run and per-eye audit are documented
+below; synthetic tests remain software checks, not scientific results.
 
 ## Verification completed — 26 October 2026
 

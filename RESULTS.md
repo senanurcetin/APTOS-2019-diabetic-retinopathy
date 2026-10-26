@@ -11,6 +11,18 @@ thresholds tuned on validation.
 
 ---
 
+## Completed examination-disjoint follow-up — 26 October 2026
+
+A separate paired run on **872 eyes / 437 supplied examinations** uses the newer
+scalar seed-42 baseline. Referable AUC is **0.8405** unchanged, **0.9435** with
+adjudicated training labels and **0.8534** with control labels. The primary AUC
+difference is **+0.0901**, 95% examination-bootstrap interval **[+0.0614, +0.1204]**.
+At original cuts, missed referable eyes change from 144 to 62, while APTOS retention
+accuracy drops from 80.6% to 64.2%. No model was promoted. See the
+[canonical audited results](reports/research/messidor2_v2_results.md) and
+[fixed pre-run protocol](docs/MESSIDOR2_V2_PROTOCOL.md). The historical results
+below retain their original baselines and split limitations.
+
 ## Headline
 
 | | |

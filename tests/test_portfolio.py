@@ -18,7 +18,9 @@ def test_two_operating_points_remain_distinct():
     assert external["Messidor-2"]["missed_referable"] == 307
     assert operating["Messidor-2"]["fn"] == 338
     assert external["IDRiD"]["sensitivity"] > operating["IDRiD"]["sensitivity"]
-    assert len(payload["inputs_sha256"]) == 4
+    assert len(payload["inputs_sha256"]) == 6
+    assert payload["followup"]["baseline_sweep"] == "baseline-c8232af68337"
+    assert payload["followup"]["n_test_eyes"] == 872
 
 
 def test_generated_page_is_current():
@@ -32,4 +34,18 @@ def test_corrupt_reports_cannot_be_published(tmp_path):
     report["ref_fn"] += 1
     path.write_text(json.dumps(report))
     with pytest.raises(ValueError):
+        build_payload(tmp_path / "reports")
+
+
+@pytest.mark.parametrize("file", ["messidor2_v2_results.json", "messidor2_v2_audit.json"])
+def test_followup_cannot_bypass_prediction_audit(tmp_path, file):
+    shutil.copytree(ROOT / "reports", tmp_path / "reports")
+    path = tmp_path / "reports/research" / file
+    report = json.loads(path.read_text())
+    if file.endswith("results.json"):
+        report["fixed_original_cuts"]["adjudicated"]["qwk"] = 1
+    else:
+        report["status"] = "RUNNING"
+    path.write_text(json.dumps(report))
+    with pytest.raises(ValueError, match="matching completed"):
         build_payload(tmp_path / "reports")

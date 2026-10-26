@@ -1,10 +1,11 @@
 # Scientific assessment — APTOS / NEXUS
 
-Assessment date: **25 October 2026**. This is a repository-based methodological
+Assessment dates: **25–26 October 2026**. This is a repository-based methodological
 audit by the development assistant, not independent peer review or a clinical
 certification. Historical outputs, current source, Kaggle execution artifacts and
-relevant primary methodological references were inspected. No new model was trained
-for this assessment. The project remains noncommercial research.
+relevant primary methodological references were inspected. The initial review did
+not train a model; the separately documented v2 paired experiment subsequently
+completed on 26 October. The project remains noncommercial research.
 
 ## Overall judgement
 
@@ -192,14 +193,15 @@ validity, generalization or clinical utility.
 |---|---|
 | Professional portfolio | Strong: modular code, tests, reproducible evidence, honest failures and coherent presentation |
 | Scientific contribution | Useful exploratory case study of shortcut and label/domain shift |
-| New GPU result | Recorded-prediction audit completed; checkpoint inference not rerun |
+| Original scalar GPU audit | Saved predictions checked; that initial audit did not rerun inference |
+| Examination v2 follow-up | Ten new fine-tuned models; per-eye metrics and intervals independently recomputed |
 | Patient-level inference | Longitudinal identity unverified; supplied exam pairs reveal split overlap |
 | Ordinal-vs-MSE superiority | Not tested by the completed scalar-only run |
 | Clinical use | Unsupported; no prospective utility or safety evaluation |
 | Screen-based visual acceptance | Excluded by user instruction; CLI/API/source checks passed, no pixel-rendering claim |
 
 The next scientifically necessary work is data-dependent: independently verified
-linkage, a new examination-disjoint confirmatory design and matching frozen predictions.
+linkage, fresh confirmatory cohorts and multi-seed robustness.
 These cannot be replaced by additional styling, synthetic identities or another
 score on the reused APTOS test split. Under the zero-budget constraint, retain the
 current model and static explorer; do not launch more GPU experiments without a
@@ -254,12 +256,13 @@ The old split was preserved byte-for-byte. The allocation, seed, software
 versions, source/code hashes and class counts are recorded in the
 [aggregate plan](../reports/research/messidor2_examination_v2_plan.json).
 
-This is a methodological repair, not a completed model experiment. In particular,
+At allocation closeout this was a methodological repair; the subsequent model
+experiment is documented below. In particular,
 339 new test eyes were in historical training and 87 in historical validation;
 old fine-tuned checkpoints must not be reused. Grade-4 support is only two in
 validation and 24 in test. Examination bootstrap is now an explicit software
-option, distinct from patient bootstrap, but no v2 interval or new AUC has been
-computed. Actual matched model outputs are still required. The historical
+option, distinct from patient bootstrap. At that preparation stage there were no
+v2 model outputs; these were subsequently produced and audited below. The historical
 Kaggle narrative and all historical performance values retain their prior scope.
 
 ## Verification completed — 26 October 2026

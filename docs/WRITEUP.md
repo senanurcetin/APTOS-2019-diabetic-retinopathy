@@ -172,3 +172,16 @@ the prediction down first.
 - The model is served, with these limitations attached, at
   [aptos-2019-diabetic-retinopathy.onrender.com](https://aptos-2019-diabetic-retinopathy.onrender.com).
   It is not a medical device.
+
+## Examination-disjoint follow-up — 26 October 2026
+
+A new run with a different, audited scalar seed-42 baseline now evaluates 872 eyes
+in 437 supplied examinations with no cross-partition examinations. Adjudicated
+training labels produce AUC 0.9435 versus control 0.8534: paired difference
++0.0901, 95% examination interval [+0.0614, +0.1204]. Common original cuts give
+sensitivity 72.8% versus baseline 36.8%, but APTOS retention accuracy falls from
+80.6% to 64.2%. This supports a conditional label-target effect with a transfer
+cost; the reused cohort and unverified longitudinal identity still limit inference.
+The [complete independently audited results](../reports/research/messidor2_v2_results.md)
+include class recall, validation cuts, source provenance and the failed portability
+claim. No model was promoted.
