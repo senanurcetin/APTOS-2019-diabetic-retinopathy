@@ -1,0 +1,118 @@
+{
+  "status": "COMPLETE",
+  "baseline_sweep": "baseline-c8232af68337",
+  "split_sha256": "0d24bc8fa53792235eaac89df30629ff7b279e64b10d17a868fa533e16f32c54",
+  "plan_sha256": "6d5940727a371970d73e12143a9580f4b93441d04a5b99b7b52c60e60d312c7f",
+  "checkpoint_sha256": {
+    "fold1.pt": "3290de2e3bb00e8762dd74353b832cddea509a89cde291bca2b1f607fd52eea0",
+    "fold2.pt": "cc87be26d629152e1a36498a7e5e753257b494216e95eb316f5be11f7f5d476d",
+    "fold3.pt": "527f659d3523eb324c26116efda5a1c96e7fd691e6cac89c21f0200576a7a698",
+    "fold4.pt": "52cdec08fe1097d99f77a6a1447eca2414bc882aec097a23e5abd56ce0329d0a",
+    "fold5.pt": "efd8b8448a441119c625568c93134319b12ddc58e310f24c9f1e16275598670d"
+  },
+  "fine_tuned_checkpoint_sha256": {
+    "adjudicated/fold1.pt": "d3f272843aa2b09b1910eab747c76157e3758443976080ce1cfc05979261d3c0",
+    "adjudicated/fold2.pt": "32f63eb53ea89a49d46fccaa4ddb1ccfbdaeabad29c79ed22cafc1853fd6d2d5",
+    "adjudicated/fold3.pt": "602ede40332f75ff35acd0a41745365c8bdb3e60e7958b90312d248bd58ea0f7",
+    "adjudicated/fold4.pt": "48c2764ae579622e605b2365df18fcdf313d2c4a896ae32433f5a4ecac85f0f5",
+    "adjudicated/fold5.pt": "dd0328a89e700614370ed1f83e4ca9013984e37773f35e95c12abeb2adfd2190",
+    "control/fold1.pt": "0ac5af7c51f413dddda78ca697d5f24acf2f415c6532626f2b2be2536ce0b937",
+    "control/fold2.pt": "997c4dcac54909a34295cbe947fc1f4b4298cff9f7f08b064f4dec99035d88ba",
+    "control/fold3.pt": "328440f4aa9aae46d6abb06e11fc969547225388ae3c45f6a68c999630ac9dbf",
+    "control/fold4.pt": "c3e66accf3ad63e0c93ee374b642c033e6291cb9efea15226fe17bcaddcca373",
+    "control/fold5.pt": "4f472c355532daadf92f6082d618c6449f828501f1172f72022ac92366b116cb"
+  },
+  "configuration": {
+    "variant": "baseline",
+    "preprocess.size": 512,
+    "preprocess.clahe": false,
+    "preprocess.clip_limit": null,
+    "preprocess.square_mode": "pad",
+    "preprocess.crop_tol": 7,
+    "preprocess.jpeg_quality": 95,
+    "preprocess.workers": 4,
+    "quality.hard_dark": 8.0,
+    "quality.hard_bright": 250.0,
+    "quality.mad_k": 3.5,
+    "quality.dup_min_corr": 0.995,
+    "quality.dup_max_mae": 3.0,
+    "quality.thumb_size": 128,
+    "augment.resized_crop_scale": [
+      0.85,
+      1.0
+    ],
+    "augment.hflip_p": 0.5,
+    "augment.vflip_p": 0.5,
+    "augment.rotation_degrees": 20,
+    "augment.color_jitter_brightness": 0.15,
+    "augment.color_jitter_contrast": 0.15,
+    "thresholds.start": [
+      0.5,
+      1.5,
+      2.5,
+      3.5
+    ],
+    "thresholds.rounds": 60,
+    "thresholds.deltas": [
+      -0.12,
+      -0.04,
+      0.04,
+      0.12
+    ],
+    "thresholds.min_gap": 0.05,
+    "train.model": "efficientnet_b0",
+    "train.mode": "reg",
+    "train.size": 384,
+    "train.batch": 16,
+    "train.grad_accum": 1,
+    "train.epochs": 15,
+    "train.lr": 0.0003,
+    "train.weight_decay": 0.0001,
+    "train.patience": 5,
+    "train.min_delta": 0.0,
+    "train.seed": 42,
+    "train.workers": 2,
+    "train.persistent_workers": true,
+    "train.amp": true,
+    "train.exclude_leaked": true,
+    "cv.folds": 5,
+    "cv.stratify_on": "diagnosis",
+    "cv.pool_splits": [
+      "train",
+      "valid"
+    ],
+    "confound.meta_cols": [
+      "width",
+      "height",
+      "aspect_ratio",
+      "megapixels",
+      "brightness",
+      "contrast_std",
+      "file_kb"
+    ],
+    "confound.n_estimators": 200,
+    "confound.cv_folds": 5,
+    "confound.random_state": 0,
+    "confound.confounded_resolution": [
+      1050,
+      1050
+    ],
+    "tracking.experiment": "aptos-2019",
+    "tracking.uri": "",
+    "tracking.bigquery_enabled": false,
+    "tracking.bigquery_project": "",
+    "tracking.bigquery_dataset": ""
+  },
+  "fine_tuning": {
+    "lr": 0.0001,
+    "weight_decay": 0.0001,
+    "epochs": 8,
+    "seed": 42
+  },
+  "validation_targets": "adjudicated in both arms; only training targets vary",
+  "gpu": "Tesla T4",
+  "torch_version": "2.11.0+cu128",
+  "source_commit": "17be6cff382c2bcdc438c68e73773fa1fe812767",
+  "processed_cache_source_provenance_sha256": "d6b82fb0d8e32d68a2aaa212e20a5b14971924be43463e909e9978f706c22d3e",
+  "result_sha256": "cd09b559cb119f7cdee27c1bc1ac28a7b45c1208c331dcfd44ec1cd3d18d6d0b"
+}

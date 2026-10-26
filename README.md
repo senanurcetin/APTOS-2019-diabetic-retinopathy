@@ -191,7 +191,10 @@ not an examination-independent confirmatory result. Original ADCIS spreadsheet
 parity and longitudinal patient identity remain unverified. See the
 [reproducible audit](docs/MESSIDOR2_ACQUISITION.md). A separate
 [examination-disjoint follow-up split](docs/MESSIDOR2_FOLLOWUP.md) now has zero
-cross-partition examinations; no new model performance is claimed.
+cross-partition examinations. The [completed v2 experiment](reports/research/messidor2_v2_results.md)
+now reports AUC 0.9435 versus control 0.8534 (paired difference +0.0901, 95%
+examination interval [+0.0614, +0.1204]), with APTOS retention accuracy falling
+from 80.6% to 64.2%. It uses a different baseline from the historical table above.
 
 The adjudicated-label arm improved on this historical split; the same-image
 control did not. **The experiment supports a role for the grading labels rather than image-domain

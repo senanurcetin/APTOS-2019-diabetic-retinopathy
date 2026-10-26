@@ -1,0 +1,57 @@
+{
+  "status": "PASS_PER_EYE_RECOMPUTATION",
+  "source_commit": "17be6cff382c2bcdc438c68e73773fa1fe812767",
+  "n_messidor_test_eyes": 872,
+  "n_test_examinations": 437,
+  "n_aptos_retention_eyes": 366,
+  "new_fold_histories_checked": 10,
+  "test_grade_counts": {
+    "0": 509,
+    "1": 135,
+    "2": 162,
+    "3": 42,
+    "4": 24
+  },
+  "paired_auc": {
+    "unit": "examination",
+    "n_eyes": 872,
+    "n_examinations": 437,
+    "draws": 2000,
+    "seed": 42,
+    "single_class_draws_rejected": 0,
+    "method": "paired percentile examination bootstrap, 95% intervals",
+    "auc": {
+      "baseline": 0.8404843630816171,
+      "adjudicated": 0.943534107006647,
+      "control": 0.8534481584395772
+    },
+    "contrasts": {
+      "adjudicated_minus_control": {
+        "difference": 0.09008594856706975,
+        "ci_lower": 0.06140229051402455,
+        "ci_upper": 0.12039319555562962
+      },
+      "adjudicated_minus_baseline": {
+        "difference": 0.10304974392502986,
+        "ci_lower": 0.07172421001986747,
+        "ci_upper": 0.13678182248654835
+      },
+      "control_minus_baseline": {
+        "difference": 0.012963795357960106,
+        "ci_lower": -0.008170498603729407,
+        "ci_upper": 0.034099663084919546
+      }
+    }
+  },
+  "inputs_sha256": {
+    "manifest.json": "49c1adc3cc3cd9964618a94687767cd115a3a090a3f17a40b3cd164b56824824",
+    "results.json": "cd09b559cb119f7cdee27c1bc1ac28a7b45c1208c331dcfd44ec1cd3d18d6d0b",
+    "test_predictions.csv": "b8ec75462afc28d497b5735bfad48c58e82bceebc66e20142bca210352939bd2",
+    "aptos_retention_predictions.csv": "a6dc3d9d52fa83235e6486280ba8a5489ad42a5d27e8af1611c49066c88e7422"
+  },
+  "limitations": [
+    "Audits saved predictions and histories, not prospective model validity.",
+    "Weight fingerprints are recorded by the run; tensors are not loaded here.",
+    "Reused cohorts and examination-map provenance limitations remain."
+  ]
+}

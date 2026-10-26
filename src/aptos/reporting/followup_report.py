@@ -54,6 +54,13 @@ def render(results_path: Path, audit_path: Path) -> str:
         cuts = ", ".join(f"{value:.4f}" for value in row["thresholds"])
         lines.append(f"| {arm} | {row['qwk']:.4f} | {ref['sensitivity']:.1%} | "
                      f"{ref['specificity']:.1%} | {ref['fn']} | {cuts} |")
+    lines += ["", "## Severity support and recall at original cuts", "",
+              "| True grade | Eyes | Baseline recall | Adjudicated recall | Control recall |",
+              "|---|---:|---:|---:|---:|"]
+    for grade in range(5):
+        recalls = [results["fixed_original_cuts"][arm][f"recall_grade_{grade}"] for arm in ARMS]
+        lines.append(f"| {grade} | {audit['test_grade_counts'][str(grade)]} | "
+                     + " | ".join(f"{value:.1%}" for value in recalls) + " |")
     lines += ["", "## APTOS retention: reused 366-eye holdout", "",
               "These diagnostics were not used for epoch selection or a new model promotion. "
               "All rows below use the original APTOS cuts.", "",
@@ -62,6 +69,10 @@ def render(results_path: Path, audit_path: Path) -> str:
     for arm in ARMS:
         row = results["aptos_retention"]["fixed_original_cuts"][arm]
         lines.append(f"| {arm} | {row['auc']:.4f} | {row['qwk']:.4f} | {row['accuracy']:.4f} | {row['macro_f1']:.4f} |")
+    lines += ["", f"Baseline re-inference differs from its saved scores by at most "
+              f"{results['aptos_retention']['baseline_rescore_max_abs_difference']:.6f} raw-score units, "
+              f"with {results['aptos_retention']['baseline_rescore_grade_mismatches']} grade mismatch(es). "
+              "This comparison consistently uses the re-inferred baseline; numerical parity is not bit-exact."]
     lines += ["", "## Provenance and limitations", "",
               f"GPU source commit: `{audit['source_commit']}`. Ten new fold histories "
               "were checked; results and paired intervals were independently recomputed from saved scores. "

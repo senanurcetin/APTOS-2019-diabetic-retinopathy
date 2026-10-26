@@ -272,3 +272,27 @@ and matching split/source-code hashes. The
 [verification record](../reports/research/messidor2_examination_v2_verification.json)
 pins the CI source, downloaded log and aggregate plan. This verifies software
 and allocation; no new model was trained and no new performance was measured.
+
+## Completed v2 paired model experiment — 26 October 2026
+
+The [executable protocol](MESSIDOR2_V2_PROTOCOL.md) and new training run are now
+complete. [Per-eye audited results](../reports/research/messidor2_v2_results.md)
+use the newer scalar seed-42 baseline, not the historical deployed ensemble.
+On 872 test eyes / 437 supplied examinations, referable AUC is **0.8405** unchanged,
+**0.9435** adjudicated and **0.8534** control. The primary adjudicated-minus-control
+difference is **+0.0901**, 95% paired examination interval **[+0.0614, +0.1204]**.
+Only training targets differ; adjudicated validation targets are common to both
+arms. The 10 new histories, threshold decisions, per-eye outputs and paired
+intervals passed [independent recomputation](../reports/research/messidor2_v2_audit.json).
+
+At common original cuts, sensitivity rises from **36.8% to 72.8%**, specificity
+changes from **98.1% to 95.5%**, and missed referable eyes fall from **144 to 62**.
+This is a conditional improvement with remaining errors, not clinical readiness.
+The adjudicated arm's grade-4 recall is **20.8%** on 24 test eyes. On the reused
+APTOS holdout, accuracy falls from **80.6% to 64.2%** and QWK from **0.8998 to 0.8579**.
+No model was promoted. Baseline re-inference has maximum raw difference 0.021574
+and one grade mismatch versus the saved base scores; the paired comparison uses
+the re-inferred baseline consistently. Original ADCIS parity, longitudinal
+patient identity, new independent cohorts and multi-seed robustness remain open.
+The frozen allocation plan records its earlier preparation state; current
+completion is recorded separately in the [launch manifest](../reports/research/messidor2_v2_launch.json).

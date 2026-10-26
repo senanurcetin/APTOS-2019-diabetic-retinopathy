@@ -128,3 +128,11 @@ fine-tuned outputs are still required; no clinical validity has been fabricated.
 The [follow-up allocation](MESSIDOR2_FOLLOWUP.md) repairs examination separation
 with zero cross-partition pairs. New model training remains separate; the
 software now supports explicitly labelled examination-cluster uncertainty.
+
+## Completed paired model follow-up — 26 October 2026
+
+The [audited v2 experiment](../reports/research/messidor2_v2_results.md) is complete:
+872 test eyes / 437 supplied examinations, ten newly fine-tuned models, and
+paired examination intervals. AUC improves within Messidor-2, with a substantial
+APTOS retention cost. See the canonical results and
+[pre-run protocol](MESSIDOR2_V2_PROTOCOL.md); no new model was promoted.

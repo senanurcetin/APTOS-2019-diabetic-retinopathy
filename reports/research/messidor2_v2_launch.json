@@ -8,7 +8,12 @@
   "kernel_source_readback_exact": true,
   "private_kernel": true,
   "free_accelerator": "NvidiaTeslaT4",
-  "status": "RUNNING; results not yet available",
+  "status": "COMPLETE; independent per-eye recomputation passed",
   "script_sha256": "aed87bac3ccf9d9155e915a604c326d3a41208bc8f4354e6db45e4ca3e47e4bf",
-  "paid_fallback_allowed": false
+  "paid_fallback_allowed": false,
+  "execution_log_sha256": "6f13dfbc3b4bd563184a4f640c6805fe93fb3afd0f8872e9953cb95f649a20bc",
+  "output_files_inventoried": 28,
+  "new_checkpoint_files_inventoried": 10,
+  "audit": "reports/research/messidor2_v2_audit.json",
+  "gpu_observed": "Tesla T4"
 }

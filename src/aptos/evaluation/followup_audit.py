@@ -147,6 +147,7 @@ def audit(output: Path, split_path: Path, base_metadata: Path, *, expected_sourc
         "status": "PASS_PER_EYE_RECOMPUTATION", "source_commit": expected_source,
         "n_messidor_test_eyes": len(raw), "n_test_examinations": raw.exam_id.nunique(),
         "n_aptos_retention_eyes": len(retention), "new_fold_histories_checked": 10,
+        "test_grade_counts": {str(k): int(v) for k, v in raw.diagnosis.value_counts().sort_index().items()},
         "paired_auc": report["paired_auc"],
         "inputs_sha256": {name: digest(output / name) for name in (
             "manifest.json", "results.json", "test_predictions.csv", "aptos_retention_predictions.csv",
