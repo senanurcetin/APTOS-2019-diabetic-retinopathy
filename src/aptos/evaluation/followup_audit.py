@@ -68,11 +68,26 @@ def audit(output: Path, split_path: Path, base_metadata: Path, *, expected_sourc
     if len(reference) != 872 or reference.exam_id.nunique() != 437:
         raise ValueError("unexpected follow-up test cohort size")
     raw = pd.read_csv(output / "test_predictions.csv")
+    # The pinned inference routine returns float32. Restore that dtype from
+    # its shortest CSV representation before checking threshold-boundary grades.
+    for arm in ARMS:
+        raw[f"{arm}_raw"] = raw[f"{arm}_raw"].astype(np.float32)
     aligned(raw, reference, ["id_code", "diagnosis", "exam_id"])
     if digest(output / "test_predictions.csv") != report["prediction_sha256"]:
         raise ValueError("prediction bytes differ from result fingerprint")
     source_summary = json.loads((base_metadata / "summary.json").read_text())
     original_cuts = source_summary["ensemble"]["thresholds"]
+    all_baseline = aligned(pd.read_csv(output / "baseline_all_predictions.csv"), split,
+                           ["id_code", "diagnosis", "exam_id", "part"])
+    if not np.array_equal(all_baseline.control_grade,
+                          apply_thresholds(all_baseline.baseline_raw.to_numpy(dtype=np.float32), original_cuts)):
+        raise ValueError("control labels differ from frozen original baseline cuts")
+    for name, (first, second) in CONTRASTS.items():
+        comparison = aligned(pd.read_csv(output / f"paired_{name}.csv"), raw,
+                             ["id_code", "diagnosis", "exam_id"])
+        if (not np.array_equal(comparison.baseline_grade, raw[f"{first}_grade_frozen"])
+                or not np.array_equal(comparison.candidate_grade, raw[f"{second}_grade_frozen"])):
+            raise ValueError("paired comparison file differs from wide prediction table")
     cuts = {"baseline": original_cuts}
     for arm in ("adjudicated", "control"):
         values = []
@@ -109,6 +124,19 @@ def audit(output: Path, split_path: Path, base_metadata: Path, *, expected_sourc
         aptos_reference = pd.DataFrame({"id_code": saved["test_ids"], "diagnosis": saved["test_true"]})
     retention = aligned(pd.read_csv(output / "aptos_retention_predictions.csv"), aptos_reference,
                         ["id_code", "diagnosis"])
+    saved_raw = []
+    for fold in range(1, 6):
+        with np.load(base_metadata / f"fold{fold}.npz", allow_pickle=False) as saved:
+            saved_raw.append(saved["test_raw"])
+    saved_raw = np.mean(saved_raw, axis=0)
+    for arm in ARMS:
+        retention[f"{arm}_raw"] = retention[f"{arm}_raw"].astype(np.float32)
+    assert_same(report["aptos_retention"]["baseline_rescore_max_abs_difference"],
+                float(np.max(np.abs(retention.baseline_raw.to_numpy() - saved_raw))))
+    assert_same(report["aptos_retention"]["baseline_rescore_grade_mismatches"], int(np.sum(
+        apply_thresholds(retention.baseline_raw.to_numpy(), original_cuts)
+        != apply_thresholds(saved_raw, original_cuts),
+    )))
     for arm in ARMS:
         scores = retention[f"{arm}_raw"].to_numpy()
         assert_same(report["aptos_retention"]["fixed_original_cuts"][arm],
