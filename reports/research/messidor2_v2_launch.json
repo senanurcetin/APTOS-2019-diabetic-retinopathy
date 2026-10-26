@@ -1,0 +1,14 @@
+{
+  "launch_date": "2026-10-26",
+  "kernel": "senanuretin/aptos-messidor-examination-followup-v2",
+  "version": 1,
+  "source_commit": "17be6cff382c2bcdc438c68e73773fa1fe812767",
+  "baseline_sweep": "baseline-c8232af68337",
+  "protocol": "docs/MESSIDOR2_V2_PROTOCOL.md",
+  "kernel_source_readback_exact": true,
+  "private_kernel": true,
+  "free_accelerator": "NvidiaTeslaT4",
+  "status": "RUNNING; results not yet available",
+  "script_sha256": "aed87bac3ccf9d9155e915a604c326d3a41208bc8f4354e6db45e4ca3e47e4bf",
+  "paid_fallback_allowed": false
+}
