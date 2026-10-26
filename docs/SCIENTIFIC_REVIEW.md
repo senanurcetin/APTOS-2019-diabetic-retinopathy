@@ -52,8 +52,9 @@ on one shared holdout, not five independent estimates of generalization.
 The new QWK is below the historical external-evaluation baseline's **0.909109**
 and the historical squash ensemble's **0.9098**. It does not establish a meaningful
 degradation or improvement: this is one run, not a prespecified paired multi-seed
-comparison. Historical reports and the deployed ONNX model remain separate. This
-new sweep has no audited IDRiD/Messidor-2 inference and no completed ordinal arm.
+comparison. Historical reports and the deployed ONNX model remain separate. At the initial saved-prediction audit, this sweep had no audited external
+inference. Its later Messidor-2 baseline inference and fine-tuning are documented
+in the completed v2 section below; an ordinal arm remains uncompleted.
 
 **Artifacts:** [machine-readable recomputation audit](../reports/research/kaggle_reg42_audit.json).
 It contains aggregate results and SHA-256 fingerprints, without image IDs or
@@ -111,9 +112,9 @@ and [download fingerprints](../reports/research/messidor2_sources.json) preserve
 **Still unresolved:** matching per-eye predictions for both historical fine-tuned
 arms were not found in the authenticated Kaggle inventory or pinned model release.
 Images and labels alone cannot reconstruct those outputs. Clustered confidence
-intervals cannot fix training/test overlap. A new prespecified examination-grouped
-split and retraining would be a new experiment; deleting six test eyes after
-seeing the result would not restore a fresh confirmatory test.
+intervals cannot fix training/test overlap. The separate v2 experiment below repairs examination grouping and retrains from
+the untouched baseline. Deleting six historical test eyes after seeing the
+result would not restore a fresh confirmatory test.
 
 ## 3. Internal evaluation and model selection
 
@@ -207,76 +208,7 @@ score on the reused APTOS test split. Under the zero-budget constraint, retain t
 current model and static explorer; do not launch more GPU experiments without a
 specific falsifiable question and available free quota.
 
-## Verification of this revision
-
-- [Full CI run](https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy/actions/runs/40083142586):
-  **393 tests passed**, coverage **72.37%**; Ruff passed. Python 3.10, 3.11
-  and 3.12 each passed 274 pure tests (5 skipped, 66 deselected).
-- Six new audit tests cover complete input, missing folds, mismatched identifiers,
-  nonfinite scores, a changed ensemble summary and wrong cohort size.
-- [Static publication](https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy/actions/runs/40083142575)
-  succeeded. Live HTML, CSS, JavaScript and official logo matched local sources
-  after normalizing line endings. The cohort rendering check passed without
-  browser automation.
-- Kaggle narrative version 8 was uploaded and its complete cell source read back
-  exactly. Its executable cells are unchanged from completed version 6; the code
-  SHA-256 is `e9d2b3d6d8ecb955433d3b62813f57382f2f2ff7f6951ae15f5a506c5fe53dee`.
-  Version 8 subsequently reported **COMPLETE**. Its downloaded execution log
-  confirms 3,662 images, metadata QWK **0.641** and HTML conversion.
-  [Final execution record](../reports/research/kaggle_publication_v8.json) includes
-  the code/log hashes and source readback result. No imaging model was retrained.
-- Final checks used CLI/API, source files, Node VM and tests only. No PC-screen
-  access or Playwright was used after the user's exclusion instruction.
-
-## 25 October acquisition revision: verification
-
-- [Linux CI](https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy/actions/runs/40216299248)
-  passed **401 tests**. Python 3.10/3.11/3.12 each passed 282 pure tests;
-  Ruff passed. The local Windows run passed 281 pure tests but one existing
-  symlink staging test lacked OS privileges; that same test passed on Linux.
-- Eight new pairing tests cover overlap, single included eyes, disjoint exams,
-  duplicate members/IDs, missing IDs/partitions and invalid filenames.
-- The generated fine-tuning report now preserves its split limitation; the
-  formatter regression check and all eight pairing tests passed locally.
-- [Pages deployment](https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy/actions/runs/40216092250)
-  succeeded; live HTML/CSS/JS/logo matched source. Node VM cohort rendering passed.
-- Kaggle narrative v9 was submitted and its full cell source read back exactly.
-  Executable cells are identical to completed v8. Version 9 subsequently reported
-  **COMPLETE**; its downloaded log confirms 3,662 images, metadata QWK **0.641**
-  and HTML conversion without recorded exceptions. The
-  [v9 verification record](../reports/research/kaggle_publication_v9.json)
-  contains source/code/log fingerprints. No imaging model was retrained.
-
-## Examination-disjoint follow-up preparation
-
-The [v2 follow-up split](MESSIDOR2_FOLLOWUP.md) is now prepared with 698 training,
-174 validation and 872 test eyes, representing 350/87/437 examinations. Under
-the supplied pairing transcription, **no examination spans partitions**.
-The old split was preserved byte-for-byte. The allocation, seed, software
-versions, source/code hashes and class counts are recorded in the
-[aggregate plan](../reports/research/messidor2_examination_v2_plan.json).
-
-At allocation closeout this was a methodological repair; the subsequent model
-experiment is documented below. In particular,
-339 new test eyes were in historical training and 87 in historical validation;
-old fine-tuned checkpoints must not be reused. Grade-4 support is only two in
-validation and 24 in test. Examination bootstrap is now an explicit software
-option, distinct from patient bootstrap. At that preparation stage there were no
-v2 model outputs; these were subsequently produced and audited below. The historical
-Kaggle narrative and all historical performance values retain their prior scope.
-
-## Verification completed — 26 October 2026
-
-[CI for source commit 02a0608](https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy/actions/runs/40218008457)
-passed **418 tests**, coverage **73.69%**, and Ruff. Python 3.10/3.11/3.12 each
-passed 299 pure tests. Real-cohort checks reconfirmed all labels and IDs,
-zero follow-up cross-partition examinations, unchanged historical CSV bytes,
-and matching split/source-code hashes. The
-[verification record](../reports/research/messidor2_examination_v2_verification.json)
-pins the CI source, downloaded log and aggregate plan. This verifies software
-and allocation; no new model was trained and no new performance was measured.
-
-## Completed v2 paired model experiment — 26 October 2026
+## 7. Completed v2 paired model experiment — 26 October 2026
 
 The [executable protocol](MESSIDOR2_V2_PROTOCOL.md) and new training run are now
 complete. [Per-eye audited results](../reports/research/messidor2_v2_results.md)
@@ -300,9 +232,15 @@ patient identity, new independent cohorts and multi-seed robustness remain open.
 The frozen allocation plan records its earlier preparation state; current
 completion is recorded separately in the [launch manifest](../reports/research/messidor2_v2_launch.json).
 
+## Verification and reproducibility
+
 Final publication checks on 26 October passed: 438 tests, 71.92% coverage,
 319 pure tests on each of Python 3.10–3.12, exact source-cell readback and
 completed execution of public Kaggle v10, and live NEXUS asset parity.
 See the [completion record](../reports/research/messidor2_v2_completion.json)
 and [Kaggle execution evidence](../reports/research/kaggle_publication_v10.json).
 These engineering checks do not remove the scientific limitations above.
+
+For installation and commands, use the [reproduction guide](REPRODUCIBILITY.md).
+Historical execution and allocation snapshots remain under `reports/research/`;
+the [documentation index](README.md) distinguishes them from current instructions.

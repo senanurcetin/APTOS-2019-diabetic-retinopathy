@@ -71,18 +71,19 @@ members, missing mappings, ambiguous IDs and missing partitions; it publishes no
 per-eye IDs. Compare [the committed aggregate audit](../reports/research/messidor2_examination_audit.json)
 and [source fingerprints](../reports/research/messidor2_sources.json).
 
-## Per-image prediction search
+## Historical prediction search — 25 October 2026
 
-The authenticated Kaggle kernel listing contains two APTOS kernels. The completed
+At acquisition time the authenticated Kaggle listing contained two APTOS kernels. The completed
 seed-42 training output inventory contains APTOS test predictions, not matching
 Messidor-2 fine-tuned predictions. The pinned Hugging Face release contains the
 original five ONNX exports and export metadata, not the two fine-tuned arms.
 The personal dataset listing returned 12 datasets, none APTOS; the GitHub v1.0.0
-release has no binary assets. Thus no matched per-eye fine-tuning uncertainty
-estimate is claimed. These
+release has no binary assets. Thus no matched per-eye uncertainty estimate for the historical fine-tuning
+experiment is claimed. These
 downloaded images cannot recreate absent fine-tuned weights. No scores or patient
 IDs were fabricated, and no new GPU experiment was launched to conceal this gap.
 
-A separate [examination-disjoint follow-up allocation](MESSIDOR2_FOLLOWUP.md)
-has now been prepared. It does not replace this historical audit or imply
-new fine-tuning results.
+A separate [examination-disjoint follow-up](MESSIDOR2_FOLLOWUP.md) was subsequently
+trained and audited on 26 October. Its [new per-eye results](../reports/research/messidor2_v2_results.md)
+do not recover the absent historical predictions or make the historical split
+independent. This acquisition record documents the original source audit.

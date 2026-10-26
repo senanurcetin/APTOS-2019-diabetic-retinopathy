@@ -1,46 +1,40 @@
 # Research notebooks
 
-The research notebooks are reproducible evidence **readers**, not clinical
-screening applications or substitutes for retraining.
+Run notebooks from the repository root after installing the package. Dataset
+licenses and experiment provenance apply independently of notebook styling.
 
-- [research_evidence.ipynb](research_evidence.ipynb) — compare recorded five-fold
-  QWK results, external referral performance and source SHA-256 fingerprints.
-  The notebook does not require GPU, cloud credentials or the Kaggle images.
-  To run it, install the repository as a Python package and start Jupyter from
-  the repo root.
-- [Operating-point evidence audit](../docs/operating-point-audit.md) — a
-  dependency-light CLI comparing two different recorded referral decisions
-  without inventing per-eye predictions.
+| Notebook | Role | Required inputs |
+|---|---|---|
+| [research_evidence.ipynb](research_evidence.ipynb) | Inspect committed historical aggregates, external results and fingerprints | Repository package and reports; no GPU or images |
+| [ordinal_experiment_matrix.ipynb](ordinal_experiment_matrix.ipynb) | Configure a separate scalar/ordinal GPU experiment; defaults to dry-run | Authorized Kaggle inputs and free GPU quota for an actual run |
+| [Kaggle publication source](kaggle_publication) | Public research narrative and executable metadata classifier | Attached APTOS mirror for execution |
+| [Original project notebook](../aptos_2019.ipynb) | Root-level historical notebook retained for existing Colab/repository links | Follow its cells; it is separate from the current Kaggle publication |
 
-Raw image datasets and labels remain under their own licenses and are not
-included in this public repository. For Kaggle workflows, see
-[open research protocol](../docs/open-research-workflow.md).
-
-## NEXUS Identity 2.0 — research visuals
-
-Both `research_evidence.ipynb` and `ordinal_experiment_matrix.ipynb` now
-include the **unaltered official transparent NEXUS SVG wordmark** as a standard
-notebook attachment, so the approved identity remains visible without a network
-request or a Drive sign-in. The source vector is
-`serving/static/nexus-logo.svg` (same bytes as the Google Drive approved asset).
-No generated or unofficial substitute logo is used.
-
-The evidence notebook applies the identity's midnight/cyan/blue/lavender
-palette to **chart presentation only**. Underlying metrics, cohorts,
-error bars, bootstrap intervals and clinical warnings are unchanged.
-The GPU notebook uses exactly the same wordmark and an explicit
-one-mode/one-seed experimental contract; it still defaults to dry-run.
-Kaggle kernel packaging copies the attachment unmodified.
-
-Graphic styling does not constitute training, a valid model result, a
-deployment, a medical device, or productization. The associated official
-source and color specifications are recorded in
-[the identity design audit](../docs/nexus-clinical-research.md).
+The evidence notebook is a reader, not a substitute for retraining. The GPU
+notebook is an experiment template: synthetic tests and a dry-run do not
+establish a completed ordinal result. Use the
+[ordinal benchmark](../docs/ordinal-benchmark.md) and
+[GPU runbook](../docs/kaggle-gpu-launch.md) for its protocol.
 
 ## Published Kaggle narrative
 
-[kaggle_publication](kaggle_publication) preserves the existing public notebook ID,
-NEXUS SVG attachment, CPU-only metadata and corrected interpretation of the
-external experiments. `kernels push` executes a new version; inspect its status
-before treating a revision as successfully executed. Historical result tables
-come from the v1.0.0 release; the metadata classifier is rerun on attached images.
+`kaggle_publication/` preserves the existing public notebook ID. Version 10
+completed and all 20 source cells matched the repository readback; see the
+[verification record](../reports/research/kaggle_publication_v10.json).
+Its CPU execution recomputes the metadata classifier. Historical imaging tables
+come from the v1.0.0 release. The completed v2 imaging experiment is reported in
+Markdown and links to its separate audited artifacts; it is not retrained by the
+public CPU notebook. A future upload starts another execution and must be
+verified before being described as complete.
+
+## NEXUS identity
+
+The evidence and GPU notebooks embed the unmodified official SVG wordmark as a
+standard attachment for offline portability. The published notebook retains its
+NEXUS attachment. See [identity provenance](../docs/PORTFOLIO.md#official-nexus-identity)
+for source assets and colors. Chart styling does not change numeric evidence or
+establish clinical validity.
+
+For installation and commands, use the
+[reproduction guide](../docs/REPRODUCIBILITY.md). Raw images, per-eye execution
+artifacts and model checkpoints remain outside Git.

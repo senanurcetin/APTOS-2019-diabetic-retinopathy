@@ -16,7 +16,7 @@ A heatmap is weak evidence on its own: every fundus image is a bright disc on a 
 
 This table is **fold 1 only**: 0.72x across 60 held-out images. Read it alongside the control below, where all five folds average 0.94x and fold 1 turns out to be the lowest of them. An earlier version of this report led with the fold-1 figure as though it described the model.
 
-![Grad-CAM](reports/figures/09_gradcam.png)
+![Grad-CAM](figures/09_gradcam.png)
 
 ## The control, and the uncomfortable result
 

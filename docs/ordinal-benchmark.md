@@ -5,6 +5,19 @@ to compare a frozen scalar MSE baseline with a cumulative ordinal model using
 identical training partitions, then measure where each model fails on external
 retinal populations. Keep all results, including negative results.
 
+## Model and experiment status
+
+The optional cumulative-link model emits one latent severity score and four
+learnable, strictly ordered cutpoints, using softplus-positive gaps. Cumulative
+targets are `[grade>0, grade>1, grade>2, grade>3]`; training uses
+`BCEWithLogitsLoss`, and expected grade is the sum of four sigmoid probabilities.
+The default scalar MSE model and historical ONNX export remain unchanged.
+
+The scalar seed-42 run completed and was audited. A matched ordinal model,
+additional seeds and paired external evaluations remain uncompleted research.
+Synthetic tests establish software behavior, not model superiority. Do not load
+an ordinal checkpoint into the scalar-only ONNX demonstration.
+
 ## Prerequisites
 
 This repository must be available inside a Python environment with its

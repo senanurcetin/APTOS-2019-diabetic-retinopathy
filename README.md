@@ -1,589 +1,105 @@
-<p align="left"><img src="serving/static/nexus-logo.svg" alt="NEXUS Identity 2.0 — official research identity" width="270"></p>
+<p><img src="serving/static/nexus-logo.svg" alt="NEXUS" width="270"></p>
 
-**NEXUS / OPEN RESEARCH** · Reproducibility · Scientific integrity · No clinical deployment
+# APTOS: retinal grading under distribution shift
 
-# APTOS-2019 Diabetic Retinopathy Grading
+**NEXUS Open Research · Noncommercial data science · English-first**
 
-> **NEXUS Open Research:** Public, non-productized reproducible research. This repository is not a clinical screening product. No customer-facing or commercial workflow is planned. The existing demonstration is strictly educational. [Offline evidence audit, Kaggle protocol and optional read-only BigQuery SQL](docs/open-research-workflow.md).
+[![tests](https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy/actions/workflows/tests.yml/badge.svg)](https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy/actions/workflows/tests.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**Research evidence:** [Scientific review](docs/SCIENTIFIC_REVIEW.md) · [research guide](docs/PORTFOLIO.md) · [results](RESULTS.md).
+A reproducible investigation of whether an EfficientNet-B0 retinopathy grading
+model earns its internal score for transferable reasons. The project examines
+acquisition shortcuts, conflicting labels, preprocessing, external failure and
+sensitivity to grading targets. It includes completed training experiments,
+independent prediction audits and a static NEXUS evidence explorer.
 
-[![tests](https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy/actions/workflows/tests.yml/badge.svg)](https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy/actions/workflows/tests.yml) [![licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
+**[Research explorer](https://senanurcetin.github.io/APTOS-2019-diabetic-retinopathy/)** ·
+[Results](RESULTS.md) · [Scientific assessment](docs/SCIENTIFIC_REVIEW.md) ·
+[Kaggle notebook](https://www.kaggle.com/code/senanuretin/aptos-three-predictions-i-wrote-before-the-data) ·
+[Documentation](docs/README.md)
 
-Predicting diabetic retinopathy severity (ICDRSS grades 0-4) from 3662 retinal
-fundus photographs — with an emphasis on checking whether the model earns its
-score for the right reason.
+## Evidence at a glance
 
-Data: Kaggle [`mariaherrerot/aptos2019`](https://www.kaggle.com/datasets/mariaherrerot/aptos2019),
-the APTOS 2019 Blindness Detection set pre-split into train/valid/test.
+These rows describe different experiments; they are not one model leaderboard.
 
-**Best test QWK: 0.9098**, a five-fold ensemble. That is not the interesting
-part — public solutions reach 0.93+. The five findings below are.
+| Experiment | Observed result | Interpretation |
+|---|---|---|
+| Historical APTOS benchmark | Best ensemble test QWK **0.9098** | Reused 366-eye holdout; not a fresh confirmatory estimate |
+| Metadata baseline | Historical QWK **0.652**; Kaggle rerun **0.641** with different folds | Low-level file/image summaries predict labels; not a mathematical performance floor |
+| Historical external baseline | Referable AUC **0.984** on IDRiD, **0.819** on Messidor-2 | Ranking and referral thresholds do not transfer uniformly |
+| Historical fine-tuning | Messidor AUC **0.925** | Six test/development examination overlaps; exploratory |
+| Examination-disjoint v2 | Adjudicated AUC **0.9435**, control **0.8534** | Training targets differ; adjudicated validation targets are common |
+| v2 transfer cost | APTOS accuracy **80.6% → 64.2%** | Messidor improvement comes with substantial retention loss |
 
-**In one read:** [Three predictions written first](docs/WRITEUP.md) — the
-findings as a story, from the metadata shortcut through two pre-registered
-external tests to a controlled experiment on a possible cause. Live demo:
-[aptos-2019-diabetic-retinopathy.onrender.com](https://aptos-2019-diabetic-retinopathy.onrender.com),
-or in the browser with no server at
-[huggingface.co/spaces/senanurcetin/aptos-retinopathy-referral](https://huggingface.co/spaces/senanurcetin/aptos-retinopathy-referral).
-On Kaggle: [APTOS: Three Predictions I Wrote Before the Data](https://www.kaggle.com/code/senanuretin/aptos-three-predictions-i-wrote-before-the-data)
-recomputes the metadata shortcut live on the Kaggle copy of the dataset and walks
-through the three experiments.
+The v2 test comprises **872 eyes / 437 supplied examinations**. Its primary
+adjudicated-minus-control AUC difference is **+0.0901**, with a 95% paired
+examination-bootstrap interval of **[+0.0614, +0.1204]**. The unchanged baseline
+AUC is **0.8405**. This run uses `baseline-c8232af68337`, distinct from the
+historical external baseline `baseline-6e66147526`.
 
----
+See the [audited v2 results](reports/research/messidor2_v2_results.md) for fixed
+and validation-fitted thresholds, rare-grade recall, retention and provenance.
+No fine-tuned model was promoted to the inference demonstration.
 
-## Research explorer and evidence status
+## Run the evidence explorer
 
-**[Scientific assessment and new GPU run audit](docs/SCIENTIFIC_REVIEW.md)** — methods, corrected claims and remaining data requirements.
-
-**[Explore the NEXUS research dashboard](https://senanurcetin.github.io/APTOS-2019-diabetic-retinopathy/)** — static, no account, GPU or image upload required.
-
-**[Open the research guide](docs/PORTFOLIO.md)** · [Kaggle publication source](notebooks/kaggle_publication) · [Reproducible notebooks](notebooks/README.md)
-
-The NEXUS research explorer compares both external cohorts, two distinct operating
-points, per-grade recall and recorded model experiments. Run it without data,
-weights or a cloud account:
+Python 3.10 or newer is required. These commands need no dataset, weights,
+GPU, cloud account or credentials:
 
 ```bash
-pip install -e ".[dev]"
+python -m pip install -e ".[dev]"
 python -m aptos.reporting.portfolio --check
 python -m http.server 8080 --directory serving/static
-# http://localhost:8080/research.html
+# Open http://localhost:8080/research.html
 ```
 
-| Frozen baseline evidence | IDRiD | Messidor-2 |
-|---|---:|---:|
-| External images | 455 | 1,744 |
-| Sensitivity, original grade >= 2 | 88.5% | 32.8% |
-| Missed referable eyes, original grades | 35 / 304 | 307 / 457 |
-| Sensitivity, separate APTOS-selected operating point | 81.6% | 26.0% |
+For dataset preparation, training, audits and the optional inference
+illustration, use the [reproduction guide](docs/REPRODUCIBILITY.md).
 
-**External validity is limited.** The metadata shortcut, repeated test-set
-comparisons and external failure matter more than the best score. Historical
-reports are audited; this update does not claim new training or clinical validity.
-The best recorded ensemble (0.9098) differs from the externally evaluated baseline
-(0.9091). [Methods, model boundaries and zero-cost delivery](docs/PORTFOLIO.md).
+## Repository structure
 
-## Five findings
-
-### A model can score well without looking at the retina
-
-A RandomForest trained **only on file metadata** — resolution, aspect ratio,
-brightness, contrast, file size — reaches **QWK 0.652** under five-fold
-cross-validation. It uses global pixel summaries rather than spatial retinal features.
-
-![Shortcut](reports/figures/07_resolution_confound.png)
-
-The cause is concentrated in one resolution: **92.5% of the 1050x1050 images
-are `No DR`**, against 33.6% at every other size. APTOS data was collected
-across several sites with different cameras, and the device signature
-correlates with disease prevalence. Resizing to 512px does not remove it —
-aspect ratio, sharpness and edge geometry still carry it.
-
-This does not invalidate the results, but any reported score should be read
-against that floor. `scripts/confound_analysis.py` measures it — and the fourth
-finding below tests whether the model actually depends on it.
-
-### Label disagreement limits how confidently accuracy can be interpreted
-
-The dataset contains the same image more than once. Of 148 same-image pairs,
-**43 (29.1%) carry conflicting labels**. Within this selected set of pairs,
-the labels agree on 70.9% of pairwise comparisons; an approximate **84%**
-single-label accuracy figure is only a heuristic under additional assumptions,
-**not a proven dataset-wide ceiling or measured inter-rater reliability**.
-
-The ensemble's test accuracy is 0.8033. Its residual errors may reflect both
-model mistakes and label variability; aggregate duplicate-pair disagreement
-cannot separate those causes.
-
-### Two preprocessing ideas, both null
-
-**CLAHE.** The first run suggested it improved test QWK by +0.0152. Across three
-seeds the difference was **+0.0152, −0.0201, −0.0049** — mean −0.0033, paired
-t-test p = 0.78. Five-fold cross-validation, an independent design on a larger
-evaluation pool, agrees and tightens it: **−0.0005, p = 0.865**.
-
-**`squash` squaring.** The geometric case was measured and correct — padding
-leaves 28.5% of a 512px frame black against squash's 13.4%, so squash carries
-21% more retina pixels. Trained and cross-validated, it bought **+0.0038 QWK,
-p = 0.468**, winning 2 of 5 folds.
-
-Neither beats the control. The second one is the sharper lesson: the argument
-for squash was quantitative and right about the pixels, and the pixels turned
-out not to be what limits this model.
-
-The largest effect found anywhere in the project is not a preprocessing choice
-at all — it is ensembling the five folds, worth **+0.019 QWK** on the baseline,
-about four times the biggest gap between any two variants (0.0044). The gain is
-smaller for the other variants: +0.016 for squash, +0.007 for clahe.
-
-### The simple camera-shortcut hypothesis did not transfer to IDRiD
-
-Given the shortcut above, the obvious question is whether the score survives
-without it. Within APTOS it cannot be removed — excluding the confounded
-resolution still leaves sixteen others whose No DR share runs from 0% to 100%.
-
-**IDRiD** removes it: all 455 of its images are 4288x2848, so geometry carries
-no label information, and the prior on that geometry is *inverted* — in APTOS
-all 52 images at that resolution are diseased, in IDRiD 129 of 455 are healthy.
-
-A prediction was committed before the run
-([`docs/external-validation-prediction.md`](docs/external-validation-prediction.md)):
-a shortcut-dependent model would over-call disease, and specificity on the
-healthy eyes would collapse.
-
-It was falsified. No fine-tuning, APTOS thresholds not refitted:
-
-| metric | APTOS test | IDRiD |
-|---|---|---|
-| QWK | 0.9091 | 0.8045 |
-| referable sensitivity | 0.956 | 0.885 |
-| **referable specificity** | **0.917** | **0.987** |
-
-1.6% of healthy eyes were called referable. Specificity is *higher* on a
-population the model has never seen. What does degrade is calibration at the
-top of the scale — 8 grade-4 predictions against 64 true cases — while missed
-referrals stay at 2 of 148. It compresses the scale rather than failing to see
-disease.
-
-### …and where it stops
-
-One external set can be luck, so a second was added: **Messidor-2**, France,
-1744 images graded by a panel of three retina specialists who adjudicated
-disagreements — better labels than APTOS or IDRiD. Four predictions were
-pushed to GitHub before any image was downloaded
-([`docs/second-external-validation-prediction.md`](docs/second-external-validation-prediction.md)).
-
-The main one failed:
-
-| | APTOS test | IDRiD | Messidor-2 |
-|---|---|---|---|
-| referable ROC AUC | 0.983 | 0.984 | **0.819** (predicted ≥ 0.93) |
-| sensitivity at the APTOS operating point | 0.920 | 0.816 | **0.260** |
-| specificity at the APTOS operating point | 0.934 | 1.000 | 0.991 |
-
-The failure has one address: **83% of Moderate (grade 2) eyes are graded below
-2**, against 21% on IDRiD. Moderate eyes with hard exudates are caught (median
-score 1.02); Moderate eyes without them are scored like Mild (0.46). The pattern supports a grading-standard hypothesis; IDRiD alone does not
-exclude every camera or acquisition confound. And recalibrating at one new site does not fix the
-next: a threshold fitted on Messidor-2 takes IDRiD specificity from 1.00 to
-0.13.
-
-That last reading was made after seeing the data, so it was then tested
-([`docs/finetune-prediction.md`](docs/finetune-prediction.md), predictions
-committed first). Half of Messidor-2 was used to fine-tune; a control arm was
-fine-tuned on the **same images** with the model's own grades as labels, so any
-gain from the camera alone would show up there too.
-
-| | unchanged | fine-tuned, adjudicated labels | fine-tuned, control labels |
-|---|---|---|---|
-| Messidor-2 test half, referable AUC | 0.830 | **0.925** | 0.834 |
-| Messidor-2 test half, Moderate graded below 2 | 78.4% | **45.0%** | 82.5% |
-| IDRiD, referable AUC | 0.984 | 0.960 | 0.981 |
-| APTOS test, referable AUC | 0.983 | 0.965 | 0.976 |
-| APTOS test, accuracy | 0.803 | 0.686 | 0.776 |
-
-**25 October 2026 examination-pair audit:** an author-released transcription
-of the ADCIS pairing table covers all 1,744 images. **Seven examinations cross
-partitions; six have one eye in test and the other in development** (five in
-training, one in validation). The historical AUC 0.925 is exploratory and is
-not an examination-independent confirmatory result. Original ADCIS spreadsheet
-parity and longitudinal patient identity remain unverified. See the
-[reproducible audit](docs/MESSIDOR2_ACQUISITION.md). A separate
-[examination-disjoint follow-up split](docs/MESSIDOR2_FOLLOWUP.md) now has zero
-cross-partition examinations. The [completed v2 experiment](reports/research/messidor2_v2_results.md)
-now reports AUC 0.9435 versus control 0.8534 (paired difference +0.0901, 95%
-examination interval [+0.0614, +0.1204]), with APTOS retention accuracy falling
-from 80.6% to 64.2%. It uses a different baseline from the historical table above.
-
-The adjudicated-label arm improved on this historical split; the same-image
-control did not. **The experiment supports a role for the grading labels rather than image-domain
-adaptation alone; it does not rule out all acquisition effects.** Two limits,
-both reported: the whole Moderate grade shifted up rather than the subtle cases
-specifically (the fifth prediction failed), and the fine-tuned model over-grades
-APTOS, so the deployed model is unchanged.
-
-Full numbers, tables and statistics: **[RESULTS.md](RESULTS.md)**. For a walk
-through the findings that recomputes them from the committed reports, open
-[`aptos_2019.ipynb`](aptos_2019.ipynb) - it runs in Colab without the dataset.
-
----
-
-## Pipeline
-
-Shared functions live in `src/aptos/preprocessing.py`. `scripts/preprocessing.py`
-remains as a thin re-export, because the scripts still under `scripts/` import it
-by path.
-
-```
-Read -> Quality check -> Auto-crop -> CLAHE -> Square -> Resize -> Normalise
+```text
+src/aptos/       Installable package: data, training, evaluation and reporting
+configs/        Experiment configuration
+scripts/        Packaging, acquisition and legacy CLI adapters
+notebooks/      Evidence notebooks, GPU experiment template and Kaggle source
+serving/        Static NEXUS explorer and separate inference illustration
+reports/        Committed aggregate evidence, tables, figures and audit records
+docs/           Documentation index, methods, runbooks and dated protocols
+tests/          Synthetic-data, integrity, training and serving contracts
+.github/        CI and static Pages deployment
+aptos_2019.ipynb Original root-level notebook, retained for existing links
 ```
 
-![Pipeline](reports/figures/05_pipeline_stages.png)
-
-| function | what it does |
-|---|---|
-| `auto_crop()` | Removes the black frame outside the retina (11.25% of the area at `tol=7`) |
-| `apply_clahe()` | CLAHE on the LAB L channel only, so colour balance survives |
-| `to_square()` | `squash` or `pad`; squash cuts black area from 28.5% to 13.4% — measured, but see below |
-| `image_quality()` | Brightness and contrast measures, unusable-image detection |
-| `brightness_outliers()` | MAD-based outlier detection |
-| `dhash()` | Perceptual hash, used as a duplicate candidate generator |
-| `preprocess()` | The full six-stage pipeline |
-
-Decisions were measured rather than assumed:
-
-- **`tol=7` for auto-crop** — cropping at tol=7 and tol=15 give nearly identical
-  results (11.25% vs 11.48% removed), so the boundary sits on a stable plateau.
-- **`squash` vs `pad` — measured, then trained, then dropped as a claim.** The
-  retinal disc is clipped top and bottom but never at the sides, so a cropped
-  image is naturally wide and already 86.5% retina. Padding dilutes that with
-  black bars; squashing keeps all tissue and yields 21% more effective retina
-  pixels. All of that is true and none of it helped: cross-validated against
-  pad, squash was worth +0.0038 QWK at p = 0.468. **Every published number in
-  this repository was produced with `pad`**, and the caches on disk record that
-  in their own `_manifest.json`.
-- **CLAHE after auto-crop** — on an uncropped image the wide black border skews
-  the histogram.
-- **Normalisation in the training transforms, not the pipeline** — one place
-  only, so it cannot happen twice.
-
-Each processed directory carries a `_manifest.json` recording the settings that
-produced it. Training checks it rather than merely printing it: a cache that
-does not match what the config asked for stops the run.
-
-## Model and training
-
-EfficientNet-B0 with ImageNet weights, 384px input.
-
-**Augmentation.** Random resized crop (0.85-1.0), horizontal *and vertical*
-flip, ±20° rotation, mild brightness and contrast jitter. Vertical flip is
-included because a fundus photograph has no meaningful up/down orientation;
-colour jitter is kept mild so it does not fight CLAHE.
-
-![Augmentation](reports/figures/08_augmentation.png)
-
-**Loss.** `--mode reg` uses a single output with MSE and four thresholds tuned
-on validation; `--mode cls` uses five-way softmax with class-weighted
-cross-entropy.
-
-**Training loop.** AdamW, cosine schedule, mixed precision, early stopping on
-validation QWK, best checkpoint kept rather than last. `aptos.training.cv` adds
-stratified K-fold cross-validation with the test set held out entirely, and is
-resumable: each fold persists its predictions and metrics before the next
-starts, so an interrupted sweep costs one fold rather than all of them.
-
-## Choosing the metric
-
-The headline metric is **quadratic weighted kappa**, not accuracy. 49% of the
-dataset is "No DR"; a model that always predicts 0 scores 49% accuracy and 0 on
-QWK. The problem is also **ordinal** — grades form a severity scale, so calling
-a Severe case Mild is worse than calling it Proliferative.
-
-QWK should be read together with macro F1. This model scores **QWK 0.91 but
-macro F1 0.55**: errors land on neighbouring grades, which QWK penalises
-lightly, so the weakness on minority classes shows up only in macro F1.
-
-## Data
-
-![Class distribution](reports/figures/01_class_distribution.png)
-
-3662 images, all readable, all three-channel RGB. Heavily imbalanced — 1434 No
-DR against 154 Severe in training, a ratio of 9.3. Resolution varies widely: 17
-distinct sizes between 474x358 and 4288x2848.
-
-Reports: [`image_properties.md`](reports/image_properties.md),
-[`data_quality.md`](reports/data_quality.md),
-[`confounds_and_noise.md`](reports/confounds_and_noise.md). All generated by
-scripts, not written by hand.
-
-## Setup
-
-```bash
-pip install -e .            # preprocessing and analysis, no torch
-pip install -e ".[train]"   # add the training stack (quote it: some shells glob [ ])
-```
-
-For GPU support install PyTorch from the CUDA index **only** — adding
-`--extra-index-url` makes pip prefer the CPU build on PyPI:
-
-```bash
-pip install --force-reinstall torch torchvision --index-url https://download.pytorch.org/whl/cu128
-```
-
-Runs are tracked locally with MLflow in a SQLite store, `mlflow.db`, which
-stays on the machine that produced it:
-
-```bash
-mlflow ui --backend-store-uri sqlite:///mlflow.db
-```
-
-The record travels with the repository as text instead: `python -m aptos.tracking
-export` writes every run to [`reports/runs.csv`](reports/runs.csv), which is
-versioned, diffable, and readable in a pull request. The binary store is not
-committed - it embeds absolute local paths, and its byte layout once tripped
-GitHub secret scanning (SQLite packed the metric key `test_acc` beside a run id,
-and the concatenation matched a vendor API-key pattern).
-
-BigQuery is not required for anything. The project originally logged every run
-to a GCP project, and when that access was withdrawn the entire experimental
-record went with it — which is why tracking is local and travels with the
-repository. `load_to_bigquery.py` is the only file that still talks to it, and
-it is an optional export - nothing reads from BigQuery any more.
-
-`scripts/analyze_runs.py` prints the run leaderboard and, with
-`--sweep models/cv/<sweep>`, the confusion matrix, per-class recall and every
-missed severe case for one sweep's ensemble, read from its persisted fold
-predictions.
-
-## Running
-
-One entry point, with the stage order enforced rather than documented:
-
-```bash
-kaggle datasets download mariaherrerot/aptos2019 -p data/images --unzip
-
-python -m aptos.pipeline list        # the stage graph
-python -m aptos.pipeline check       # what could run right now
-python -m aptos.pipeline run all     # everything, in dependency order
-```
-
-Every stage declares what it reads, so a stage whose inputs are missing stops
-with a message naming the stage you skipped. That matters here: `quality`
-verifies duplicate candidates against thumbnails from the processed cache, and
-running it before `preprocess` used to yield zero duplicates and an empty leak
-list *silently*. The published run order in earlier versions of this file had
-exactly that mistake.
-
-Training and cross-validation:
-
-```bash
-python -m aptos.training.cv --config configs/cv.yaml --variant baseline
-bash scripts/run_cv.sh                      # baseline, squash, clahe in turn
-```
-
-The sweep is resumable — completed folds are skipped, so re-running after an
-interruption picks up where it stopped.
-
-External validation, with no fine-tuning and no threshold refitting:
-
-```bash
-kaggle datasets download mariaherrerot/idrid-dataset -p data/external --unzip
-python -m aptos.evaluation.external --sweep models/cv/baseline-<id>
-python -m aptos.evaluation.confound --sweeps models/cv/baseline-<id>
-
-# the second external set, Messidor-2 (adjudicated grades + images)
-kaggle datasets download google-brain/messidor2-dr-grades -p data/external/messidor2 --unzip
-kaggle datasets download mariaherrerot/messidor2preprocess -p data/external/messidor2 --unzip
-python -m aptos.evaluation.external --sweep models/cv/baseline-<id> --dataset messidor2
-python -m aptos.evaluation.calibration --sweep models/cv/baseline-<id>
-
-# archival replay ONLY: this proxy split has known bilateral overlap
-# for the separate examination-disjoint follow-up, see docs/MESSIDOR2_FOLLOWUP.md
-python -m aptos.training.finetune split --legacy-replay
-python -m aptos.training.finetune run --legacy-replay
-```
-
-Each external run was preceded by a prediction committed to `docs/` before the
-data was touched; the files keep the prediction and append the outcome.
-
-## Tests
-
-```bash
-pytest                      # 177 tests
-pytest -m pure              # the 121 that need neither torch nor the dataset
-python tests/test_preprocessing.py   # 31 of those, without pytest at all
-pytest --cov                # coverage; CI fails below the floor in pyproject.toml
-```
-
-The preprocessing tests build synthetic fundus images, so they run on a machine
-that has never downloaded the dataset — which is why CI checks them on Python
-3.10, 3.11 and 3.12, and why the Colab notebook can run them too. A second CI
-job installs CPU torch and runs everything, including an end-to-end training
-run on synthetic images and a resume-after-a-lost-fold check, and enforces a
-65% coverage floor (measured at 69%).
-
-## Things worth knowing
-
-- **Duplicate detection needs two stages.** dHash alone flagged 312 candidate
-  groups; 181 were false positives, because every fundus image is a bright disc
-  on black. Candidates are verified at pixel level, leaving 131 real groups, 48
-  of which cross the splits. `--exclude-leaked` drops the 49 affected training
-  images. Measured impact on the score was small (test QWK 0.8960 → 0.8983),
-  but measuring that a flaw is harmless is not the same as fixing it.
-- **The test split holds 366 images**, only 17 of them Severe. Select on
-  validation, look at test once, and treat per-class test figures as
-  indicative.
-- **Brightness thresholds must be data-aware.** Brightness spans 15.0-129.6
-  here, so the general-purpose "too bright" cutoff of 250 never fires. The
-  quality report uses MAD-based outlier detection alongside fixed thresholds.
-- **The Kaggle archive is inconsistent**: the validation split lives under
-  `val_images/`, not `valid_images/`.
-- **`test.csv` ends with ~500 blank lines.** Loading it raw with schema
-  autodetection produces a broken table.
-- **Long GPU runs are fragile on Windows.** Every dataloader worker is a
-  fresh process that re-imports torch and maps its CUDA libraries, and Windows
-  charges each of them against a system-wide commit limit. Run out and the
-  workers die with `error code 1455` ("paging file too small"). It is not a
-  VRAM problem - peak VRAM here is 2.2 GB of 6. Do not start a second heavy job
-  alongside a run, and do not edit anything under `src/aptos/` while one is
-  live, because workers re-import it by path. When headroom is short,
-  `--workers 0` loads data in the main process: slower, but it cannot fail
-  this way.
-
-## Serving
-
-```bash
-pip install -e ".[train,serve]"
-uvicorn serving.app:app --reload
-```
-
-`POST /predict` takes a fundus photograph and returns a grade, the referral
-decision, the raw ordinal score, each fold's score and the spread across the
-five folds; `?preview=true` adds the preprocessed image the model actually
-scored. `GET /model-card` returns what the model is known to get wrong.
-
-The page at `/` ([serving/static/index.html](serving/static/index.html)) shows
-the referral decision first, then the grade, the ensemble score against the four
-thresholds with each fold marked, and the upload beside the cropped, padded
-image that was scored. Fold spread is read against a measured reference - its
-percentile among the 366 APTOS test images - rather than a cut-off picked by
-eye. Every number on the page is injected from `MODEL_CARD`, and a test fails if
-the page names a metric the card does not carry. The page states
-that this is not a medical device, and lists the confound, the observed label discordance and
-the calibration drift, because a demo that omits them would contradict the
-analysis it exists to demonstrate.
-
-The referral flag is an experimental output. Ranking transferred to IDRiD
-(ROC AUC 0.984) but degraded on Messidor-2 (0.819); sensitivity at the original
-grade boundary fell to 32.8%. Neither the flag nor the grade is a clinical decision.
-
-### Deployment
-
-The weights are published as an ONNX export on Hugging Face:
-[senanurcetin/aptos-retinopathy-grader](https://huggingface.co/senanurcetin/aptos-retinopathy-grader).
-The service runs on Render's free tier from [`render.yaml`](render.yaml):
-**[aptos-2019-diabetic-retinopathy.onrender.com](https://aptos-2019-diabetic-retinopathy.onrender.com)**.
-It sleeps when idle, so the first request after a quiet spell waits for a cold
-start, and on the free tier's fraction of a CPU a prediction takes 4-9 seconds.
-
-The free tier allows 512 MB of RAM, which the PyTorch service did not fit. So
-the deployed path runs the same ensemble through ONNX Runtime and never imports
-torch. Every substitution in that path was measured before it was used:
-
-| step | check | result |
-|---|---|---|
-| PyTorch -> ONNX | raw scores on 40 held-out images | max difference 3.1e-05, 0 grade mismatches |
-| torchvision -> numpy input transform | 25 images, pixel by pixel | identical |
-| memory | largest 8 test images, full service | peak 204 MB (was 613 MB with ONNX Runtime's arena on) |
-| dependencies | service run in a venv holding only the Dockerfile's packages | all endpoints respond; torch and scikit-learn absent |
-| weight download | build step run locally at the pinned revision | sha256 identical to the export |
-| the live service | 10 held-out test images, two per grade, sent to the deployed URL | grade matches the offline ensemble on 9 of 10 |
-
-The one disagreement is a boundary case, and a measured one: the offline score
-was 2.353 and the live score 2.310, either side of the 2|3 cut at 2.324. The
-offline path reads the JPEG cache, the live one preprocesses the uploaded PNG
-from source, and that round-trip moved the score by 0.042 - inside the 0.12
-range already recorded. The referral decision is the same either way, and the
-five folds' own scores for that image spread by 0.54, which puts the
-preprocessing difference in proportion.
-
-Preprocessing is not reimplemented anywhere: both paths call the same
-`preprocess_array`. `serving/export_onnx.py` refuses an export that fails
-parity, and `serving/fetch_weights.py` refuses to fetch one whose recorded
-check failed.
-
-## Known gaps
-
-Documented rather than hidden. Seven earlier entries here are now closed —
-cross-validation completed, `squash` was trained and came back null, the
-shortcut was tested rather than only reported, IDRiD was run, the ported
-trainer was shown to reproduce the original exactly (test QWK 0.8853 from both
-the port and the original on today's stack), confound-aware folds were run (no
-change: ensemble QWK 0.9071 against 0.9091), and a second external set was
-added. That last one opened the first gap below. What remains:
-
-- **The deployed model under-grades Moderate disease.** Against Messidor-2's
-  adjudicated labels, 83% of Moderate eyes are graded below 2. Fine-tuning on
-  adjudicated labels improves that historical split (45%, AUC 0.925; examination overlap detected) but over-grades APTOS (accuracy
-  0.803 to 0.686), so it was not deployed. A model right on both needs one
-  labelling standard across all its training data, which this project does not
-  have. Until then, read the referral flag as "exudate-level disease or worse".
-
-
-- **Calibration has to be corrected per site.** ECE rises from 0.032 on APTOS
-  test to 0.117 on IDRiD and 0.152 on Messidor-2, under-confident on both, so a
-  threshold fitted on APTOS under-refers elsewhere (IDRiD sensitivity 0.816
-  against the 0.90 it was set for). Refitting the calibrator at one external
-  site improves the other, but the operating point does not travel between
-  them, so a deployment needs labelled data from every site it serves. See
-  [`reports/calibration.md`](reports/calibration.md).
-
-- **CLAHE parameters were never tuned.** Only clip=2.0 on the LAB lightness
-  channel has been trained. So the finding is "CLAHE at these settings does
-  nothing", not "CLAHE cannot help" — though two independent designs now put
-  the effect at zero.
-- **Both external sets are Kaggle mirrors.** IDRiD is 455 images rather than
-  the full official distribution, and the Messidor-2 copy was already cropped
-  and resized to 512px by a third party before this project saw it.
-- **The deployed service sleeps.** Render's free tier stops the container after
-  inactivity, so the first request after a quiet spell waits for a cold start.
-- **There is no working attention explanation.** Grad-CAM is implemented and
-  measured, and the measurement says it cannot be trusted here: five identically
-  trained folds disagree about where the model looks as much as trained and
-  untrained weights do (p = 0.77). The service declines to return heatmaps for
-  that reason. See [`reports/attention.md`](reports/attention.md).
-- **Serving preprocesses from source while training read cached JPEGs.** The
-  cache went through a quality-95 JPEG round-trip that an upload does not, so
-  raw scores differ slightly — up to 0.12 on six held-out images, with every
-  predicted grade agreeing. Small, real, and not worth hiding.
-
-## Experimental ordinal severity model
-
-An optional, **research-only** cumulative-link head is available for controlled
-experiments against the existing EfficientNet-B0 scalar MSE baseline. Its
-four trainable, ordered cutpoints and cumulative binary loss are documented
-in [the ordinal experiment protocol](docs/ordinal-research.md). This does not
-modify published accuracy, external-validation results, or deployed models;
-**no new performance gain has been measured**.
-
-## Layout
-
-```
-src/aptos/
-  config.py            every constant, one place; YAML + dataclasses
-  preprocessing.py     the shared image pipeline
-  pipeline.py          stage graph, preconditions, CLI entry point
-  tracking.py          MLflow, with BigQuery as an optional extra sink
-  data/                labels, datasets, cache manifests
-  modeling/            QWK, threshold search, clinical metrics (no torch)
-  training/            model, epoch loop, resumable cross-validation,
-                       fine-tuning on adjudicated labels
-  evaluation/          confound stratification, external validation (IDRiD,
-                       Messidor-2), calibration and site transfer, Grad-CAM
-configs/               base + one file per variant, and the CV variants
-scripts/               legacy scripts, ported progressively
-  preprocessing.py     thin re-export, kept for the scripts that import by path
-  run_cv.sh            the sweep runner
-serving/               FastAPI app, ONNX export, the demo page, Dockerfile, model card
-tests/                 177 tests; `-m pure` needs neither torch nor the dataset
-docs/                  three pre-registered predictions with their outcomes,
-                       and WRITEUP.md, the project in one read
-reports/               generated markdown, CSVs and 16 figures
-```
-
-## Licence
-
-Code: MIT — see [LICENSE](LICENSE).
-
-The dataset is not included in this repository and is not covered by that
-licence; see [NOTICE](NOTICE).
-
-## Credits
-
-Built as a final-year data science project. The pipeline, analysis, reports,
-figures, tests and cross-validation in this repository were developed by
-**Senanur Çetin**; see the commit history for the breakdown.
-
-Initial project scaffolding and the first Colab notebook came from **Ceren
-Kocabaş** and **Ruveyda Karakoyun**.
+Downloaded data, checkpoints, MLflow stores and local execution outputs belong
+in ignored `data/`, `models/`, `mlruns/` and `outputs/`. They are not part of the
+public source distribution. Runtime code follows the existing `src` layout;
+`serving/static` is retained because FastAPI and Pages share those assets.
+
+## Scientific boundaries
+
+- The APTOS holdout and external cohorts have already been inspected. Further
+  comparisons on them are exploratory.
+- Examination separation uses a third-party pairing transcription. Original
+  ADCIS spreadsheet parity and longitudinal patient identity are unverified.
+- The v2 adjudicated arm recalls only **20.8%** of the 24 grade-4 test eyes;
+  validation contains only two grade-4 eyes.
+- Duplicate-label disagreement does not establish a population accuracy ceiling.
+  Nonsignificant preprocessing or attention tests do not prove equivalence.
+- No prospective clinical utility, demographic fairness or multi-seed robustness
+  is established. This repository is not a diagnostic service.
+
+The [scientific review](docs/SCIENTIFIC_REVIEW.md) separates completed findings,
+methodological limitations and the remaining data requirements. Verification
+records are linked there rather than repeated throughout the documentation.
+
+## Contributing and licensing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for checks and evidence requirements, and
+[SECURITY.md](SECURITY.md) for private disclosure. Code is [MIT-licensed](LICENSE).
+Datasets and model artifacts have separate terms; see [NOTICE](NOTICE) and the
+[model card](serving/MODEL_CARD.md).
+
+Developed by **Senanur Çetin**. Initial project scaffolding and the first Colab
+notebook were contributed by **Ceren Kocabaş** and **Ruveyda Karakoyun**.
+Citation metadata is provided in [CITATION.cff](CITATION.cff).

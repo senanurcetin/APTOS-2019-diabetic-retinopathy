@@ -12,90 +12,89 @@ datasets:
   - aptos2019
 ---
 
-# APTOS retinopathy grader
+# APTOS scalar ensemble: model card
 
-A five-fold EfficientNet-B0 ensemble that grades diabetic retinopathy (ICDRSS
-0-4) from colour fundus photographs and makes a referral decision. Trained on
-APTOS-2019; exported to ONNX for CPU serving.
+This card describes the historical five-fold EfficientNet-B0 scalar regression
+ensemble, `baseline-6e66147526`, exported to ONNX for a research illustration.
+It does not describe the newer scalar seed-42 sweep or either v2 fine-tuned arm.
+No fine-tuned model was promoted.
 
-The export was checked against the original PyTorch models before publication:
-maximum raw-score difference 3.1e-05 on 40 held-out images, zero grade
-mismatches. `export.json` records that check alongside the thresholds and the
-preprocessing settings the model expects.
+**Research only.** No prospective clinical utility, regulatory clearance or
+clinical safety has been established. Predictions must not guide patient care.
 
-> **Not a medical device.** A benchmark model trained on one public dataset,
-> with no clinical validation and no regulatory clearance. Do not use it for
-> anyone's care.
+## Intended use and model
 
-Source, analysis and every number below:
-[senanurcetin/APTOS-2019-diabetic-retinopathy](https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy).
+The model maps color fundus photographs to an ordinal severity score and four
+validation-fitted thresholds for grades 0–4. The demonstration also reports an
+experimental referral flag for predicted grade ≥ 2. This flag differs from the
+separately selected operating point in the calibration report.
 
-Live demo, serving these exact weights on a free CPU instance:
-[aptos-2019-diabetic-retinopathy.onrender.com](https://aptos-2019-diabetic-retinopathy.onrender.com).
-The instance sleeps when idle, so the first request after a pause takes
-about a minute.
+Training uses APTOS-2019, ImageNet initialization and 384px inputs. Shared
+preprocessing crops the retinal field, squares and resizes the image, then
+normalizes it for the ensemble. The source and experiment record are in the
+[repository](https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy).
 
-## What it gets right
+## Recorded evaluation
 
-| | APTOS test | IDRiD (external) | Messidor-2 (external) |
-|---|---|---|---|
+The external columns use unchanged APTOS grade thresholds. These are historical
+results on dataset mirrors, not prospective screening estimates.
+
+| Metric | APTOS test | IDRiD | Messidor-2 |
+|---|---:|---:|---:|
 | QWK | 0.9091 | 0.8045 | 0.4928 |
-| referable ROC AUC | 0.983 | 0.984 | 0.819 |
-| referable sensitivity | 0.956 | 0.885 | 0.328 |
-| referable specificity | 0.917 | 0.987 | 0.990 |
+| Referable ROC AUC | 0.983 | 0.984 | 0.819 |
+| Referable sensitivity | 0.956 | 0.885 | 0.328 |
+| Referable specificity | 0.917 | 0.987 | 0.990 |
 
-IDRiD is a different clinic, camera and grading team (both sets are from India),
-and all of its images share one resolution - so the acquisition shortcut described below is
-unavailable there. No fine-tuning, and the APTOS thresholds were not refitted.
-Discrimination transferred essentially intact.
+APTOS has 366 test eyes; the external mirrors contain 455 IDRiD and 1,744
+Messidor-2 images. Messidor-2 includes 457 referable eyes, of which 307 were
+missed by the original grade decision. High IDRiD performance does not establish
+transferability to another population or grading standard.
 
-Messidor-2 (France, 1744 images graded by an adjudicating panel of three retina
-specialists) is where it stops. A prediction written before the run expected
-referable AUC >= 0.93; it came out 0.819. The next section says why.
+## Limitations
 
-## What it gets wrong
+- **Under-grading:** 83% of historical Messidor grade-2 eyes were predicted below
+  grade 2. The observed hard-exudate pattern supports a grading-target hypothesis;
+  it is not a validated lesion detector or definitive causal mechanism.
+- **Dataset shortcuts:** low-level file/image summaries reach historical QWK
+  0.652. Brightness derives from pixels; this is not a pixel-free test or a
+  mathematical performance floor.
+- **Label disagreement:** 43 of 148 selected same-image pairs carry conflicting
+  labels. This does not establish an 84% population accuracy ceiling.
+- **Selection and identity:** the APTOS holdout has been inspected repeatedly.
+  Demographic fairness and longitudinal patient independence are unverified.
+- **Calibration:** thresholds and score calibration shift across populations.
+  Site-specific fitting requires a separate evaluation cohort; it does not
+  establish usefulness at another site.
+- **Explanations:** the recorded Grad-CAM controls do not support reliable lesion
+  localization. Nonsignificance does not prove equivalence between maps.
+- **Preprocessing parity:** training used cached JPEGs; upload-time preprocessing
+  can move scores near a grade threshold. Recorded export parity does not
+  guarantee identical predictions for every decoding path.
 
-- **Moderate disease without hard exudates is under-graded.** On Messidor-2,
-  83% of Moderate eyes were graded below 2. Moderate eyes with exudates were
-  caught; those defined by subtler signs were scored like Mild. The model
-  learned where APTOS's single graders draw that line, and a specialist panel
-  draws it lower. Fine-tuning on adjudicated labels moves the line (45% below 2,
-  AUC 0.925) while a same-image control does not, which confirms the cause - but
-  that model over-grades APTOS, so it is not the one published here. Read the
-  referral flag as "exudate-level disease or worse".
-- **A shortcut exists in the training data.** A classifier given only file
-  metadata - resolution, aspect ratio, brightness, file size - reaches QWK 0.652
-  on APTOS without looking at the retina, because camera correlates with disease
-  prevalence there.
-- **The labels are noisy.** Duplicate images carry conflicting grades 29% of the
-  time, which puts a single label's accuracy near 84%. The model cannot be more
-  right than its labels.
-- **The grade drifts on new populations.** On IDRiD the model issued 8 grade-4
-  predictions where there were 64. It compresses the top of the scale rather
-  than missing disease - 2 of 148 severe cases were called non-referable - but
-  the five-way grade should not be trusted outside the training distribution.
-  The referral flag held up on IDRiD, but not at the Moderate boundary above.
-- **Its probabilities are under-confident elsewhere, and thresholds are local.**
-  Calibration error rose from 0.03 on APTOS to 0.12 on IDRiD and 0.15 on
-  Messidor-2. A threshold chosen for sensitivity 0.90 on APTOS delivered 0.82 on
-  IDRiD, and a threshold refitted on one external set did not transfer to the
-  other. Set it on labelled data from the site it will serve.
-- **There is no attention map.** Grad-CAM was implemented and measured: five
-  identically trained folds disagree about where the model looks as much as
-  trained and untrained weights do. A heatmap here would look informative
-  without being so, so none is offered.
-- **Uploads are preprocessed from source**, while training read JPEG-cached
-  images. Raw scores can differ slightly from the offline evaluation; on six
-  held-out images every predicted grade still matched.
+The historical fine-tuning result (AUC 0.925) has six test/development
+examination overlaps. The separate examination-disjoint v2 experiment reaches
+AUC 0.9435 but uses a different baseline and loses APTOS accuracy (80.6% to
+64.2%). Neither result replaces this model's evaluation. See
+[audited v2 results](../reports/research/messidor2_v2_results.md) and the
+[scientific review](../docs/SCIENTIFIC_REVIEW.md).
 
-## API
+## Export and inference illustration
 
-```
-POST /predict       multipart file -> grade, referable, raw score, fold spread
-GET  /model-card    the limitations above, as JSON
-GET  /health
+The historical ONNX export recorded a maximum score difference of 3.1e-05
+against PyTorch on 40 images, with zero grade mismatches. Its `export.json`
+contains thresholds and preprocessing settings. This limited check is specific
+to that export; the newer v2 baseline re-score is a separate comparison.
+
+```text
+POST /predict       multipart image → grade, referral flag, score, fold spread
+GET  /model-card    structured model metadata and limitations
+GET  /health        service health
 ```
 
-The response includes `fold_spread`, the standard deviation of the five fold
-models' scores for that image. A large spread means the folds disagree, and the
-prediction deserves less weight.
+Fold spread is the standard deviation of model scores, not calibrated confidence.
+The [reproduction guide](../docs/REPRODUCIBILITY.md) describes optional local
+serving. The static [NEXUS explorer](https://senanurcetin.github.io/APTOS-2019-diabetic-retinopathy/)
+needs no model or uploads. Do not send identifiable retinal images to a public
+demonstration. Code licensing does not grant rights to the underlying datasets;
+see [NOTICE](../NOTICE).

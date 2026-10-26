@@ -1,12 +1,13 @@
 # Paired external-validation uncertainty (research-only)
 
-The project's existing external reports are **aggregate counts**. They support
+The project's historical external reports are **aggregate counts**. They support
 the published sensitivity/specificity estimates and descriptive Wilson
 intervals, but they **cannot** reconstruct paired per-eye predictions, patient
 linkage, or patient-level uncertainty. No such data is fabricated.
 
-This module is for **future experiments** in which two fixed models have scored
-the **same eyes** with frozen operating thresholds. Run it locally using
+This module compares two fixed models scored on the **same eyes** with frozen
+operating thresholds. It is used by the completed examination-disjoint v2
+follow-up; see [audited results](../reports/research/messidor2_v2_results.md). Run it locally using
 the original data holder's permitted data; do not commit identifiable records.
 
 ## Input CSV contract

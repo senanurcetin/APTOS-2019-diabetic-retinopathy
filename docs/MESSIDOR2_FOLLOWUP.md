@@ -102,7 +102,7 @@ and exports aggregate differences only. At allocation closeout no model interval
 was available. The subsequent completed run and per-eye audit are documented
 below; synthetic tests remain software checks, not scientific results.
 
-## Verification completed — 26 October 2026
+## Allocation-stage verification — 26 October 2026
 
 [CI for source commit 02a0608](https://github.com/senanurcetin/APTOS-2019-diabetic-retinopathy/actions/runs/40218008457)
 passed **418 tests**, coverage **73.69%**, and Ruff. Python 3.10/3.11/3.12 each
@@ -110,8 +110,8 @@ passed 299 pure tests. Real-cohort checks reconfirmed all labels and IDs,
 zero follow-up cross-partition examinations, unchanged historical CSV bytes,
 and matching split/source-code hashes. The
 [verification record](../reports/research/messidor2_examination_v2_verification.json)
-pins the CI source, downloaded log and aggregate plan. This verifies software
-and allocation; no new model was trained and no new performance was measured.
+pins the CI source, downloaded log and aggregate plan. This earlier verification covers software and allocation only. The subsequent
+model experiment and its independent audit are documented below.
 
 ## Completed v2 paired model experiment — 26 October 2026
 

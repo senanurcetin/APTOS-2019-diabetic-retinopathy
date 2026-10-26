@@ -1,7 +1,7 @@
 # Three predictions written first: what a retinopathy model learned
 
 *What a diabetic retinopathy model learned, what it didn't, and how the project
-found out. September 2026.*
+found out. Historical study: September 2026; follow-up: October 2026.*
 
 The APTOS 2019 dataset holds 3662 retinal photographs graded 0-4 for diabetic
 retinopathy. A five-fold EfficientNet-B0 ensemble trained on it reaches a
@@ -12,8 +12,8 @@ write-up is about why.
 ## 1. The model could score well without looking at the eye
 
 Before training anything, a random forest was given only file metadata:
-resolution, aspect ratio, brightness, file size. It never saw a retinal pixel,
-and it reached **QWK 0.652**.
+resolution, aspect ratio, brightness, file size. It used global image summaries
+rather than spatial retinal features, and reached **QWK 0.652**.
 
 The cause is that APTOS was collected at several sites with different cameras,
 and camera correlates with disease. 92.5% of the 1050x1050 images are graded
@@ -36,8 +36,8 @@ Both were tested with five-fold cross-validation, paired across folds:
 | squash vs baseline | +0.0038 | 0.47 |
 | CLAHE vs baseline | -0.0005 | 0.87 |
 
-Both are null. The largest effect found anywhere in the project was not a
-preprocessing choice but averaging the five fold models, worth +0.019 QWK - four
+Neither comparison established a reliable benefit. Within these preprocessing
+comparisons, averaging the five fold models gave a descriptive +0.019 QWK — four
 times the largest gap between preprocessing variants.
 
 ## 3. The first external test: a prediction that failed in the model's favour

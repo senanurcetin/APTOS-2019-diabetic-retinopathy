@@ -23,6 +23,7 @@ what makes it worth computing.
 """
 from __future__ import annotations
 
+import os
 import pathlib
 
 import cv2
@@ -372,7 +373,7 @@ def main(argv=None) -> int:
         f"the lowest of them. An earlier version of this report led with the "
         f"fold-1 figure as though it described the model.",
         "",
-        f"![Grad-CAM]({args.out})",
+        f"![Grad-CAM]({pathlib.Path(os.path.relpath(figure_path, (cfg.paths.root / args.report).parent)).as_posix()})",
         "",
         "## The control, and the uncomfortable result",
         "",

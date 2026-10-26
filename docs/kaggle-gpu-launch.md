@@ -1,7 +1,12 @@
-# Kaggle GPU experiment launch — no CI and no credential commits
+# Kaggle GPU experiment launch
 
 This is a public, non-productized research repository. The APTOS experiment
 requires genuine GPU runs, not placeholder performance numbers.
+
+This runbook covers generic scalar/ordinal packaging. The completed paired
+Messidor-2 run has a separate [frozen protocol](MESSIDOR2_V2_PROTOCOL.md) and
+`package_examination_followup.py` packager. Current completion and prediction
+audits are indexed in the [scientific review](SCIENTIFIC_REVIEW.md).
 
 ## Security and access
 

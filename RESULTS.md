@@ -4,10 +4,11 @@ Every number here was produced by the code in this repository. Runs are tracked
 in MLflow and exported as text to `reports/runs.csv`; the six single-split runs
 predate that layer and were transcribed from the original BigQuery tables.
 
-Setup for all runs: EfficientNet-B0 (ImageNet weights), 384px input, batch 16,
+Setup for the historical APTOS benchmark runs below: EfficientNet-B0 (ImageNet weights), 384px input, batch 16,
 15 epochs, AdamW at 3e-4, cosine schedule, mixed precision, early stopping on
 validation QWK (patience 5), best checkpoint kept. Regression mode with four
-thresholds tuned on validation.
+thresholds tuned on validation. The separate v2 follow-up uses its own
+[frozen protocol](docs/MESSIDOR2_V2_PROTOCOL.md).
 
 ---
 
@@ -34,14 +35,14 @@ below retain their original baselines and split limitations.
 | Preprocessing ideas tested | **2 of 2 came back null** |
 | External validation (IDRiD) | **QWK 0.8045**, referable specificity **0.987** |
 | Second external set (Messidor-2, adjudicated labels) | referable AUC **0.819**; pre-registered prediction **failed** |
-| Fine-tuned on adjudicated labels (Messidor-2 test half) | AUC 0.830 -> **0.925**; a same-image control gains nothing |
+| Fine-tuned on adjudicated labels (Messidor-2 test half) | AUC 0.830 -> **0.925**; control AUC 0.834; historical split overlap |
 
 The score is not the interesting part of this project. Public APTOS solutions
 reach 0.93+. What follows — the metadata baseline, the duplicate-label discordance, and two
 preprocessing techniques that did not survive measurement — is.
 
-The largest effect found anywhere in this project is not a preprocessing
-choice. It is **ensembling the five folds: +0.019 QWK** on the baseline, about
+Within the historical preprocessing comparisons, the larger descriptive gain
+came from **ensembling the five folds: +0.019 QWK** on the baseline, about
 four times the biggest gap between any two preprocessing variants (0.0044).
 The gain is smaller elsewhere - +0.016 for squash, +0.007 for clahe - so this is
 a statement about the baseline, not a constant.
@@ -254,11 +255,11 @@ channel at the same clip limit (2.32x vs 1.81x gain at clip=2).
 
 ---
 
-### Cross-validation confirms it
+### Cross-validation comparison
 
 The single-split result rested on three seeds with a test spread of ±0.0177.
-Cross-validation is an independent design on a larger evaluation pool, and it
-agrees:
+A five-fold training design gave a similar estimate on the same shared test
+holdout; it is not an independent external replication:
 
 | design | mean Δ test QWK (clahe − baseline) | spread | p |
 |---|---|---|---|
@@ -266,9 +267,8 @@ agrees:
 | 5 folds, paired | **−0.0005** | ± 0.0067 | 0.865 |
 
 The effect estimate moves towards zero and its spread narrows by 2.6x. Two
-designs that could have disagreed did not. CLAHE at clip=2.0 on the LAB
-lightness channel does nothing measurable for this task, and that is now about
-as settled as this dataset can make it.
+designs that could have disagreed did not. These comparisons did not detect a reliable benefit for CLAHE at clip=2.0 on
+the LAB lightness channel. Nonsignificance does not establish equivalence.
 
 The validation-side advantage vanished as well. In the single-split runs CLAHE
 won on validation in all three seeds, which was the strongest thing that could
@@ -307,14 +307,14 @@ geometry still carry it. Kruskal-Wallis confirms the classes differ
 significantly on brightness (p=7e-5), contrast (p<1e-5) and megapixels
 (p<1e-5).
 
-This does not invalidate the results, but **QWK 0.652 is reachable with no
-diagnosis at all**, and any reported score should be read against that floor.
+A supervised classifier reaches **QWK 0.652** from low-level file/image
+summaries. This is a shortcut baseline, not a mathematical performance floor.
 
 ---
 
 ## The shortcut, tested rather than reported
 
-A metadata-only classifier reaches QWK 0.652 on APTOS. Until now that floor was
+A metadata-only classifier reaches QWK 0.652 on APTOS. That baseline was
 reported alongside the headline and left there. Two measurements now ask whether
 the score survives without it.
 
