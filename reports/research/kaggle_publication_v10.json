@@ -1,0 +1,17 @@
+{
+  "verified_date": "2026-10-26",
+  "kernel": "senanuretin/aptos-three-predictions-i-wrote-before-the-data",
+  "version": 10,
+  "execution_status": "COMPLETE",
+  "source_cell_readback_matches": true,
+  "source_cells_compared": 20,
+  "executable_code_unchanged_from_completed_v9": true,
+  "executable_code_sha256": "e9d2b3d6d8ecb955433d3b62813f57382f2f2ff7f6951ae15f5a506c5fe53dee",
+  "execution_log_sha256": "c36adc8d1397e59d738bf3c767e88f2524d1c2a78cfbb55e3d04e7e288817317",
+  "metadata_qwk_logged_rounded": 0.641,
+  "labelled_images_logged": 3662,
+  "html_conversion_completed": true,
+  "execution_traceback_found": false,
+  "imaging_models_retrained_in_public_cpu_notebook": false,
+  "changes": "Markdown publishes the separately completed and audited private examination-disjoint follow-up, including APTOS retention loss and limitations."
+}

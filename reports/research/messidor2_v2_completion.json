@@ -1,0 +1,40 @@
+{
+  "verified_date": "2026-10-26",
+  "status": "COMPLETE_WITH_DOCUMENTED_RESEARCH_LIMITATIONS",
+  "gpu_source_commit": "17be6cff382c2bcdc438c68e73773fa1fe812767",
+  "verified_publication_commit": "8263230704d488ac1379867d6a909bfa3102d889",
+  "independent_prediction_audit": "reports/research/messidor2_v2_audit.json",
+  "results": "reports/research/messidor2_v2_results.md",
+  "github_ci": {
+    "run_id": 40320546307,
+    "conclusion": "success",
+    "tests_passed": 438,
+    "coverage_percent": 71.92,
+    "pure_tests_each_python_version": 319,
+    "python_versions": [
+      "3.10",
+      "3.11",
+      "3.12"
+    ]
+  },
+  "github_pages": {
+    "run_id": 40320546286,
+    "conclusion": "success",
+    "url": "https://senanurcetin.github.io/APTOS-2019-diabetic-retinopathy/",
+    "http_200_and_normalized_source_parity": [
+      "index.html",
+      "research.css",
+      "research.js",
+      "nexus-logo.svg"
+    ],
+    "generated_evidence_check": "PASS; checked against committed audit bytes (LF)",
+    "node_vm_rendering_and_cohort_switch": "PASS",
+    "pixel_rendering_verified": false
+  },
+  "kaggle_publication": "reports/research/kaggle_publication_v10.json",
+  "pc_screen_used": false,
+  "playwright_used": false,
+  "paid_infrastructure_used": false,
+  "model_promoted": false,
+  "scientific_assessment": "Advanced research portfolio with completed controlled training, examination-disjoint partitions, independent per-eye audit and explicit transfer loss. Previously inspected cohort, third-party examination mapping, limited rare grades and absent multi-seed/prospective validation preclude clinical readiness."
+}

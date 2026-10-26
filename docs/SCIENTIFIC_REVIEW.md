@@ -299,3 +299,10 @@ the re-inferred baseline consistently. Original ADCIS parity, longitudinal
 patient identity, new independent cohorts and multi-seed robustness remain open.
 The frozen allocation plan records its earlier preparation state; current
 completion is recorded separately in the [launch manifest](../reports/research/messidor2_v2_launch.json).
+
+Final publication checks on 26 October passed: 438 tests, 71.92% coverage,
+319 pure tests on each of Python 3.10–3.12, exact source-cell readback and
+completed execution of public Kaggle v10, and live NEXUS asset parity.
+See the [completion record](../reports/research/messidor2_v2_completion.json)
+and [Kaggle execution evidence](../reports/research/kaggle_publication_v10.json).
+These engineering checks do not remove the scientific limitations above.
